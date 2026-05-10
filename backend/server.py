@@ -693,12 +693,21 @@ async def seed():
          ["JKBOSE-pattern test series", "One-on-one revision plans", "Affordable monthly fee plans"]),
     ]
     for t, cat, dur, fee, desc, feat, img, syl, fac, feats in courses_data:
-        if not await db.courses.find_one({"title": t}):
+        existing = await db.courses.find_one({"title": t})
+        if not existing:
             await db.courses.insert_one({
                 "id": new_id(), "title": t, "category": cat, "duration": dur, "fee": fee,
                 "description": desc, "syllabus": syl, "faculty": fac, "features": feats,
                 "scholarship_available": True, "featured": feat, "image_url": img, "created_at": now_iso(),
             })
+        else:
+            # Backfill arrays for legacy seed rows that pre-date these fields
+            patch = {}
+            if not existing.get("features"): patch["features"] = feats
+            if not existing.get("syllabus"): patch["syllabus"] = syl
+            if not existing.get("faculty"): patch["faculty"] = fac
+            if patch:
+                await db.courses.update_one({"id": existing["id"]}, {"$set": patch})
 
     # notices
     if await db.notices.count_documents({}) == 0:

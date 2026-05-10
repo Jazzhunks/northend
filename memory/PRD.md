@@ -1,67 +1,61 @@
 # Northend Educational World — PRD
 
 ## Original Problem Statement
-Modern, premium, mobile-first educational website for Northend Educational World (authorized Unacademy franchise for Kashmir). Tagline: "Empowering Kashmir's Future Through Quality Education." Audience: NEET / IIT-JEE / Foundation / CUET / NDA / JKBOSE aspirants, parents, and job seekers.
+Modern, premium, mobile-first educational website for Northend Educational World (authorized Unacademy franchise for Kashmir).
 
 ## Architecture
-- **Frontend**: React 19 + Tailwind + Shadcn UI + react-router-dom v7. Bricolage Grotesque (display) + IBM Plex Sans (body). Swiss & High-Contrast aesthetic — International Klein Blue (#002FA7) primary, #FFC107 accent.
-- **Backend**: FastAPI + Motor (async MongoDB). JWT auth (httpOnly cookies + Authorization Bearer fallback). Bcrypt hashing. Idempotent admin + catalog seeding on startup.
-- **Storage**: Emergent built-in object storage (10 MB limit, PDF/JPG/PNG/WebP).
-- **Email**: Gmail SMTP via Workspace account `manager.ops@northendedu.com`, fired via FastAPI BackgroundTasks.
-- **PDF**: reportlab + qrcode for scholarship admit cards.
-- **DB**: collections — users, courses, scholarships, scholarship_applications, enrollments, jobs, job_applications, notices, results, testimonials, centers, inquiries, files.
+- React 19 + Tailwind + Shadcn UI · FastAPI + Motor (MongoDB) · JWT auth · Emergent object storage · Gmail SMTP · reportlab+qrcode
+- Categories supported: **NEET · IIT-JEE · Foundation · CBSE · JKBOSE**
 
-## User Personas
-1. **Student aspirant (NEET/JEE/CUET)** — explores courses, applies for scholarship, downloads admit card, enrolls, tracks status.
-2. **Parent** — browses centers, results, notices, contacts counselor.
-3. **Job seeker** — applies to teaching / counseling / operations roles with resume upload.
-4. **Admin** — manages courses, notices, jobs, applications; exports Excel.
+## Personas
+1. Student aspirant — explore courses, scholarship, enroll, dashboard.
+2. Parent — centers, results, notices, contact.
+3. Job seeker — apply with resume upload.
+4. Admin — full CRUD across all content + Excel exports.
 
 ## Implementation Status
 
-### ✅ v1 (2026-02-10)
-- 11 public pages + admin and student dashboards
-- JWT auth, bcrypt, idempotent admin seed
-- 6 Kashmir centers, 8 courses, 5 jobs, scholarship campaign, toppers, testimonials
-- Excel export (5 collections), stats counters, scholarship calculator
-- Floating WhatsApp FAB, sticky glass navbar, all interactive elements have data-testid
-- Backend pytest: 38/38 passing
+### ✅ v1 (2026-02-10): MVP
+- 11 public pages, JWT auth, admin/student dashboards, Excel export
+- 6 Kashmir centers, courses, jobs, scholarship campaign, toppers, testimonials seeded
 
-### ✅ v1.1 (2026-02-10)
-- Emergent object storage uploads (`/api/upload`, `/api/files/{id}`)
-- Reusable `<FileUpload/>` component on Jobs (resume) + Enroll (ID proof)
-- PDF + QR admit-card generation (`/api/scholarship-applications/{no}/admit-card`)
-- Gmail SMTP transactional emails: enrollment / scholarship / job-app receipts + admin notifications
-- BackgroundTasks for non-blocking email sends
-- Backend pytest: **52/52 passing**
+### ✅ v1.1 (2026-02-10): Integrations
+- Emergent object storage (`/api/upload`, `/api/files/{id}`) with `<FileUpload/>` on Jobs + Enroll
+- PDF + QR scholarship admit-card (`reportlab` + `qrcode`)
+- Gmail SMTP via Workspace (`manager.ops@northendedu.com`) with branded HTML templates
+- Async storage client (httpx) — non-blocking uploads
+
+### ✅ v1.2 (2026-02-10): Admin full control + simplified categories
+- Categories locked to NEET/IIT-JEE/Foundation/CBSE/JKBOSE (Pydantic Literal); old categories (CUET/NDA/Crash) auto-deleted on startup
+- New `<ChipInput/>` for course form: Syllabus highlights, Faculty, Features
+- Public CourseDetail shows "What you get" features section
+- Admin CRUD added for Centers, Testimonials, Results, Scholarship Campaigns
+- AdminDashboard now has **11 tabs**
+- Idempotent seed: backfills features/syllabus/faculty on legacy course titles
+- pytest **74/74 passing**
 
 ### ⏭ P1 Backlog
-- Brute-force lockout + per-IP rate limit on public POST endpoints (especially /api/upload)
-- Refer-a-friend program (referral codes → fee discount on enrollment)
-- Recharts analytics in admin dashboard (selections trend, students by city)
-- Rich-text editor for notices/courses (currently plain text)
+- Brute-force lockout + per-IP rate limit on public POST endpoints (especially `/api/upload`)
+- Refer-a-Friend program (₹1,000 fee discount per converted referral)
+- Recharts widgets in admin dashboard (selections trend, students by city)
 - Payment gateway (Stripe / Razorpay) for online fee collection
-- Multi-image course banners + gallery page
-- Async storage client (httpx.AsyncClient) — current sync requests block event loop on large files
-- Move SMTP password and EMERGENT_LLM_KEY to a production secret manager
+- Move SMTP password + Emergent key to a production secret manager
+- Split server.py (~790 lines) and AdminDashboard.jsx (~600 lines) into per-domain modules
+- Switch admin Update routes to PATCH with Optional fields for partial saves
 
 ### P2 Backlog
-- PWA support, service-worker offline shell
+- PWA support, sitemap.xml, dynamic SEO metadata, blog/news
 - Multi-language (Urdu / Kashmiri)
 - Attendance & study-material modules in student dashboard
-- Inquiry-management workflow with assigned counselors
-- Notification broadcasting (WhatsApp Business API / SMS)
-- Sitemap.xml, dynamic SEO metadata, blog/news system
-- Split server.py into per-domain routers (~725 lines now)
+- WhatsApp Business API broadcast
+- Notification broadcasting (SMS / email digest)
 
 ## Test Credentials
-See `/app/memory/test_credentials.md`.
-- Admin: `admin@northend.edu` / `Admin@2025`
-- Test student: register fresh via `/register`
+See `/app/memory/test_credentials.md`. Admin: `admin@northend.edu` / `Admin@2025`.
 
 ## Next Tasks
-1. Brute-force lockout + rate limiting on public POST endpoints (security hardening).
-2. Refer-a-friend program for ₹1,000 enrollment discounts.
-3. Recharts dashboard widgets in /admin (selections by year, students by city).
-4. Stripe / Razorpay integration for online fee collection.
-5. Refactor server.py into routers/ subdirectory.
+1. Refer-a-Friend referral codes + fee discount on enrollment.
+2. Brute-force lockout + rate limiting.
+3. Recharts admin analytics widgets.
+4. Stripe / Razorpay online fee gateway.
+5. Refactor server.py + AdminDashboard.jsx into smaller modules.
