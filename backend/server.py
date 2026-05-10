@@ -19,7 +19,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, EmailStr
 import openpyxl
 
-from storage_client import init_storage, put_object, get_object, APP_NAME
+from storage_client import init_storage, put_object, get_object, aclose as storage_aclose, APP_NAME
 from email_client import (
     email_enrollment_received, email_scholarship_received,
     email_job_app_received, email_admin_notification,
@@ -505,7 +505,7 @@ async def upload(file: UploadFile = File(...)):
     file_id = new_id()
     path = f"{APP_NAME}/uploads/{file_id}.{ext}"
     try:
-        result = put_object(path, data, ctype)
+        result = await put_object(path, data, ctype)
     except Exception as e:
         raise HTTPException(500, f"Upload failed: {e}")
     record = {
@@ -527,7 +527,7 @@ async def download_file(file_id: str):
     if not rec:
         raise HTTPException(404, "File not found")
     try:
-        data, ctype = get_object(rec["storage_path"])
+        data, ctype = await get_object(rec["storage_path"])
     except Exception as e:
         raise HTTPException(500, f"Storage error: {e}")
     return Response(content=data, media_type=rec.get("content_type") or ctype,
@@ -716,9 +716,10 @@ logging.basicConfig(level=logging.INFO)
 @app.on_event("startup")
 async def on_start():
     await seed()
-    init_storage()
+    await init_storage()
     logging.info("Northend backend ready.")
 
 @app.on_event("shutdown")
 async def on_stop():
+    await storage_aclose()
     client.close()

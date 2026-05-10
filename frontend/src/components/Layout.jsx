@@ -26,9 +26,6 @@ function Navbar() {
     <header className="glass sticky top-0 z-50" data-testid="site-header">
       <div className="max-w-7xl mx-auto flex items-center justify-between px-4 lg:px-8 h-16">
         <Link to="/" className="flex items-center gap-2 group" data-testid="logo-link">
-          <div className="h-9 w-9 bg-primary text-primary-foreground grid place-items-center rounded-md">
-            <GraduationCap size={20} />
-          </div>
           <div className="leading-tight">
             <div className="font-display font-black text-base tracking-tight">Northend</div>
             <div className="text-[10px] tracking-[0.18em] uppercase text-muted-foreground">Educational World</div>
