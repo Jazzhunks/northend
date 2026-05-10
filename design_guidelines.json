@@ -1,0 +1,111 @@
+{
+  "theme": "light",
+  "archetype": "Archetype 4 (Swiss & High-Contrast)",
+  "vibe": "Elite, authoritative, outcome-oriented, minimalist, high-trust",
+  "colors": {
+    "background": "#FFFFFF",
+    "surface": "#F8FAFC",
+    "surface_glass": "rgba(255, 255, 255, 0.7)",
+    "primary": "#002FA7",
+    "primary_hover": "#001F70",
+    "accent": "#FFC107",
+    "text_primary": "#0F172A",
+    "text_secondary": "#475569",
+    "border": "#E2E8F0",
+    "success": "#10B981",
+    "error": "#EF4444"
+  },
+  "typography": {
+    "heading_font": "Cabinet Grotesk",
+    "body_font": "IBM Plex Sans",
+    "font_weights": {
+      "light": 300,
+      "regular": 400,
+      "medium": 500,
+      "bold": 700,
+      "black": 900
+    },
+    "scales": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl tracking-tighter leading-none font-black",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl tracking-tight leading-tight font-bold",
+      "h3": "text-xl sm:text-2xl tracking-tight font-bold",
+      "h4": "text-lg sm:text-xl font-medium",
+      "body": "text-base leading-relaxed",
+      "small": "text-sm",
+      "overline": "text-xs tracking-[0.2em] uppercase font-bold text-primary"
+    }
+  },
+  "spacing_and_layout": {
+    "general": "Generous spacing. p-8, p-12, p-16 for structural sections. Containers with borders must use internal padding p-8.",
+    "marketing_grid": "Mode A: The Tetris Grid (Asymmetric Bento). grid-cols-1 md:grid-cols-8 lg:grid-cols-12, gap-8.",
+    "dashboard_grid": "Mode B: The Control Room Grid. grid-cols-1 md:grid-cols-3 lg:grid-cols-4, gap-4. Strict data density.",
+    "border_radius": "rounded-none or max rounded-md (8px) for a strict, disciplined academic feel."
+  },
+  "surface_strategies": {
+    "header": "Crystal Glassmorphism: backdrop-blur-xl bg-white/70, 1px inner border border-white/40.",
+    "dashboard_cards": "Grid Borders: flat background, border-collapse, subtle border-r border-b border-border/40, no shadow. Hover: slight lift, subtle shadow.",
+    "marketing_cards": "Neumorphism (Tactile): off-white bg, 1px sharp border-black/5, high-contrast text."
+  },
+  "motion_and_interactions": {
+    "hover_states": "ALWAYS explicitly set text color on hover. focus:ring-2 focus:ring-primary/50.",
+    "animations": "Scroll-triggered micro-interactions for statistics counters. Staggered entrance for course lists.",
+    "accessibility": "Respect prefers-reduced-motion. High contrast on focus states."
+  },
+  "components_instructions": {
+    "general": "Use raw HTML + Tailwind for creative marketing layouts (Hero, Bento Grids). Use Shadcn UI for forms, tabs, dropdowns, dashboards.",
+    "forms": "Use Shadcn Input, Select, Checkbox. High-contrast active states.",
+    "tables": "Shadcn Table for Results, Rank Lists, Admin CRUD. Striped rows for readability.",
+    "charts": "Shadcn Charts (Recharts) for Admin Dashboard analytics (selections, student growth).",
+    "navigation": "Sticky nav with solid background/glassmorphism (z-50). Mobile-native hamburger.",
+    "testing": "All interactive elements MUST have data-testid attributes (e.g., data-testid='enroll-now-btn')."
+  },
+  "page_specific_guidelines": {
+    "home": "Anti-Design Hero with open lead capture or bold CTAs. Trust-first elements (numbers, selections) immediately visible. Generous whitespace.",
+    "scholarship_portal": "High visual hierarchy for registration form vs results. Use yellow accent for highlights.",
+    "dashboards": "Control Room Grid. Strict monochrome with primary color only for active/actionable elements. No unnecessary padding."
+  },
+  "media": {
+    "icons_library": "lucide-react",
+    "image_urls": [
+      {
+        "category": "hero_background",
+        "url": "https://images.unsplash.com/photo-1773499951138-8d52c966bedf?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTF8MHwxfHNlYXJjaHwyfHxtb2Rlcm4lMjBjbGFzc3Jvb20lMjBhcmNoaXRlY3R1cmV8ZW58MHx8fHwxNzc4NDA1MTM3fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Modern reflective glass institute architecture, used as a subtle hero background with white/glass overlay"
+      },
+      {
+        "category": "student_success_1",
+        "url": "https://images.unsplash.com/photo-1571260899304-425eee4c7efc?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NjZ8MHwxfHNlYXJjaHwxfHxzdHVkZW50cyUyMHN0dWR5aW5nJTIwaGFwcHl8ZW58MHx8fHwxNzc4NDA1MTM3fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Student with textbook for testimonials or course features"
+      },
+      {
+        "category": "student_success_2",
+        "url": "https://images.pexels.com/photos/6147219/pexels-photo-6147219.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Group of students studying on campus"
+      },
+      {
+        "category": "classroom",
+        "url": "https://images.pexels.com/photos/29534728/pexels-photo-29534728.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Modern classroom seating"
+      },
+      {
+        "category": "kashmir_landscape",
+        "url": "https://images.unsplash.com/photo-1606355792317-4dcadc93ed26?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MTJ8MHwxfHNlYXJjaHwxfHxrYXNobWlyJTIwbGFuZHNjYXBlJTIwc25vd3xlbnwwfHx8fDE3Nzg0MDUxNTB8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Aerial view of snow-covered mountains, for localizing the centers/about sections"
+      },
+      {
+        "category": "scholarship",
+        "url": "https://images.unsplash.com/photo-1555967522-37949fc21dcb?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwxfHxncmFkdWF0aW9uJTIwY2FwJTIwZ29sZHxlbnwwfHx8fDE3Nzg0MDUxNTB8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Student holding book, representing scholarship achievement"
+      }
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Install fonts: `npm install @fontsource/cabinet-grotesk @fontsource/ibm-plex-sans` or use Google Fonts/local font files.",
+    "Do NOT use 'Inter', 'Roboto', or 'Open Sans' for headings.",
+    "Implement the 'Swiss & High-Contrast' aesthetic. Heavily rely on monochrome structure (white, grays, black) and use Primary Blue (#002FA7) strictly for actions/highlights.",
+    "Ensure the hero overlay on images is max bg-black/50 (dark mode) or bg-white/40 (light mode). Do not obscure images heavily.",
+    "For the 'Centers' page, weave in the 'kashmir_landscape' image.",
+    "Ensure dashboards use Shadcn components extensively and follow the Control Room Grid layout.",
+    "Ensure data-testid attributes are included on all CTAs, inputs, and major interaction points."
+  ]
+}
