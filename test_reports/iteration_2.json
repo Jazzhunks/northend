@@ -1,0 +1,40 @@
+{
+  "summary": "Iteration 2: ran full pytest suite (38 tests) and tested critical UI flows on public preview URL. Backend 100% pass after one data fix. Frontend home/courses/login/admin all work; one UI bug found on Home stat counters showing 0+ despite valid API data.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/courses (seed)", "issue": "Seed only inserts when collection is empty (count==0). DB had only 1 course (Foundation) from a prior partial seed, causing /api/courses to return 1 item and the Courses page/featured-courses to look broken. Workaround: dropped courses collection and restarted backend to re-seed all 7 categories. Recommend making seed idempotent (upsert by title) or seeding any missing categories on startup."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Home/StatsCounter", "issue": "All four stat tiles render '0+' / '0' even though GET /api/stats returns students_trained=12150, selections=898, educators=65, centers=6. Counter animation either does not start (likely IntersectionObserver missed because section is in initial viewport) or final value is not bound. Fix: ensure animation completes to fetched value (and falls back to the final number if observer never fires).", "selector": "Home stats section", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Home hero", "issues": ["WhatsApp floating button is visible but lacks data-testid='floating-whatsapp' (we found it visually but not by testid). Add data-testid for testability."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/iteration_2.xml"
+  ],
+  "action_items": [
+    "Fix Home StatsCounter so the animated number always settles on the API value (the API itself is fine — students_trained=12150 etc.).",
+    "Make seed_courses idempotent: on startup, insert any missing categories instead of skipping when count>0. This protects against partial-seed states.",
+    "Add data-testid attributes on key Home sections (stats, featured-courses, scholarship-banner, toppers, testimonials, notices-strip) and on the floating WhatsApp button to ease automated testing."
+  ],
+  "critical_code_review_comments": [
+    "Status update endpoints use PUT with `status` as a query parameter (e.g. PUT /api/enrollments/{id}/status?status=approved). Consider switching to PATCH with a JSON body for REST hygiene; current shape is unusual and confused tests initially.",
+    "Seed function is non-idempotent for courses/notices/centers (guarded only by count==0). Any partial cleanup leaves the catalog broken until the collection is fully emptied.",
+    "AuthContext stores token under localStorage key `nw_token` while the request brief described it as `access_token` — naming drift; document or rename for consistency."
+  ],
+  "updated_files": ["/app/backend/tests/backend_test.py"],
+  "success_rate": {"backend": "100% (38/38)", "frontend": "~85% (home stats counter is the only visible bug; courses filter, login, admin dashboard all work)"},
+  "test_credentials": "Admin admin@northend.edu / Admin@2025 (seeded). Test student created per-run as student_test_<pid>@test.com / Student@2025.",
+  "seed_data_creation": "Dropped the courses MongoDB collection once and restarted backend so seed re-inserted all 7 category courses. No manual data otherwise added.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend pytest suite at /app/backend/tests/backend_test.py is the source of truth — 38 tests, all green. Status-update endpoints are PUT with ?status=... query param (not PATCH+body). Auth token localStorage key is `nw_token`. Seed is non-idempotent for courses; if /api/courses returns <7 items, drop db.courses and `sudo supervisorctl restart backend`. Home page stats animation bug: API works, only the UI fails to render the animated final value.",
+  "rca of the issue": "Home stats showing 0: /api/stats returns correct integers; React counter likely uses IntersectionObserver to start counting when scrolled into view, but the stats block sits in the initial viewport on a 1080px screen so the observer's initial-intersect callback may not fire (or the start value 0 is never advanced). Recommend setting state to the fetched number on first render and only animating the in-between if visible. Seed bug RCA: `if await db.courses.count_documents({}) == 0:` — once any course exists (even one stale one), the rest of the catalog is never inserted. Mitigation applied for testing: deleted courses collection, restarted backend; permanent fix is upsert-by-title in seed()."
+}
