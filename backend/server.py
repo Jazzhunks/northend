@@ -23,6 +23,7 @@ from storage_client import init_storage, put_object, get_object, aclose as stora
 from email_client import (
     email_enrollment_received, email_scholarship_received,
     email_job_app_received, email_admin_notification,
+    email_scholarship_result_published,
 )
 from pdf_client import admit_card_pdf, result_card_pdf
 
@@ -455,7 +456,7 @@ async def update_scholarship_status(aid: str, status: str = Query(...), _admin =
 
 # ---------- Scholarship Result management ----------
 @api.put("/scholarship-applications/{aid}/result")
-async def set_scholarship_result(aid: str, payload: ScholarshipResultIn, _admin = Depends(require_admin)):
+async def set_scholarship_result(aid: str, payload: ScholarshipResultIn, background: BackgroundTasks, _admin = Depends(require_admin)):
     app_doc = await db.scholarship_applications.find_one({"id": aid}, {"_id": 0})
     if not app_doc:
         raise HTTPException(404, "Application not found")
@@ -469,9 +470,21 @@ async def set_scholarship_result(aid: str, payload: ScholarshipResultIn, _admin 
         "result_remarks": payload.remarks,
         "result_published": bool(payload.publish),
     }
+    was_published = bool(app_doc.get("result_published"))
     if payload.publish:
         update["result_published_at"] = now_iso()
     await db.scholarship_applications.update_one({"id": aid}, {"$set": update})
+    # Fire result email only on transition unpublished -> published
+    if payload.publish and not was_published and app_doc.get("email"):
+        front = os.environ.get("FRONTEND_URL", "").rstrip("/")
+        result_url = (f"{front}/api/scholarship-applications/{app_doc['application_no']}/result-card"
+                      f"?phone={app_doc.get('phone','')}") if front else None
+        background.add_task(
+            email_scholarship_result_published,
+            app_doc["email"], app_doc.get("name", ""), app_doc["application_no"],
+            pct, payload.marks_obtained, payload.total_marks, payload.rank,
+            result_url,
+        )
     return {"ok": True, **update}
 
 @api.post("/scholarship-applications/lookup")
@@ -586,6 +599,113 @@ async def attendance_export(sid: str, _admin = Depends(require_admin)):
             "marked_at": rec.get("marked_at") or "",
         })
     return export_excel(rows, "Attendance", f"attendance-{sid}.xlsx")
+
+# ---------- Scholarship results: template + bulk upload ----------
+RESULT_HEADERS = ["application_no", "name", "school", "standard",
+                  "marks_obtained", "total_marks", "rank", "percentile",
+                  "scholarship_percentage", "remarks", "publish"]
+
+@api.get("/admin/scholarships/{sid}/results-template")
+async def results_template(sid: str, _admin = Depends(require_admin)):
+    camp = await db.scholarships.find_one({"id": sid}, {"_id": 0})
+    if not camp:
+        raise HTTPException(404, "Campaign not found")
+    apps = await db.scholarship_applications.find({"scholarship_id": sid}, {"_id": 0}).sort("name", 1).to_list(5000)
+    wb = openpyxl.Workbook(); ws = wb.active; ws.title = "Results"
+    ws.append(RESULT_HEADERS)
+    total_marks_default = camp.get("total_marks") or 100
+    for a in apps:
+        ws.append([
+            a.get("application_no", ""), a.get("name", ""),
+            a.get("school", ""), a.get("standard", ""),
+            "", total_marks_default, "", "", "", "", "no",
+        ])
+    # Make header bold
+    for cell in ws[1]:
+        cell.font = openpyxl.styles.Font(bold=True)
+    buf = io.BytesIO(); wb.save(buf); buf.seek(0)
+    return StreamingResponse(buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="results-template-{sid}.xlsx"'})
+
+@api.post("/admin/scholarships/{sid}/bulk-results")
+async def bulk_results(sid: str, background: BackgroundTasks,
+                       file: UploadFile = File(...), _admin = Depends(require_admin)):
+    camp = await db.scholarships.find_one({"id": sid}, {"_id": 0})
+    if not camp:
+        raise HTTPException(404, "Campaign not found")
+    data = await file.read()
+    if not data:
+        raise HTTPException(400, "Empty file")
+    try:
+        wb = openpyxl.load_workbook(io.BytesIO(data), read_only=True, data_only=True)
+        ws = wb.active
+    except Exception as e:
+        raise HTTPException(400, f"Could not read Excel: {e}")
+
+    rows = list(ws.iter_rows(values_only=True))
+    if not rows:
+        raise HTTPException(400, "Sheet is empty")
+    headers = [str(h or "").strip().lower() for h in rows[0]]
+    h_idx = {h: i for i, h in enumerate(headers)}
+    required = ["application_no", "marks_obtained", "scholarship_percentage"]
+    missing = [r for r in required if r not in h_idx]
+    if missing:
+        raise HTTPException(400, f"Missing columns: {missing}. Expected: {RESULT_HEADERS}")
+
+    front = os.environ.get("FRONTEND_URL", "").rstrip("/")
+    processed, published_count, errors = 0, 0, []
+    for row_no, row in enumerate(rows[1:], start=2):
+        try:
+            app_no = (str(row[h_idx["application_no"]]).strip() if row[h_idx["application_no"]] is not None else "")
+            if not app_no:
+                continue
+            marks = float(row[h_idx["marks_obtained"]] or 0)
+            total = float(row[h_idx.get("total_marks", -1)] or camp.get("total_marks") or 100) if "total_marks" in h_idx else float(camp.get("total_marks") or 100)
+            sch_pct = max(0, min(100, int(float(row[h_idx["scholarship_percentage"]] or 0))))
+            rank = row[h_idx.get("rank", -1)] if "rank" in h_idx else None
+            rank_v = int(rank) if rank not in (None, "", 0) else None
+            perc = row[h_idx.get("percentile", -1)] if "percentile" in h_idx else None
+            perc_v = float(perc) if perc not in (None, "") else None
+            remarks = row[h_idx.get("remarks", -1)] if "remarks" in h_idx else None
+            remarks_v = str(remarks).strip() if remarks not in (None, "") else None
+            pub_raw = row[h_idx.get("publish", -1)] if "publish" in h_idx else "yes"
+            publish = str(pub_raw).strip().lower() in ("yes", "true", "1", "y", "publish", "published")
+
+            app_doc = await db.scholarship_applications.find_one(
+                {"application_no": app_no, "scholarship_id": sid}, {"_id": 0}
+            )
+            if not app_doc:
+                errors.append({"row": row_no, "app": app_no, "error": "not in this campaign"})
+                continue
+
+            was_published = bool(app_doc.get("result_published"))
+            update = {
+                "result_marks_obtained": marks,
+                "result_total_marks": total,
+                "result_rank": rank_v,
+                "result_percentile": perc_v,
+                "result_scholarship_percentage": sch_pct,
+                "result_remarks": remarks_v,
+                "result_published": publish,
+            }
+            if publish:
+                update["result_published_at"] = now_iso()
+                published_count += 1
+            await db.scholarship_applications.update_one({"id": app_doc["id"]}, {"$set": update})
+            processed += 1
+
+            if publish and not was_published and app_doc.get("email"):
+                result_url = (f"{front}/api/scholarship-applications/{app_no}/result-card"
+                              f"?phone={app_doc.get('phone','')}") if front else None
+                background.add_task(
+                    email_scholarship_result_published,
+                    app_doc["email"], app_doc.get("name", ""), app_no,
+                    sch_pct, marks, total, rank_v, result_url,
+                )
+        except Exception as e:
+            errors.append({"row": row_no, "app": app_no if 'app_no' in locals() else "", "error": str(e)})
+    return {"processed": processed, "published": published_count, "errors": errors}
 
 
 # ---------- Enrollments ----------

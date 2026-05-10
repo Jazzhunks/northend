@@ -77,6 +77,25 @@ def email_job_app_received(to_email: str, name: str, job_title: str):
 <p>Regards,<br/>Northend HR</p>"""
     return send_email(to_email, "Application received — Northend", _wrap("Application Received", body))
 
+def email_scholarship_result_published(to_email: str, name: str, application_no: str,
+                                       scholarship_percentage: int,
+                                       marks_obtained, total_marks, rank=None,
+                                       result_card_url: str | None = None):
+    rank_html = f"<p>Rank: <b>{rank}</b></p>" if rank else ""
+    cta = f'<p style="text-align:center;margin-top:16px;"><a href="{result_card_url}" style="display:inline-block;background:#002FA7;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">Download Result Card (PDF)</a></p>' if result_card_url else ""
+    body = f"""<p>Hi {name},</p>
+<p>Your <b>Northend Scholarship Test</b> result has been declared.</p>
+<p>Application No: <b style="font-family:monospace;font-size:15px;color:#002FA7;">{application_no}</b></p>
+<p>Marks: <b>{marks_obtained} / {total_marks}</b></p>
+{rank_html}
+<p style="margin-top:14px;font-size:18px;">Scholarship awarded:
+  <b style="color:#10B981;font-size:24px;">{scholarship_percentage}%</b> off on tuition fee.</p>
+{cta}
+<p style="margin-top:20px;">Visit your nearest center within 7 days to claim your scholarship and complete enrollment.</p>
+<p>Congratulations,<br/>Northend Academic Team</p>"""
+    return send_email(to_email, "🎉 Scholarship Result Declared — Northend",
+                      _wrap("Your Result is Out", body))
+
 def email_admin_notification(subject: str, html_body: str):
     to = os.environ.get("ADMIN_NOTIFY_EMAIL")
     if not to:

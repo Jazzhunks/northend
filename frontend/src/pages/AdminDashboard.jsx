@@ -198,6 +198,34 @@ export default function AdminDashboard() {
   const examinerLink = (token) => `${window.location.origin}/examiner?token=${token}`;
   const copy = (txt) => { navigator.clipboard?.writeText(txt); toast.success("Link copied"); };
 
+  // ----- bulk results
+  const downloadResultsTemplate = async (sid) => {
+    try {
+      const tok = localStorage.getItem("nw_token");
+      const res = await fetch(`${API_BASE}/admin/scholarships/${sid}/results-template`, {
+        credentials: "include", headers: tok ? { Authorization: `Bearer ${tok}` } : {},
+      });
+      if (!res.ok) throw new Error("Template download failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `results-template-${sid}.xlsx`; a.click(); URL.revokeObjectURL(url);
+    } catch (e) { toast.error(e.message); }
+  };
+
+  const bulkUploadResults = async (sid, file) => {
+    try {
+      const fd = new FormData(); fd.append("file", file);
+      const { data } = await api.post(`/admin/scholarships/${sid}/bulk-results`, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      const errCount = (data.errors || []).length;
+      toast.success(`Processed ${data.processed} · Published ${data.published}${errCount ? ` · ${errCount} error(s)` : ""}`);
+      if (errCount) console.warn("Bulk upload errors:", data.errors);
+      load();
+    } catch (e) { toast.error(formatError(e.response?.data?.detail) || e.message); }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 lg:px-8 py-12" data-testid="admin-dashboard">
       <div className="text-xs uppercase tracking-[0.2em] font-bold text-primary mb-2">Admin Console</div>
@@ -537,6 +565,9 @@ export default function AdminDashboard() {
                 <div className="flex flex-col gap-1.5 items-stretch">
                   <Button size="sm" variant={c.is_featured ? "default" : "outline"} onClick={() => c.is_featured ? clearFeatured() : setFeatured("scholarship", c.id)} data-testid={`feat-camp-${c.id}`}>{c.is_featured ? "Unfeature" : "Feature"}</Button>
                   <Button size="sm" variant="outline" onClick={() => downloadAttendance(c.id)} data-testid={`att-${c.id}`}><Download size={14}/>Attendance Excel</Button>
+                  <Button size="sm" variant="outline" onClick={() => downloadResultsTemplate(c.id)} data-testid={`tpl-${c.id}`}><Download size={14}/>Results Template</Button>
+                  <Button size="sm" variant="outline" type="button" onClick={() => document.getElementById(`bulk-input-${c.id}`)?.click()} data-testid={`bulk-${c.id}`}><Plus size={14}/>Bulk Upload Results</Button>
+                  <input id={`bulk-input-${c.id}`} type="file" accept=".xlsx" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) { bulkUploadResults(c.id, f); e.target.value = ""; } }}/>
                   <Button size="sm" variant="outline" onClick={() => del(`/scholarships/${c.id}`, "campaign")} data-testid={`del-camp-${c.id}`}><Trash2 size={14}/>Delete</Button>
                 </div>
               </div>
