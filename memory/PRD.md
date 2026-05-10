@@ -6,58 +6,62 @@ Modern, premium, mobile-first educational website for Northend Educational World
 ## Architecture
 - **Frontend**: React 19 + Tailwind + Shadcn UI + react-router-dom v7. Bricolage Grotesque (display) + IBM Plex Sans (body). Swiss & High-Contrast aesthetic — International Klein Blue (#002FA7) primary, #FFC107 accent.
 - **Backend**: FastAPI + Motor (async MongoDB). JWT auth (httpOnly cookies + Authorization Bearer fallback). Bcrypt hashing. Idempotent admin + catalog seeding on startup.
-- **DB**: MongoDB collections — users, courses, scholarships, scholarship_applications, enrollments, jobs, job_applications, notices, results, testimonials, centers, inquiries.
-- **Excel export**: openpyxl-driven `/api/admin/export/{kind}` for enrollments, scholarship-applications, job-applications, inquiries, students.
+- **Storage**: Emergent built-in object storage (10 MB limit, PDF/JPG/PNG/WebP).
+- **Email**: Gmail SMTP via Workspace account `manager.ops@northendedu.com`, fired via FastAPI BackgroundTasks.
+- **PDF**: reportlab + qrcode for scholarship admit cards.
+- **DB**: collections — users, courses, scholarships, scholarship_applications, enrollments, jobs, job_applications, notices, results, testimonials, centers, inquiries, files.
 
 ## User Personas
-1. **Student aspirant (NEET/JEE/CUET)** — explores courses, applies for scholarship, enrolls, tracks status from dashboard.
+1. **Student aspirant (NEET/JEE/CUET)** — explores courses, applies for scholarship, downloads admit card, enrolls, tracks status.
 2. **Parent** — browses centers, results, notices, contacts counselor.
-3. **Job seeker** — applies to teaching / counseling / operations roles.
+3. **Job seeker** — applies to teaching / counseling / operations roles with resume upload.
 4. **Admin** — manages courses, notices, jobs, applications; exports Excel.
 
-## Implementation Status (2026-02-10)
+## Implementation Status
 
-### ✅ Implemented (P0)
-- 11 public pages: Home, About, Courses, CourseDetail, Scholarship, Enroll, Jobs, Centers, Results, Notices, Contact
-- Auth: login, register, logout, /me — admin idempotently seeded
-- Student dashboard (enrollments + notices)
-- Admin dashboard with 7 tabs: Enrollments, Scholarship Apps, Job Apps, Courses CRUD, Notices CRUD, Jobs CRUD, Inquiries
-- Excel export for 5 collections
-- Stats counters (intersection-observed with fallback), scholarship calculator, application/receipt number generation
-- Floating WhatsApp FAB, sticky glass navbar, dark-mode-ready theme
-- 6 Kashmir centers seeded (Srinagar, Anantnag, Sopore, Soura, Zakura, Parraypora)
-- 7 course categories seeded; 6 toppers; 3 testimonials; 3 notices; 5 jobs; 1 scholarship campaign
-- All interactive elements have `data-testid`
-- Backend pytest suite: 38/38 passing
+### ✅ v1 (2026-02-10)
+- 11 public pages + admin and student dashboards
+- JWT auth, bcrypt, idempotent admin seed
+- 6 Kashmir centers, 8 courses, 5 jobs, scholarship campaign, toppers, testimonials
+- Excel export (5 collections), stats counters, scholarship calculator
+- Floating WhatsApp FAB, sticky glass navbar, all interactive elements have data-testid
+- Backend pytest: 38/38 passing
+
+### ✅ v1.1 (2026-02-10)
+- Emergent object storage uploads (`/api/upload`, `/api/files/{id}`)
+- Reusable `<FileUpload/>` component on Jobs (resume) + Enroll (ID proof)
+- PDF + QR admit-card generation (`/api/scholarship-applications/{no}/admit-card`)
+- Gmail SMTP transactional emails: enrollment / scholarship / job-app receipts + admin notifications
+- BackgroundTasks for non-blocking email sends
+- Backend pytest: **52/52 passing**
 
 ### ⏭ P1 Backlog
-- File uploads via Emergent object storage (resumes, ID proof, course PDFs) — currently URL field
-- WhatsApp Business API broadcast (currently wa.me link)
-- Email / OTP via Resend or Twilio (registration verification, password reset)
-- PDF generation: admit cards, fee receipts (reportlab installed but routes not wired)
-- QR-code based admit-card verification
-- Payment gateway (Stripe/Razorpay) for online fee
+- Brute-force lockout + per-IP rate limit on public POST endpoints (especially /api/upload)
+- Refer-a-friend program (referral codes → fee discount on enrollment)
+- Recharts analytics in admin dashboard (selections trend, students by city)
 - Rich-text editor for notices/courses (currently plain text)
-- Brute-force lockout + rate limiting on public POST endpoints
-- Gallery, blog/news, sitemap, dynamic SEO metadata
-- Multi-image course banners
-- Recharts analytics widgets in admin dashboard
+- Payment gateway (Stripe / Razorpay) for online fee collection
+- Multi-image course banners + gallery page
+- Async storage client (httpx.AsyncClient) — current sync requests block event loop on large files
+- Move SMTP password and EMERGENT_LLM_KEY to a production secret manager
 
 ### P2 Backlog
 - PWA support, service-worker offline shell
 - Multi-language (Urdu / Kashmiri)
 - Attendance & study-material modules in student dashboard
 - Inquiry-management workflow with assigned counselors
-- Notification broadcasting (WhatsApp / SMS / email)
+- Notification broadcasting (WhatsApp Business API / SMS)
+- Sitemap.xml, dynamic SEO metadata, blog/news system
+- Split server.py into per-domain routers (~725 lines now)
 
 ## Test Credentials
 See `/app/memory/test_credentials.md`.
 - Admin: `admin@northend.edu` / `Admin@2025`
-- Test student: register fresh
+- Test student: register fresh via `/register`
 
 ## Next Tasks
-1. Wire object-storage uploads for resume + ID proof.
-2. Add PDF admit-card generation for scholarship applicants (reportlab + QR).
-3. Email transactional notifications (Resend) for enrollment + scholarship + job-app submissions.
-4. Add brute-force lockout + per-IP rate limit on public POST endpoints.
-5. Build Recharts dashboards (selections trend, students by city) on /admin.
+1. Brute-force lockout + rate limiting on public POST endpoints (security hardening).
+2. Refer-a-friend program for ₹1,000 enrollment discounts.
+3. Recharts dashboard widgets in /admin (selections by year, students by city).
+4. Stripe / Razorpay integration for online fee collection.
+5. Refactor server.py into routers/ subdirectory.

@@ -43,7 +43,7 @@ export default function Home() {
               <span className="text-primary">quality education.</span>
             </h1>
             <p className="mt-6 text-base lg:text-lg text-muted-foreground max-w-xl leading-relaxed">
-              NEET · IIT-JEE · Foundation · CUET · NDA · JKBOSE — taught by India's best educators, anchored by 5 centers across the valley.
+              NEET · IIT-JEE · Foundation · CBSE · JKBOSE — taught by India's best educators, anchored by 5 centers across the valley.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link to="/enroll"><Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md h-12 px-6" data-testid="hero-enroll-btn">Enroll Now <ArrowRight size={16}/></Button></Link>
@@ -218,7 +218,7 @@ export default function Home() {
           <div className="relative z-10 p-8 lg:p-12 text-primary-foreground h-full flex flex-col justify-end">
             <div className="text-xs uppercase tracking-[0.2em] font-bold text-accent mb-3">Made for Kashmir</div>
             <h3 className="font-display text-3xl font-black leading-tight">Built in the valley.<br/>Built for the valley.</h3>
-            <p className="mt-3 text-primary-foreground/80 text-sm">6 centers across Srinagar, Anantnag, Sopore, Soura, Zakura and Parraypora — and growing.</p>
+            <p className="mt-3 text-primary-foreground/80 text-sm">5 centers across Anantnag, Soura, Zakura and Parraypora — and growing.</p>
             <Link to="/centers" className="mt-6"><Button variant="secondary" data-testid="see-centers-btn">See our centers <ArrowRight size={16}/></Button></Link>
           </div>
         </div>
