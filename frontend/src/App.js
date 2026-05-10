@@ -17,6 +17,7 @@ import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import StudentDashboard from "@/pages/StudentDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
+import Examiner from "@/pages/Examiner";
 
 function Protected({ children, role }) {
   const { user, loading } = useAuth();
@@ -32,6 +33,7 @@ export default function App() {
       <BrowserRouter>
         <Toaster position="top-right" richColors />
         <Routes>
+          <Route path="/examiner" element={<Examiner />} />
           <Route element={<Layout />}>
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<About />} />

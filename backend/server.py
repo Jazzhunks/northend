@@ -132,6 +132,11 @@ class ScholarshipIn(BaseModel):
     exam_date: str
     deadline: str
     eligibility: str
+    venue: Optional[str] = None
+    available_venues: List[str] = []
+    exam_time: Optional[str] = None
+    total_marks: Optional[int] = 100
+    whatsapp_community_url: Optional[str] = None
     active: bool = True
     is_featured: bool = False
 
@@ -144,6 +149,7 @@ class ScholarshipApplicationIn(BaseModel):
     target_exam: str
     city: str
     scholarship_id: str  # REQUIRED — must reference an admin-uploaded campaign
+    venue: Optional[str] = None  # picked by student from campaign.available_venues
 
 class ScholarshipResultIn(BaseModel):
     marks_obtained: float
@@ -157,6 +163,12 @@ class ScholarshipResultIn(BaseModel):
 class ScholarshipLookupIn(BaseModel):
     phone: str
     application_no: str
+
+class AttendanceMarkIn(BaseModel):
+    token: str
+    application_no: str
+    venue: str
+    status: Literal["present", "absent"] = "present"
 
 class EnrollmentIn(BaseModel):
     course_id: str
@@ -367,11 +379,17 @@ async def delete_course(cid: str, _admin = Depends(require_admin)):
 # ---------- Scholarships ----------
 @api.get("/scholarships")
 async def list_scholarships():
+    items = await db.scholarships.find({}, {"_id": 0, "examiner_token": 0}).sort("created_at", -1).to_list(100)
+    return items
+
+@api.get("/admin/scholarships")
+async def list_scholarships_admin(_admin = Depends(require_admin)):
     return await db.scholarships.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
 
 @api.post("/scholarships")
 async def create_scholarship(payload: ScholarshipIn, _admin = Depends(require_admin)):
     doc = payload.model_dump(); doc["id"] = new_id(); doc["created_at"] = now_iso()
+    doc["examiner_token"] = uuid.uuid4().hex
     await db.scholarships.insert_one(doc)
     if doc.get("is_featured"):
         await _clear_featured_except("scholarships", doc["id"])
@@ -385,29 +403,43 @@ async def update_scholarship(sid: str, payload: ScholarshipIn, _admin = Depends(
         await _clear_featured_except("scholarships", sid)
     return await db.scholarships.find_one({"id": sid}, {"_id": 0})
 
+@api.post("/admin/scholarships/{sid}/regenerate-token")
+async def regenerate_examiner_token(sid: str, _admin = Depends(require_admin)):
+    new_token = uuid.uuid4().hex
+    res = await db.scholarships.update_one({"id": sid}, {"$set": {"examiner_token": new_token}})
+    if not res.matched_count:
+        raise HTTPException(404, "Campaign not found")
+    return {"examiner_token": new_token}
+
 @api.delete("/scholarships/{sid}")
 async def delete_scholarship(sid: str, _admin = Depends(require_admin)):
     await db.scholarships.delete_one({"id": sid}); return {"ok": True}
 
 @api.post("/scholarship-applications")
 async def apply_scholarship(payload: ScholarshipApplicationIn, background: BackgroundTasks):
-    # Must reference an existing, active scholarship campaign
     campaign = await db.scholarships.find_one({"id": payload.scholarship_id}, {"_id": 0})
     if not campaign:
         raise HTTPException(404, "Scholarship campaign not found")
     if not campaign.get("active"):
         raise HTTPException(400, "Scholarship campaign is closed")
+    avail = campaign.get("available_venues") or []
+    if avail and payload.venue and payload.venue not in avail:
+        raise HTTPException(400, f"Selected venue is not available for this campaign")
     doc = payload.model_dump()
     doc["id"] = new_id()
     doc["application_no"] = "NEW-SCH-" + str(uuid.uuid4().int)[:8]
     doc["status"] = "pending"
     doc["scholarship_title"] = campaign.get("title", "")
+    if not doc.get("venue"):
+        doc["venue"] = (avail[0] if avail else campaign.get("venue") or f"Northend {payload.city}")
     doc["created_at"] = now_iso()
     await db.scholarship_applications.insert_one(doc)
     doc.pop("_id", None)
+    # Surface campaign WA url to client so they can show join modal
+    doc["whatsapp_community_url"] = campaign.get("whatsapp_community_url")
     background.add_task(email_scholarship_received, payload.email, payload.name, doc["application_no"], payload.target_exam)
     background.add_task(email_admin_notification, f"New scholarship application: {payload.name}",
-                       f"<p><b>{payload.name}</b> from {payload.school} ({payload.standard}) applied for <b>{campaign.get('title','')}</b>.<br/>App No: {doc['application_no']}</p>")
+                       f"<p><b>{payload.name}</b> from {payload.school} ({payload.standard}) applied for <b>{campaign.get('title','')}</b> at <b>{doc['venue']}</b>.<br/>App No: {doc['application_no']}</p>")
     return doc
 
 @api.get("/scholarship-applications")
@@ -468,6 +500,93 @@ async def my_scholarship_applications(user: dict = Depends(get_current_user)):
             for k in ("result_marks_obtained", "result_total_marks", "result_rank", "result_percentile", "result_scholarship_percentage", "result_remarks"):
                 a.pop(k, None)
     return apps
+
+# ---------- Attendance (token-based, no login) ----------
+async def _campaign_by_token(token: str):
+    if not token:
+        raise HTTPException(401, "Missing token")
+    camp = await db.scholarships.find_one({"examiner_token": token}, {"_id": 0})
+    if not camp:
+        raise HTTPException(401, "Invalid examiner token")
+    return camp
+
+@api.get("/attendance/campaign")
+async def attendance_campaign(token: str = Query(...)):
+    camp = await _campaign_by_token(token)
+    return {
+        "id": camp["id"], "title": camp["title"],
+        "exam_date": camp.get("exam_date"), "exam_time": camp.get("exam_time"),
+        "available_venues": camp.get("available_venues") or [],
+        "total_marks": camp.get("total_marks"),
+    }
+
+@api.get("/attendance/applications")
+async def attendance_applications(token: str = Query(...), venue: Optional[str] = None):
+    camp = await _campaign_by_token(token)
+    q = {"scholarship_id": camp["id"]}
+    if venue: q["venue"] = venue
+    apps = await db.scholarship_applications.find(q, {"_id": 0}).sort("name", 1).to_list(2000)
+    # join with attendance
+    appno_set = [a["application_no"] for a in apps]
+    att_rows = await db.attendance.find({"scholarship_id": camp["id"], "application_no": {"$in": appno_set}}, {"_id": 0}).to_list(2000)
+    att_by = {a["application_no"]: a for a in att_rows}
+    out = []
+    for a in apps:
+        rec = att_by.get(a["application_no"])
+        out.append({
+            "application_no": a["application_no"], "name": a["name"], "phone": a["phone"],
+            "school": a.get("school"), "standard": a.get("standard"),
+            "venue": a.get("venue"),
+            "attendance_status": (rec or {}).get("status"),
+            "marked_at": (rec or {}).get("marked_at"),
+        })
+    return {"campaign_id": camp["id"], "venue": venue, "items": out,
+            "marked_count": sum(1 for o in out if o["attendance_status"] == "present")}
+
+@api.post("/attendance/mark")
+async def attendance_mark(payload: AttendanceMarkIn):
+    camp = await _campaign_by_token(payload.token)
+    app_no = payload.application_no.strip()
+    app_doc = await db.scholarship_applications.find_one(
+        {"application_no": app_no, "scholarship_id": camp["id"]}, {"_id": 0}
+    )
+    if not app_doc:
+        raise HTTPException(404, "Application not found for this campaign")
+    rec = {
+        "application_no": app_no,
+        "scholarship_id": camp["id"],
+        "venue": payload.venue,
+        "status": payload.status,
+        "marked_at": now_iso(),
+    }
+    await db.attendance.update_one(
+        {"application_no": app_no, "scholarship_id": camp["id"]},
+        {"$set": rec}, upsert=True,
+    )
+    return {"ok": True, "application_no": app_no, "name": app_doc.get("name"), "status": payload.status, "marked_at": rec["marked_at"]}
+
+@api.get("/admin/attendance/{sid}/export")
+async def attendance_export(sid: str, _admin = Depends(require_admin)):
+    camp = await db.scholarships.find_one({"id": sid}, {"_id": 0})
+    if not camp:
+        raise HTTPException(404, "Campaign not found")
+    apps = await db.scholarship_applications.find({"scholarship_id": sid}, {"_id": 0}).to_list(5000)
+    att = {a["application_no"]: a for a in await db.attendance.find({"scholarship_id": sid}, {"_id": 0}).to_list(5000)}
+    rows = []
+    for a in apps:
+        rec = att.get(a["application_no"]) or {}
+        rows.append({
+            "application_no": a.get("application_no"),
+            "name": a.get("name"),
+            "phone": a.get("phone"),
+            "school": a.get("school"),
+            "standard": a.get("standard"),
+            "venue": a.get("venue"),
+            "status": rec.get("status") or "absent",
+            "marked_at": rec.get("marked_at") or "",
+        })
+    return export_excel(rows, "Attendance", f"attendance-{sid}.xlsx")
+
 
 # ---------- Enrollments ----------
 @api.post("/enrollments")
@@ -925,8 +1044,15 @@ async def seed():
             "description": "Win up to 100% scholarship on tuition fees. Open for Class 8–12 students across Kashmir.",
             "exam_date": "2026-02-28", "deadline": "2026-02-25",
             "eligibility": "Students of Class 8 to 12 from any school in J&K.",
-            "active": True, "created_at": now_iso(),
+            "active": True,
+            "examiner_token": uuid.uuid4().hex,
+            "available_venues": [],
+            "created_at": now_iso(),
         })
+
+    # Backfill examiner_token for any scholarship that pre-dates this field
+    async for sc in db.scholarships.find({"examiner_token": {"$exists": False}}, {"_id": 0, "id": 1}):
+        await db.scholarships.update_one({"id": sc["id"]}, {"$set": {"examiner_token": uuid.uuid4().hex}})
 
     # indexes
     await db.users.create_index("email", unique=True)

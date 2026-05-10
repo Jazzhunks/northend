@@ -96,20 +96,23 @@ export default function AdminDashboard() {
   const [newCenter, setNewCenter] = useState({ name:"", city:"", address:"", phone:"", timing:"8:00 AM – 8:00 PM", lat:34.0837, lng:74.7973 });
   const [newTestimonial, setNewTestimonial] = useState({ name:"", role:"", quote:"" });
   const [newResult, setNewResult] = useState({ student_name:"", exam:"", rank:"", year:new Date().getFullYear(), course:"NEET", photo_url:"", quote:"" });
-  const [newCampaign, setNewCampaign] = useState({ title:"", description:"", exam_date:"", deadline:"", eligibility:"", venue:"", exam_time:"10:00 AM", total_marks:100, active:true, is_featured:false });
+  const [newCampaign, setNewCampaign] = useState({ title:"", description:"", exam_date:"", deadline:"", eligibility:"", venue:"", available_venues:[], whatsapp_community_url:"", exam_time:"10:00 AM", total_marks:100, active:true, is_featured:false });
   const [resultEditor, setResultEditor] = useState({}); // map of app.id -> form state
+  const [adminCampaigns, setAdminCampaigns] = useState([]); // includes examiner_token
 
   const load = async () => {
     try {
-      const [s, e, sa, ja, iq, c, n, j, ce, ts, rs, cm] = await Promise.all([
+      const [s, e, sa, ja, iq, c, n, j, ce, ts, rs, cm, acm] = await Promise.all([
         api.get("/admin/summary"), api.get("/enrollments"), api.get("/scholarship-applications"),
         api.get("/job-applications"), api.get("/inquiries"), api.get("/courses"),
         api.get("/notices"), api.get("/jobs/all"),
         api.get("/centers"), api.get("/testimonials"), api.get("/results"), api.get("/scholarships"),
+        api.get("/admin/scholarships"),
       ]);
       setSummary(s.data); setEnrollments(e.data); setScholarshipApps(sa.data);
       setJobApps(ja.data); setInquiries(iq.data); setCourses(c.data); setNotices(n.data); setJobs(j.data);
       setCenters(ce.data); setTestimonials(ts.data); setResults(rs.data); setCampaigns(cm.data);
+      setAdminCampaigns(acm.data);
     } catch (err) { toast.error(formatError(err.response?.data?.detail) || err.message); }
   };
   useEffect(() => { load(); }, []);
@@ -169,6 +172,31 @@ export default function AdminDashboard() {
     try { await api.post("/admin/feature?kind=clear&id=none"); toast.success("Cleared featured"); load(); }
     catch (e) { toast.error(formatError(e.response?.data?.detail) || e.message); }
   };
+
+  // ----- attendance + examiner helpers
+  const downloadAttendance = async (sid) => {
+    try {
+      const tok = localStorage.getItem("nw_token");
+      const res = await fetch(`${API_BASE}/admin/attendance/${sid}/export`, {
+        credentials: "include",
+        headers: tok ? { Authorization: `Bearer ${tok}` } : {},
+      });
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `attendance-${sid}.xlsx`; a.click(); URL.revokeObjectURL(url);
+    } catch (e) { toast.error(e.message); }
+  };
+
+  const regenerateToken = async (sid) => {
+    if (!confirm("Regenerate examiner token? Old links will stop working.")) return;
+    try { await api.post(`/admin/scholarships/${sid}/regenerate-token`); toast.success("Token regenerated"); load(); }
+    catch (e) { toast.error(formatError(e.response?.data?.detail) || e.message); }
+  };
+
+  const examinerLink = (token) => `${window.location.origin}/examiner?token=${token}`;
+  const copy = (txt) => { navigator.clipboard?.writeText(txt); toast.success("Link copied"); };
 
   return (
     <div className="max-w-7xl mx-auto px-4 lg:px-8 py-12" data-testid="admin-dashboard">
@@ -461,32 +489,67 @@ export default function AdminDashboard() {
         {/* Campaigns */}
         <TabsContent value="campaigns" className="mt-6">
           <div className="font-display font-bold text-lg mb-3">Scholarship Campaigns</div>
-          <form onSubmit={(e)=>{e.preventDefault(); post("/scholarships", newCampaign, ()=>setNewCampaign({title:"",description:"",exam_date:"",deadline:"",eligibility:"",venue:"",exam_time:"10:00 AM",total_marks:100,active:true,is_featured:false}), "Campaign");}} className="border border-border p-5 rounded-md grid sm:grid-cols-2 gap-3 mb-6">
+          <form onSubmit={(e)=>{e.preventDefault(); post("/scholarships", newCampaign, ()=>setNewCampaign({title:"",description:"",exam_date:"",deadline:"",eligibility:"",venue:"",available_venues:[],whatsapp_community_url:"",exam_time:"10:00 AM",total_marks:100,active:true,is_featured:false}), "Campaign");}} className="border border-border p-5 rounded-md grid sm:grid-cols-2 gap-3 mb-6">
             <Input placeholder="Title (e.g. NST 2026)" value={newCampaign.title} onChange={e=>setNewCampaign({...newCampaign, title:e.target.value})} required data-testid="ncm-title"/>
             <Input placeholder="Eligibility" value={newCampaign.eligibility} onChange={e=>setNewCampaign({...newCampaign, eligibility:e.target.value})} required data-testid="ncm-elig"/>
             <Input placeholder="Exam date (YYYY-MM-DD)" value={newCampaign.exam_date} onChange={e=>setNewCampaign({...newCampaign, exam_date:e.target.value})} required data-testid="ncm-exam"/>
             <Input placeholder="Deadline (YYYY-MM-DD)" value={newCampaign.deadline} onChange={e=>setNewCampaign({...newCampaign, deadline:e.target.value})} required data-testid="ncm-dead"/>
             <Input placeholder="Exam time (e.g. 10:00 AM)" value={newCampaign.exam_time} onChange={e=>setNewCampaign({...newCampaign, exam_time:e.target.value})} data-testid="ncm-time"/>
             <Input placeholder="Total marks" type="number" value={newCampaign.total_marks} onChange={e=>setNewCampaign({...newCampaign, total_marks:Number(e.target.value)})} data-testid="ncm-marks"/>
-            <Input placeholder="Venue (full address)" value={newCampaign.venue} onChange={e=>setNewCampaign({...newCampaign, venue:e.target.value})} className="sm:col-span-2" data-testid="ncm-venue"/>
+            <Input placeholder="WhatsApp community URL" value={newCampaign.whatsapp_community_url} onChange={e=>setNewCampaign({...newCampaign, whatsapp_community_url:e.target.value})} className="sm:col-span-2" data-testid="ncm-wa"/>
+            <div className="sm:col-span-2">
+              <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Available venues (tick the centers where this exam will run)</label>
+              <div className="flex flex-wrap gap-2 border border-border rounded-md p-2 bg-background">
+                {centers.map(c => {
+                  const checked = newCampaign.available_venues.includes(c.name);
+                  return (
+                    <label key={c.id} className={`text-xs px-3 py-1.5 rounded-md border cursor-pointer ${checked ? "bg-primary text-primary-foreground border-primary" : "border-border"}`} data-testid={`ncm-venue-${c.id}`}>
+                      <input type="checkbox" className="hidden" checked={checked} onChange={() => {
+                        setNewCampaign(prev => ({...prev, available_venues: checked ? prev.available_venues.filter(v=>v!==c.name) : [...prev.available_venues, c.name]}));
+                      }}/>
+                      {c.name}
+                    </label>
+                  );
+                })}
+                {centers.length === 0 && <span className="text-xs text-muted-foreground">Add centers first under the Centers tab.</span>}
+              </div>
+            </div>
             <textarea className="sm:col-span-2 border border-border rounded-md px-3 py-2 bg-background min-h-20" placeholder="Description" value={newCampaign.description} onChange={e=>setNewCampaign({...newCampaign, description:e.target.value})} required data-testid="ncm-desc"/>
             <label className="text-sm flex items-center gap-2"><input type="checkbox" checked={newCampaign.active} onChange={e=>setNewCampaign({...newCampaign, active:e.target.checked})}/>Active</label>
             <Button type="submit" className="bg-primary text-primary-foreground" data-testid="ncm-submit"><Plus size={14}/>Launch Campaign</Button>
           </form>
-          <div className="space-y-2">{campaigns.map(c => (
-            <div key={c.id} className={`border ${c.is_featured ? "border-accent ring-1 ring-accent/30" : "border-border"} p-4 rounded-md flex items-start justify-between gap-3`}>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <div className="text-xs uppercase tracking-[0.18em] font-bold text-primary">{c.active ? "Live" : "Closed"}</div>
-                  {c.is_featured && <span className="text-[10px] uppercase tracking-wider bg-accent text-accent-foreground px-2 py-0.5 rounded font-bold">★ Featured</span>}
+          <div className="space-y-3">{adminCampaigns.map(c => (
+            <div key={c.id} className={`border ${c.is_featured ? "border-accent ring-1 ring-accent/30" : "border-border"} p-4 rounded-md`}>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="text-xs uppercase tracking-[0.18em] font-bold text-primary">{c.active ? "Live" : "Closed"}</div>
+                    {c.is_featured && <span className="text-[10px] uppercase tracking-wider bg-accent text-accent-foreground px-2 py-0.5 rounded font-bold">★ Featured</span>}
+                  </div>
+                  <div className="font-bold mt-1">{c.title}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Exam {c.exam_date} {c.exam_time ? `· ${c.exam_time}` : ""} · Deadline {c.deadline}</div>
+                  {(c.available_venues || []).length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {c.available_venues.map(v => <span key={v} className="text-[10px] bg-secondary px-2 py-0.5 rounded">{v}</span>)}
+                    </div>
+                  )}
                 </div>
-                <div className="font-bold">{c.title}</div>
-                <div className="text-xs text-muted-foreground mt-1">Exam {c.exam_date} · Deadline {c.deadline}</div>
+                <div className="flex flex-col gap-1.5 items-stretch">
+                  <Button size="sm" variant={c.is_featured ? "default" : "outline"} onClick={() => c.is_featured ? clearFeatured() : setFeatured("scholarship", c.id)} data-testid={`feat-camp-${c.id}`}>{c.is_featured ? "Unfeature" : "Feature"}</Button>
+                  <Button size="sm" variant="outline" onClick={() => downloadAttendance(c.id)} data-testid={`att-${c.id}`}><Download size={14}/>Attendance Excel</Button>
+                  <Button size="sm" variant="outline" onClick={() => del(`/scholarships/${c.id}`, "campaign")} data-testid={`del-camp-${c.id}`}><Trash2 size={14}/>Delete</Button>
+                </div>
               </div>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Button size="sm" variant={c.is_featured ? "default" : "outline"} onClick={() => c.is_featured ? clearFeatured() : setFeatured("scholarship", c.id)} data-testid={`feat-camp-${c.id}`}>{c.is_featured ? "Unfeature" : "Feature"}</Button>
-                <Button size="sm" variant="outline" onClick={() => del(`/scholarships/${c.id}`, "campaign")} data-testid={`del-camp-${c.id}`}><Trash2 size={14}/></Button>
-              </div>
+              {c.examiner_token && (
+                <div className="mt-3 pt-3 border-t border-border bg-secondary/30 -mx-4 -mb-4 px-4 py-3">
+                  <div className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5">Examiner Link (share with examiners — no login required)</div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <code className="bg-background border border-border px-2 py-1 rounded break-all flex-1 font-mono">{examinerLink(c.examiner_token)}</code>
+                    <Button size="sm" variant="outline" onClick={() => copy(examinerLink(c.examiner_token))} data-testid={`copy-link-${c.id}`}>Copy</Button>
+                    <Button size="sm" variant="outline" onClick={() => regenerateToken(c.id)} data-testid={`regen-${c.id}`}>Regenerate</Button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}</div>
         </TabsContent>

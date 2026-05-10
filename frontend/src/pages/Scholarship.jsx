@@ -9,7 +9,8 @@ import { Award, Calendar, MapPin, Clock, Trophy, Download, FileText } from "luci
 export default function Scholarship() {
   const [campaigns, setCampaigns] = useState([]);
   const [submitted, setSubmitted] = useState(null);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", school: "", standard: "", target_exam: "NEET", city: "", scholarship_id: "" });
+  const [showWaModal, setShowWaModal] = useState(false);
+  const [form, setForm] = useState({ name: "", email: "", phone: "", school: "", standard: "", target_exam: "NEET", city: "", scholarship_id: "", venue: "" });
   const [calc, setCalc] = useState({ marks: "" });
 
   // Result lookup
@@ -29,9 +30,12 @@ export default function Scholarship() {
   const submit = async (e) => {
     e.preventDefault();
     if (!form.scholarship_id) { toast.error("Please select a scholarship campaign."); return; }
+    const camp = campaigns.find(c => c.id === form.scholarship_id);
+    if ((camp?.available_venues || []).length && !form.venue) { toast.error("Please choose your nearest exam venue."); return; }
     try {
       const { data } = await api.post("/scholarship-applications", form);
       setSubmitted(data);
+      if (data.whatsapp_community_url) setShowWaModal(true);
       toast.success("Application submitted! Save your application number.");
     } catch (e) {
       toast.error(formatError(e.response?.data?.detail));
@@ -139,9 +143,18 @@ export default function Scholarship() {
                       {["NEET","IIT-JEE","Foundation","CBSE","JKBOSE"].map(x => <option key={x}>{x}</option>)}
                     </select>
                     {campaigns.length > 1 && (
-                      <select className="border border-border rounded-md px-3 py-2 bg-background sm:col-span-2" value={form.scholarship_id} onChange={e => setForm({...form, scholarship_id: e.target.value})} required data-testid="sch-campaign">
+                      <select className="border border-border rounded-md px-3 py-2 bg-background sm:col-span-2" value={form.scholarship_id} onChange={e => setForm({...form, scholarship_id: e.target.value, venue: ""})} required data-testid="sch-campaign">
                         {campaigns.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
                       </select>
+                    )}
+                    {(selectedCampaign?.available_venues || []).length > 0 && (
+                      <div className="sm:col-span-2">
+                        <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block flex items-center gap-1"><MapPin size={12}/>Choose your nearest exam venue</label>
+                        <select className="w-full border border-border rounded-md px-3 py-2 bg-background" value={form.venue} onChange={e => setForm({...form, venue: e.target.value})} required data-testid="sch-venue">
+                          <option value="">Select a venue…</option>
+                          {selectedCampaign.available_venues.map(v => <option key={v} value={v}>{v}</option>)}
+                        </select>
+                      </div>
                     )}
                   </div>
                   <Button type="submit" disabled={!form.scholarship_id} className="w-full bg-primary text-primary-foreground h-12" data-testid="sch-submit">Submit Application</Button>
@@ -223,6 +236,26 @@ export default function Scholarship() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* WhatsApp community join modal */}
+      {showWaModal && submitted?.whatsapp_community_url && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4" data-testid="wa-modal" onClick={() => setShowWaModal(false)}>
+          <div className="bg-background rounded-md max-w-md w-full p-8 relative" onClick={e => e.stopPropagation()}>
+            <button className="absolute top-3 right-3 text-muted-foreground" onClick={() => setShowWaModal(false)} data-testid="wa-modal-close"><X size={18}/></button>
+            <div className="h-14 w-14 rounded-full bg-[#25D366]/15 grid place-items-center mb-4">
+              <MessageCircle className="text-[#25D366]" size={28}/>
+            </div>
+            <h3 className="font-display text-2xl font-black">Join the WhatsApp community</h3>
+            <p className="text-sm text-muted-foreground mt-2">Get instant updates on your admit card, exam schedule, and result announcements directly from Northend's mentors.</p>
+            <div className="flex gap-2 mt-6">
+              <a href={submitted.whatsapp_community_url} target="_blank" rel="noreferrer" className="flex-1">
+                <Button className="w-full bg-[#25D366] hover:bg-[#1FB855] text-white h-12" data-testid="wa-modal-join">Join Community</Button>
+              </a>
+              <Button variant="outline" onClick={() => setShowWaModal(false)} className="h-12" data-testid="wa-modal-skip">Maybe later</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
