@@ -152,7 +152,7 @@ function WhatsAppFab() {
     <a
       href="https://wa.me/919876500001?text=Hi%20Northend%2C%20I%20want%20to%20know%20about%20your%20courses"
       target="_blank" rel="noreferrer"
-      data-testid="whatsapp-fab"
+      data-testid="floating-whatsapp"
       className="fixed bottom-6 right-6 z-40 h-14 w-14 grid place-items-center rounded-full bg-[#25D366] text-white shadow-lg hover:scale-105 transition"
     >
       <MessageCircle size={26} />

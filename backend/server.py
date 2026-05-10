@@ -527,18 +527,18 @@ async def seed():
         ]
         await db.centers.insert_many(kashmir_centers)
 
-    # courses
-    if await db.courses.count_documents({}) == 0:
-        courses_data = [
-            ("Class 11–12 NEET Crash", "NEET", "12 months", 65000, "Comprehensive NEET preparation with Unacademy curriculum", True, "https://images.unsplash.com/photo-1571260899304-425eee4c7efc?w=800"),
-            ("IIT-JEE Main + Advanced", "IIT-JEE", "24 months", 95000, "Two-year integrated JEE programme with mock tests", True, "https://images.pexels.com/photos/29534728/pexels-photo-29534728.jpeg?w=800"),
-            ("Foundation 8th–10th", "Foundation", "12 months", 35000, "Strong academic foundation with Olympiad training", False, "https://images.pexels.com/photos/6147219/pexels-photo-6147219.jpeg?w=800"),
-            ("CUET UG", "CUET", "8 months", 28000, "Domain-specific CUET coaching for Indian universities", True, "https://images.unsplash.com/photo-1555967522-37949fc21dcb?w=800"),
-            ("NDA Coaching", "NDA", "10 months", 32000, "NDA written + SSB interview preparation", False, "https://images.unsplash.com/photo-1571260899304-425eee4c7efc?w=800"),
-            ("JKBOSE 12th Boards", "JKBOSE", "10 months", 22000, "Targeted JKBOSE board syllabus mastery", False, "https://images.pexels.com/photos/29534728/pexels-photo-29534728.jpeg?w=800"),
-            ("NEET Crash 90 Days", "Crash", "3 months", 18000, "Last-minute NEET revision and test series", True, "https://images.pexels.com/photos/6147219/pexels-photo-6147219.jpeg?w=800"),
-        ]
-        for t, cat, dur, fee, desc, feat, img in courses_data:
+    # courses (idempotent: insert any missing course titles)
+    courses_data = [
+        ("Class 11–12 NEET Crash", "NEET", "12 months", 65000, "Comprehensive NEET preparation with Unacademy curriculum", True, "https://images.unsplash.com/photo-1571260899304-425eee4c7efc?w=800"),
+        ("IIT-JEE Main + Advanced", "IIT-JEE", "24 months", 95000, "Two-year integrated JEE programme with mock tests", True, "https://images.pexels.com/photos/29534728/pexels-photo-29534728.jpeg?w=800"),
+        ("Foundation 8th–10th", "Foundation", "12 months", 35000, "Strong academic foundation with Olympiad training", False, "https://images.pexels.com/photos/6147219/pexels-photo-6147219.jpeg?w=800"),
+        ("CUET UG", "CUET", "8 months", 28000, "Domain-specific CUET coaching for Indian universities", True, "https://images.unsplash.com/photo-1555967522-37949fc21dcb?w=800"),
+        ("NDA Coaching", "NDA", "10 months", 32000, "NDA written + SSB interview preparation", False, "https://images.unsplash.com/photo-1571260899304-425eee4c7efc?w=800"),
+        ("JKBOSE 12th Boards", "JKBOSE", "10 months", 22000, "Targeted JKBOSE board syllabus mastery", False, "https://images.pexels.com/photos/29534728/pexels-photo-29534728.jpeg?w=800"),
+        ("NEET Crash 90 Days", "Crash", "3 months", 18000, "Last-minute NEET revision and test series", True, "https://images.pexels.com/photos/6147219/pexels-photo-6147219.jpeg?w=800"),
+    ]
+    for t, cat, dur, fee, desc, feat, img in courses_data:
+        if not await db.courses.find_one({"title": t}):
             await db.courses.insert_one({
                 "id": new_id(), "title": t, "category": cat, "duration": dur, "fee": fee,
                 "description": desc, "syllabus": ["Physics", "Chemistry", "Biology/Maths", "Test Series", "Doubt Sessions"],
