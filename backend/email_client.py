@@ -50,7 +50,7 @@ def _wrap(title: str, body_html: str) -> str:
   </td></tr>
   <tr><td style="padding:28px;line-height:1.6;font-size:15px;">{body_html}</td></tr>
   <tr><td style="background:#f8fafc;padding:18px 28px;color:#475569;font-size:12px;text-align:center;border-top:1px solid #e2e8f0;">
-    Authorized Unacademy Franchise · Kashmir · +91-9876500001
+    Authorized Unacademy Franchise · Kashmir · +91-8766238623
   </td></tr>
 </table></td></tr></table></body></html>"""
 

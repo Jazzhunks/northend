@@ -76,7 +76,7 @@ def admit_card_pdf(application_no, name, school, standard, target_exam,
         "1. Carry a printed copy of this admit card and a valid school ID.",
         "2. Reach the venue 30 minutes before the exam time.",
         "3. Calculators, mobiles and smart watches are not allowed.",
-        "4. Result will be available 3 days after the exam at northendedu.com.",
+        "4. Result will be available 3-7 working days after the exam at northendedu.com.",
     ]
     for n in notes:
         c.drawString(15 * mm, y, n); y -= 4 * mm
