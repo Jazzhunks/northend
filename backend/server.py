@@ -832,12 +832,27 @@ async def seed():
 # ---------- App wiring ----------
 app.include_router(api)
 
-frontend_url = os.environ.get("FRONTEND_URL", "")
-allowed = ["http://localhost:3000"]
-if frontend_url: allowed.append(frontend_url)
+# CORS: allow preview, production custom domain, and any extra comma-separated origins via env.
+# Wildcard "*" with credentials is rejected by browsers — we use an explicit list + regex.
+_default_allowed = [
+    "http://localhost:3000",
+    "https://nexed-neet.preview.emergentagent.com",
+    "https://northendedu.com",
+    "https://www.northendedu.com",
+    "https://nexed-neet.emergent.host",
+]
+_extra = os.environ.get("ADDITIONAL_ORIGINS", "")
+if _extra:
+    _default_allowed.extend([o.strip() for o in _extra.split(",") if o.strip()])
+_frontend_url = os.environ.get("FRONTEND_URL", "")
+if _frontend_url and _frontend_url not in _default_allowed:
+    _default_allowed.append(_frontend_url)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed,
+    allow_origins=list(set(_default_allowed)),
+    # Allow any *.preview.emergentagent.com and *.emergent.host preview/staging hosts
+    allow_origin_regex=r"https://([a-z0-9-]+\.)?(preview\.emergentagent\.com|emergent\.host|northendedu\.com)$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
