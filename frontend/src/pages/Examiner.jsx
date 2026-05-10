@@ -82,7 +82,9 @@ export default function Examiner() {
           mark(app_no);
           // brief pause + restart camera
           html5Qr.pause(true);
-          setTimeout(() => { try { html5Qr.resume(); } catch {} }, 1200);
+          setTimeout(() => {
+            try { html5Qr.resume(); } catch (e) { console.warn("QR resume failed", e); }
+          }, 1200);
         },
         () => {} // ignore decode errors
       );
@@ -93,7 +95,12 @@ export default function Examiner() {
   };
 
   const stopScanner = async () => {
-    try { await scannerRef.current?.stop(); await scannerRef.current?.clear(); } catch {}
+    try {
+      await scannerRef.current?.stop();
+      await scannerRef.current?.clear();
+    } catch (e) {
+      console.warn("Scanner stop failed", e);
+    }
     scannerRef.current = null;
     setScanning(false);
   };
@@ -151,8 +158,8 @@ export default function Examiner() {
             <div className="border border-border p-5 rounded-md bg-background">
               <div className="font-display font-bold mb-3">Recently Marked</div>
               <ul className="space-y-2 text-sm">
-                {recent.map((r, i) => (
-                  <li key={i} className="flex items-center gap-2"><CheckCircle2 size={14} className="text-green-600"/><span className="font-bold">{r.name}</span><span className="text-muted-foreground font-mono text-xs">{r.application_no}</span></li>
+                {recent.map((r) => (
+                  <li key={`${r.application_no}-${r.ts}`} className="flex items-center gap-2"><CheckCircle2 size={14} className="text-green-600"/><span className="font-bold">{r.name}</span><span className="text-muted-foreground font-mono text-xs">{r.application_no}</span></li>
                 ))}
               </ul>
             </div>

@@ -344,7 +344,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-1">
-                  {(c.features || []).slice(0, 3).map((f, i) => <span key={i} className="text-[10px] uppercase tracking-wider bg-accent/20 px-2 py-0.5 rounded">{f}</span>)}
+                  {(c.features || []).slice(0, 3).map((f) => <span key={f} className="text-[10px] uppercase tracking-wider bg-accent/20 px-2 py-0.5 rounded">{f}</span>)}
                 </div>
               </div>
             ))}

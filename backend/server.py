@@ -827,7 +827,6 @@ async def download_file(file_id: str):
         raise HTTPException(500, f"Storage error: {e}")
     return Response(content=data, media_type=rec.get("content_type") or ctype,
                     headers={"Content-Disposition": f'inline; filename="{rec["original_filename"]}"'})
-
 # ---------- Scholarship admit card PDF ----------
 @api.get("/scholarship-applications/{application_no}/admit-card")
 async def admit_card(application_no: str):

@@ -17,7 +17,7 @@ export default function ChipInput({ value = [], onChange, placeholder = "Add and
     <div className="border border-border rounded-md px-2 py-2 bg-background" data-testid={testId}>
       <div className="flex flex-wrap gap-1.5 mb-2">
         {value.map((v, i) => (
-          <span key={i} className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-1 rounded-md">
+          <span key={`${v}-${i}`} className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-1 rounded-md">
             {v}
             <button type="button" onClick={() => remove(i)} className="hover:text-destructive" data-testid={`${testId}-remove-${i}`}><X size={12}/></button>
           </span>

@@ -18,7 +18,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => { refresh(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
   const login = async (email, password) => {
     const { data } = await api.post("/auth/login", { email, password });
@@ -35,7 +35,7 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
-    try { await api.post("/auth/logout"); } catch {}
+    try { await api.post("/auth/logout"); } catch (e) { console.warn("Logout failed", e); }
     localStorage.removeItem("nw_token");
     setUser(null);
   };
