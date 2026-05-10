@@ -1045,7 +1045,7 @@ async def export(kind: str, _admin = Depends(require_admin)):
 
 # ---------- Seed ----------
 async def seed():
-    # admin
+    # admin: always upserted so you can never lock yourself out (env-driven recovery)
     admin_email = os.environ.get("ADMIN_EMAIL").lower()
     admin_pwd = os.environ.get("ADMIN_PASSWORD")
     existing = await db.users.find_one({"email": admin_email})
@@ -1060,22 +1060,75 @@ async def seed():
         await db.users.update_one({"email": admin_email},
             {"$set": {"password_hash": hash_password(admin_pwd), "role": "admin"}})
 
+    # First-deploy-only content seeding. Once the marker is set, admin deletes are permanent.
+    seed_marker = await db.system_meta.find_one({"key": "initial_seed"})
+    if seed_marker is None:
+        # Existing deployments: if any content already exists, just record the marker
+        # without re-inserting anything (so we don't resurrect items the admin already deleted).
+        has_existing_data = (
+            (await db.centers.count_documents({}) > 0)
+            or (await db.courses.count_documents({}) > 0)
+            or (await db.notices.count_documents({}) > 0)
+            or (await db.jobs.count_documents({}) > 0)
+            or (await db.testimonials.count_documents({}) > 0)
+            or (await db.scholarships.count_documents({}) > 0)
+        )
+        if has_existing_data:
+            await db.system_meta.insert_one({
+                "key": "initial_seed", "completed_at": now_iso(), "method": "auto-detected",
+            })
+        else:
+            await _run_initial_seed()
+            await db.system_meta.insert_one({
+                "key": "initial_seed", "completed_at": now_iso(), "method": "fresh-install",
+            })
+
+    # Always-safe backfills below — these only patch existing rows, they never create new ones
+    # so they cannot resurrect deleted content.
+
+    # Backfill examiner_token for any scholarship that pre-dates this field
+    async for sc in db.scholarships.find({"examiner_token": {"$exists": False}}, {"_id": 0, "id": 1}):
+        await db.scholarships.update_one({"id": sc["id"]}, {"$set": {"examiner_token": uuid.uuid4().hex}})
+
+    # Backfill features/syllabus/faculty arrays for legacy course rows that pre-date these fields
+    legacy_course_patches = {
+        "Class 11–12 NEET": {
+            "syllabus": ["Physics", "Chemistry", "Botany", "Zoology", "NCERT Mastery", "Weekly Mock Tests"],
+            "faculty": ["Dr. A. Wani (Physics)", "Mr. R. Bhat (Chemistry)", "Ms. S. Kaur (Biology)"],
+            "features": ["1:30 mentor ratio", "Doubt clearing daily", "AIIMS-style test series", "Personal performance dashboard"],
+        },
+        "IIT-JEE Main + Advanced": {
+            "syllabus": ["Mathematics", "Physics", "Chemistry", "Numerical Practice", "Past JEE Papers"],
+            "faculty": ["Mr. F. Lone (Maths)", "Dr. A. Wani (Physics)", "Mr. R. Bhat (Chemistry)"],
+            "features": ["Small batches of 30", "Olympiad-grade problem sets", "All-India test ranking", "Doubt sessions 6 days a week"],
+        },
+    }
+    for title, fields in legacy_course_patches.items():
+        existing_course = await db.courses.find_one({"title": title})
+        if existing_course:
+            patch = {k: v for k, v in fields.items() if not existing_course.get(k)}
+            if patch:
+                await db.courses.update_one({"id": existing_course["id"]}, {"$set": patch})
+
+    # indexes
+    await db.users.create_index("email", unique=True)
+    await db.users.create_index("id", unique=True)
+
+
+async def _run_initial_seed():
+    """Insert the default starter content. Runs ONLY on a fresh, empty database."""
     # centers
-    if await db.centers.count_documents({}) == 0:
-        kashmir_centers = [
-            {"id": new_id(), "name": "Northend Srinagar", "city": "Srinagar", "address": "Lal Chowk, Srinagar, J&K 190001", "phone": "+91-9876500001", "timing": "8:00 AM – 8:00 PM", "lat": 34.0837, "lng": 74.7973},
-            {"id": new_id(), "name": "Northend Anantnag", "city": "Anantnag", "address": "KP Road, Anantnag, J&K 192101", "phone": "+91-9876500002", "timing": "8:00 AM – 8:00 PM", "lat": 33.7311, "lng": 75.1487},
-            {"id": new_id(), "name": "Northend Sopore", "city": "Sopore", "address": "Main Chowk, Sopore, J&K 193201", "phone": "+91-9876500003", "timing": "8:00 AM – 8:00 PM", "lat": 34.2871, "lng": 74.4663},
-            {"id": new_id(), "name": "Northend Soura", "city": "Soura", "address": "Soura, Srinagar, J&K 190011", "phone": "+91-9876500004", "timing": "8:00 AM – 8:00 PM", "lat": 34.1396, "lng": 74.8005},
-            {"id": new_id(), "name": "Northend Zakura", "city": "Zakura", "address": "Zakura, Srinagar, J&K 190006", "phone": "+91-9876500005", "timing": "8:00 AM – 8:00 PM", "lat": 34.1373, "lng": 74.8584},
-            {"id": new_id(), "name": "Northend Parraypora", "city": "Parraypora", "address": "Parraypora, Srinagar, J&K 190015", "phone": "+91-9876500006", "timing": "8:00 AM – 8:00 PM", "lat": 34.0500, "lng": 74.7833},
-        ]
-        await db.centers.insert_many(kashmir_centers)
+    kashmir_centers = [
+        {"id": new_id(), "name": "Northend Srinagar", "city": "Srinagar", "address": "Lal Chowk, Srinagar, J&K 190001", "phone": "+91-9876500001", "timing": "8:00 AM – 8:00 PM", "lat": 34.0837, "lng": 74.7973},
+        {"id": new_id(), "name": "Northend Anantnag", "city": "Anantnag", "address": "KP Road, Anantnag, J&K 192101", "phone": "+91-9876500002", "timing": "8:00 AM – 8:00 PM", "lat": 33.7311, "lng": 75.1487},
+        {"id": new_id(), "name": "Northend Sopore", "city": "Sopore", "address": "Main Chowk, Sopore, J&K 193201", "phone": "+91-9876500003", "timing": "8:00 AM – 8:00 PM", "lat": 34.2871, "lng": 74.4663},
+        {"id": new_id(), "name": "Northend Soura", "city": "Soura", "address": "Soura, Srinagar, J&K 190011", "phone": "+91-9876500004", "timing": "8:00 AM – 8:00 PM", "lat": 34.1396, "lng": 74.8005},
+        {"id": new_id(), "name": "Northend Zakura", "city": "Zakura", "address": "Zakura, Srinagar, J&K 190006", "phone": "+91-9876500005", "timing": "8:00 AM – 8:00 PM", "lat": 34.1373, "lng": 74.8584},
+        {"id": new_id(), "name": "Northend Parraypora", "city": "Parraypora", "address": "Parraypora, Srinagar, J&K 190015", "phone": "+91-9876500006", "timing": "8:00 AM – 8:00 PM", "lat": 34.0500, "lng": 74.7833},
+    ]
+    await db.centers.insert_many(kashmir_centers)
 
-    # Drop courses that are not in the allowed category set (admin requested simplification)
-    await db.courses.delete_many({"category": {"$nin": ALLOWED_CATEGORIES}})
-
-    # courses (idempotent: insert any missing course titles)
+    # courses
     courses_data = [
         ("Class 11–12 NEET", "NEET", "24 months", 95000, "Comprehensive 2-year NEET preparation with Unacademy curriculum.", True, "https://images.unsplash.com/photo-1571260899304-425eee4c7efc?w=800",
          ["Physics", "Chemistry", "Botany", "Zoology", "NCERT Mastery", "Weekly Mock Tests"],
@@ -1099,90 +1152,67 @@ async def seed():
          ["JKBOSE-pattern test series", "One-on-one revision plans", "Affordable monthly fee plans"]),
     ]
     for t, cat, dur, fee, desc, feat, img, syl, fac, feats in courses_data:
-        existing = await db.courses.find_one({"title": t})
-        if not existing:
-            await db.courses.insert_one({
-                "id": new_id(), "title": t, "category": cat, "duration": dur, "fee": fee,
-                "description": desc, "syllabus": syl, "faculty": fac, "features": feats,
-                "scholarship_available": True, "featured": feat, "image_url": img, "created_at": now_iso(),
-            })
-        else:
-            # Backfill arrays for legacy seed rows that pre-date these fields
-            patch = {}
-            if not existing.get("features"): patch["features"] = feats
-            if not existing.get("syllabus"): patch["syllabus"] = syl
-            if not existing.get("faculty"): patch["faculty"] = fac
-            if patch:
-                await db.courses.update_one({"id": existing["id"]}, {"$set": patch})
-
-    # notices
-    if await db.notices.count_documents({}) == 0:
-        notices = [
-            ("New 2026 NEET Batch Launch", "Admissions open for the new NEET 2026 batch starting March 1.", "Admissions", True),
-            ("Scholarship Test 2026", "Northend Scholarship Test on Feb 28 — up to 100% fee waiver.", "Scholarship", True),
-            ("Foundation Olympiad Workshop", "Free 3-day Olympiad workshop for Class 8–10 students.", "Workshop", False),
-        ]
-        for t, c, cat, p in notices:
-            await db.notices.insert_one({"id": new_id(), "title": t, "content": c, "category": cat, "pinned": p, "created_at": now_iso()})
-
-    # results
-    if await db.results.count_documents({}) == 0:
-        results_data = [
-            ("Aamir Hussain", "NEET 2025", "AIR 412", 2025, "NEET", "Cracked NEET in first attempt with Northend's guidance."),
-            ("Zoya Bhat", "JEE Advanced 2025", "AIR 1108", 2025, "IIT-JEE", "From Anantnag to IIT Delhi — mentors made the difference."),
-            ("Hamid Wani", "NEET 2024", "AIR 587", 2024, "NEET", "Dedicated faculty + structured tests = AIIMS dream realised."),
-            ("Sahla Mir", "CUET 2024", "99.4 percentile", 2024, "CUET", "Got admission into Delhi University Hindu College."),
-            ("Bilal Ahmad", "JEE Main 2025", "99.1 percentile", 2025, "IIT-JEE", "Best teaching ecosystem in Kashmir, hands down."),
-            ("Iqra Jan", "NEET 2025", "AIR 1903", 2025, "NEET", "Northend made the impossible feel routine."),
-        ]
-        for n, e, r, y, c, q in results_data:
-            await db.results.insert_one({
-                "id": new_id(), "student_name": n, "exam": e, "rank": r, "year": y, "course": c,
-                "photo_url": None, "quote": q, "created_at": now_iso()
-            })
-
-    # testimonials
-    if await db.testimonials.count_documents({}) == 0:
-        ts = [
-            ("Insha Rather", "Parent", "Northend transformed my daughter's preparation. The faculty truly cares."),
-            ("Rayaan Khan", "NEET Aspirant", "Best decision was joining Northend in Srinagar. Mock tests were spot on."),
-            ("Mehak Lone", "JEE Aspirant", "Doubt clearing happens in real time — feels like a national coaching."),
-        ]
-        for n, role, q in ts:
-            await db.testimonials.insert_one({"id": new_id(), "name": n, "role": role, "quote": q, "created_at": now_iso()})
-
-    # jobs
-    if await db.jobs.count_documents({}) == 0:
-        jobs = [
-            ("Physics Faculty (NEET/JEE)", "Academics", "Srinagar", "Full-time", "Senior physics educator for NEET/JEE batches.", ["M.Sc/Ph.D Physics", "3+ years coaching experience"], True),
-            ("Counselor", "Admissions", "Anantnag", "Full-time", "Student counseling and parent interactions.", ["Graduate", "Excellent communication"], True),
-            ("Floor Manager", "Operations", "Sopore", "Full-time", "Manage center operations and student discipline.", ["Graduate", "Leadership skills"], True),
-            ("BDM (Business Dev. Manager)", "Business", "Srinagar", "Full-time", "Drive admissions and outreach across Kashmir.", ["MBA preferred", "5+ years in EdTech"], True),
-            ("DTP Operator", "Production", "Srinagar", "Full-time", "Design study material and notices.", ["CorelDraw / InDesign expertise"], True),
-        ]
-        for t, d, l, ty, desc, req, a in jobs:
-            await db.jobs.insert_one({"id": new_id(), "title": t, "department": d, "location": l, "type": ty, "description": desc, "requirements": req, "active": a, "created_at": now_iso()})
-
-    # scholarship campaign
-    if await db.scholarships.count_documents({}) == 0:
-        await db.scholarships.insert_one({
-            "id": new_id(), "title": "Northend Scholarship Test 2026 (NST)",
-            "description": "Win up to 100% scholarship on tuition fees. Open for Class 8–12 students across Kashmir.",
-            "exam_date": "2026-02-28", "deadline": "2026-02-25",
-            "eligibility": "Students of Class 8 to 12 from any school in J&K.",
-            "active": True,
-            "examiner_token": uuid.uuid4().hex,
-            "available_venues": [],
-            "created_at": now_iso(),
+        await db.courses.insert_one({
+            "id": new_id(), "title": t, "category": cat, "duration": dur, "fee": fee,
+            "description": desc, "syllabus": syl, "faculty": fac, "features": feats,
+            "scholarship_available": True, "featured": feat, "image_url": img, "created_at": now_iso(),
         })
 
-    # Backfill examiner_token for any scholarship that pre-dates this field
-    async for sc in db.scholarships.find({"examiner_token": {"$exists": False}}, {"_id": 0, "id": 1}):
-        await db.scholarships.update_one({"id": sc["id"]}, {"$set": {"examiner_token": uuid.uuid4().hex}})
+    # notices
+    notices = [
+        ("New 2026 NEET Batch Launch", "Admissions open for the new NEET 2026 batch starting March 1.", "Admissions", True),
+        ("Scholarship Test 2026", "Northend Scholarship Test on Feb 28 — up to 100% fee waiver.", "Scholarship", True),
+        ("Foundation Olympiad Workshop", "Free 3-day Olympiad workshop for Class 8–10 students.", "Workshop", False),
+    ]
+    for t, c, cat, p in notices:
+        await db.notices.insert_one({"id": new_id(), "title": t, "content": c, "category": cat, "pinned": p, "created_at": now_iso()})
 
-    # indexes
-    await db.users.create_index("email", unique=True)
-    await db.users.create_index("id", unique=True)
+    # results
+    results_data = [
+        ("Aamir Hussain", "NEET 2025", "AIR 412", 2025, "NEET", "Cracked NEET in first attempt with Northend's guidance."),
+        ("Zoya Bhat", "JEE Advanced 2025", "AIR 1108", 2025, "IIT-JEE", "From Anantnag to IIT Delhi — mentors made the difference."),
+        ("Hamid Wani", "NEET 2024", "AIR 587", 2024, "NEET", "Dedicated faculty + structured tests = AIIMS dream realised."),
+        ("Sahla Mir", "CUET 2024", "99.4 percentile", 2024, "CUET", "Got admission into Delhi University Hindu College."),
+        ("Bilal Ahmad", "JEE Main 2025", "99.1 percentile", 2025, "IIT-JEE", "Best teaching ecosystem in Kashmir, hands down."),
+        ("Iqra Jan", "NEET 2025", "AIR 1903", 2025, "NEET", "Northend made the impossible feel routine."),
+    ]
+    for n, e, r, y, c, q in results_data:
+        await db.results.insert_one({
+            "id": new_id(), "student_name": n, "exam": e, "rank": r, "year": y, "course": c,
+            "photo_url": None, "quote": q, "created_at": now_iso()
+        })
+
+    # testimonials
+    ts = [
+        ("Insha Rather", "Parent", "Northend transformed my daughter's preparation. The faculty truly cares."),
+        ("Rayaan Khan", "NEET Aspirant", "Best decision was joining Northend in Srinagar. Mock tests were spot on."),
+        ("Mehak Lone", "JEE Aspirant", "Doubt clearing happens in real time — feels like a national coaching."),
+    ]
+    for n, role, q in ts:
+        await db.testimonials.insert_one({"id": new_id(), "name": n, "role": role, "quote": q, "created_at": now_iso()})
+
+    # jobs
+    jobs = [
+        ("Physics Faculty (NEET/JEE)", "Academics", "Srinagar", "Full-time", "Senior physics educator for NEET/JEE batches.", ["M.Sc/Ph.D Physics", "3+ years coaching experience"], True),
+        ("Counselor", "Admissions", "Anantnag", "Full-time", "Student counseling and parent interactions.", ["Graduate", "Excellent communication"], True),
+        ("Floor Manager", "Operations", "Sopore", "Full-time", "Manage center operations and student discipline.", ["Graduate", "Leadership skills"], True),
+        ("BDM (Business Dev. Manager)", "Business", "Srinagar", "Full-time", "Drive admissions and outreach across Kashmir.", ["MBA preferred", "5+ years in EdTech"], True),
+        ("DTP Operator", "Production", "Srinagar", "Full-time", "Design study material and notices.", ["CorelDraw / InDesign expertise"], True),
+    ]
+    for t, d, l, ty, desc, req, a in jobs:
+        await db.jobs.insert_one({"id": new_id(), "title": t, "department": d, "location": l, "type": ty, "description": desc, "requirements": req, "active": a, "created_at": now_iso()})
+
+    # scholarship campaign
+    await db.scholarships.insert_one({
+        "id": new_id(), "title": "Northend Scholarship Test 2026 (NST)",
+        "description": "Win up to 100% scholarship on tuition fees. Open for Class 8–12 students across Kashmir.",
+        "exam_date": "2026-02-28", "deadline": "2026-02-25",
+        "eligibility": "Students of Class 8 to 12 from any school in J&K.",
+        "active": True,
+        "examiner_token": uuid.uuid4().hex,
+        "available_venues": [],
+        "created_at": now_iso(),
+    })
 
 # ---------- App wiring ----------
 app.include_router(api)
