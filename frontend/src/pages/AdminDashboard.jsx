@@ -143,6 +143,16 @@ export default function AdminDashboard() {
   };
   const del = async (path, label) => { if (!confirm(`Delete this ${label}?`)) return; await api.delete(path); load(); };
 
+  // ----- feature toggle (single across notices/jobs/scholarships)
+  const setFeatured = async (kind, id) => {
+    try { await api.post(`/admin/feature?kind=${kind}&id=${id}`); toast.success("Featured on home"); load(); }
+    catch (e) { toast.error(formatError(e.response?.data?.detail) || e.message); }
+  };
+  const clearFeatured = async () => {
+    try { await api.post("/admin/feature?kind=clear&id=none"); toast.success("Cleared featured"); load(); }
+    catch (e) { toast.error(formatError(e.response?.data?.detail) || e.message); }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 lg:px-8 py-12" data-testid="admin-dashboard">
       <div className="text-xs uppercase tracking-[0.2em] font-bold text-primary mb-2">Admin Console</div>
