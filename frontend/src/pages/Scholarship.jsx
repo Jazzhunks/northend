@@ -64,7 +64,12 @@ export default function Scholarship() {
               <h3 className="font-display text-3xl font-black mt-2">Save your application number</h3>
               <div className="font-mono text-2xl mt-4 p-4 bg-background border border-border rounded-md">{submitted.application_no}</div>
               <p className="text-sm text-muted-foreground mt-4">Your admit card will be available for download 3 days before the exam. We'll also send updates via WhatsApp on your registered number.</p>
-              <Button onClick={() => setSubmitted(null)} variant="outline" className="mt-4" data-testid="another-app-btn">Submit another application</Button>
+              <div className="flex flex-wrap gap-2 mt-4">
+                <a href={`${process.env.REACT_APP_BACKEND_URL}/api/scholarship-applications/${submitted.application_no}/admit-card`} target="_blank" rel="noreferrer">
+                  <Button className="bg-primary text-primary-foreground" data-testid="download-admit-card">Download Admit Card (PDF)</Button>
+                </a>
+                <Button onClick={() => setSubmitted(null)} variant="outline" data-testid="another-app-btn">Submit another</Button>
+              </div>
             </div>
           ) : (
             <form onSubmit={submit} className="border border-border p-8 rounded-md space-y-4 bg-background">

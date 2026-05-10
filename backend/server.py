@@ -12,12 +12,26 @@ import jwt
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Literal
 
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, Query
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, Query, UploadFile, File, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, EmailStr
 import openpyxl
+
+from storage_client import init_storage, put_object, get_object, APP_NAME
+from email_client import (
+    email_enrollment_received, email_scholarship_received,
+    email_job_app_received, email_admin_notification,
+)
+from pdf_client import admit_card_pdf
+
+ALLOWED_UPLOAD_TYPES = {
+    "application/pdf": "pdf",
+    "image/jpeg": "jpg", "image/jpg": "jpg",
+    "image/png": "png", "image/webp": "webp",
+}
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 
 # ---------- Setup ----------
 mongo_url = os.environ['MONGO_URL']
@@ -134,6 +148,7 @@ class EnrollmentIn(BaseModel):
     phone: str
     address: str
     center: str
+    id_proof_url: Optional[str] = None
 
 class JobIn(BaseModel):
     title: str
@@ -299,7 +314,7 @@ async def delete_scholarship(sid: str, _admin = Depends(require_admin)):
     await db.scholarships.delete_one({"id": sid}); return {"ok": True}
 
 @api.post("/scholarship-applications")
-async def apply_scholarship(payload: ScholarshipApplicationIn):
+async def apply_scholarship(payload: ScholarshipApplicationIn, background: BackgroundTasks):
     doc = payload.model_dump()
     doc["id"] = new_id()
     doc["application_no"] = "NEW-SCH-" + str(uuid.uuid4().int)[:8]
@@ -307,6 +322,9 @@ async def apply_scholarship(payload: ScholarshipApplicationIn):
     doc["created_at"] = now_iso()
     await db.scholarship_applications.insert_one(doc)
     doc.pop("_id", None)
+    background.add_task(email_scholarship_received, payload.email, payload.name, doc["application_no"], payload.target_exam)
+    background.add_task(email_admin_notification, f"New scholarship application: {payload.name}",
+                       f"<p><b>{payload.name}</b> from {payload.school} ({payload.standard}) applied for <b>{payload.target_exam}</b> scholarship.<br/>App No: {doc['application_no']}</p>")
     return doc
 
 @api.get("/scholarship-applications")
@@ -322,15 +340,15 @@ async def update_scholarship_status(aid: str, status: str = Query(...), _admin =
 
 # ---------- Enrollments ----------
 @api.post("/enrollments")
-async def create_enrollment(payload: EnrollmentIn, request: Request):
-    if not await db.courses.find_one({"id": payload.course_id}):
+async def create_enrollment(payload: EnrollmentIn, request: Request, background: BackgroundTasks):
+    course = await db.courses.find_one({"id": payload.course_id}, {"_id": 0})
+    if not course:
         raise HTTPException(404, "Course not found")
     doc = payload.model_dump()
     doc["id"] = new_id()
     doc["status"] = "pending"
     doc["receipt_no"] = "NEW-ENR-" + str(uuid.uuid4().int)[:8]
     doc["created_at"] = now_iso()
-    # link to user if logged in
     try:
         user = await get_current_user(request)
         doc["user_id"] = user["id"]
@@ -338,6 +356,9 @@ async def create_enrollment(payload: EnrollmentIn, request: Request):
         doc["user_id"] = None
     await db.enrollments.insert_one(doc)
     doc.pop("_id", None)
+    background.add_task(email_enrollment_received, payload.email, payload.name, doc["receipt_no"], course["title"], payload.center)
+    background.add_task(email_admin_notification, f"New enrollment: {payload.name}",
+                       f"<p><b>{payload.name}</b> ({payload.email}, {payload.phone}) enrolled for <b>{course['title']}</b> at <b>{payload.center}</b>.<br/>Receipt: {doc['receipt_no']}</p>")
     return doc
 
 @api.get("/enrollments")
@@ -379,12 +400,16 @@ async def delete_job(jid: str, _admin = Depends(require_admin)):
     await db.jobs.delete_one({"id": jid}); return {"ok": True}
 
 @api.post("/job-applications")
-async def apply_job(payload: JobApplicationIn):
-    if not await db.jobs.find_one({"id": payload.job_id}):
+async def apply_job(payload: JobApplicationIn, background: BackgroundTasks):
+    job = await db.jobs.find_one({"id": payload.job_id}, {"_id": 0})
+    if not job:
         raise HTTPException(404, "Job not found")
     doc = payload.model_dump()
     doc["id"] = new_id(); doc["status"] = "received"; doc["created_at"] = now_iso()
     await db.job_applications.insert_one(doc); doc.pop("_id", None)
+    background.add_task(email_job_app_received, payload.email, payload.name, job["title"])
+    background.add_task(email_admin_notification, f"New job application: {payload.name}",
+                       f"<p><b>{payload.name}</b> ({payload.email}, {payload.phone}) applied for <b>{job['title']}</b>.<br/>Qualification: {payload.qualification}<br/>Experience: {payload.experience}<br/>Resume: {payload.resume_url or '—'}</p>")
     return doc
 
 @api.get("/job-applications")
@@ -465,7 +490,71 @@ async def admin_summary(_admin = Depends(require_admin)):
         "total_jobs": await db.jobs.count_documents({}),
     }
 
-# ---------- Excel Export ----------
+# ---------- File Upload (Emergent Object Storage) ----------
+@api.post("/upload")
+async def upload(file: UploadFile = File(...)):
+    ctype = file.content_type or "application/octet-stream"
+    if ctype not in ALLOWED_UPLOAD_TYPES:
+        raise HTTPException(415, f"Unsupported type {ctype}. Allowed: pdf, jpg, png, webp.")
+    ext = ALLOWED_UPLOAD_TYPES[ctype]
+    data = await file.read()
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(413, "File too large (max 10 MB)")
+    if len(data) == 0:
+        raise HTTPException(400, "Empty file")
+    file_id = new_id()
+    path = f"{APP_NAME}/uploads/{file_id}.{ext}"
+    try:
+        result = put_object(path, data, ctype)
+    except Exception as e:
+        raise HTTPException(500, f"Upload failed: {e}")
+    record = {
+        "id": file_id,
+        "storage_path": result["path"],
+        "original_filename": file.filename,
+        "content_type": ctype,
+        "size": result.get("size", len(data)),
+        "is_deleted": False,
+        "created_at": now_iso(),
+    }
+    await db.files.insert_one(record); record.pop("_id", None)
+    record["url"] = f"/api/files/{file_id}"
+    return record
+
+@api.get("/files/{file_id}")
+async def download_file(file_id: str):
+    rec = await db.files.find_one({"id": file_id, "is_deleted": False}, {"_id": 0})
+    if not rec:
+        raise HTTPException(404, "File not found")
+    try:
+        data, ctype = get_object(rec["storage_path"])
+    except Exception as e:
+        raise HTTPException(500, f"Storage error: {e}")
+    return Response(content=data, media_type=rec.get("content_type") or ctype,
+                    headers={"Content-Disposition": f'inline; filename="{rec["original_filename"]}"'})
+
+# ---------- Scholarship admit card PDF ----------
+@api.get("/scholarship-applications/{application_no}/admit-card")
+async def admit_card(application_no: str):
+    app_doc = await db.scholarship_applications.find_one({"application_no": application_no}, {"_id": 0})
+    if not app_doc:
+        raise HTTPException(404, "Application not found")
+    # exam_date best effort from latest active scholarship campaign
+    camp = await db.scholarships.find_one({"active": True}, {"_id": 0}, sort=[("created_at", -1)])
+    exam_date = (camp or {}).get("exam_date", "TBA")
+    pdf_bytes = admit_card_pdf(
+        application_no=application_no,
+        name=app_doc.get("name", ""),
+        school=app_doc.get("school", ""),
+        standard=app_doc.get("standard", ""),
+        target_exam=app_doc.get("target_exam", ""),
+        exam_date=exam_date,
+        center=f"Northend {app_doc.get('city', 'Srinagar')}",
+    )
+    return Response(content=pdf_bytes, media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="admit-card-{application_no}.pdf"'})
+
+
 def export_excel(rows: list, sheet_name: str, filename: str):
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -627,6 +716,7 @@ logging.basicConfig(level=logging.INFO)
 @app.on_event("startup")
 async def on_start():
     await seed()
+    init_storage()
     logging.info("Northend backend ready.")
 
 @app.on_event("shutdown")

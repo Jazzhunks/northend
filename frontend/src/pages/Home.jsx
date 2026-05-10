@@ -43,7 +43,7 @@ export default function Home() {
               <span className="text-primary">quality education.</span>
             </h1>
             <p className="mt-6 text-base lg:text-lg text-muted-foreground max-w-xl leading-relaxed">
-              NEET · IIT-JEE · Foundation · CUET · NDA · JKBOSE — taught by India's best educators, anchored by 6 centers across the valley.
+              NEET · IIT-JEE · Foundation · CUET · NDA · JKBOSE — taught by India's best educators, anchored by 5 centers across the valley.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link to="/enroll"><Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md h-12 px-6" data-testid="hero-enroll-btn">Enroll Now <ArrowRight size={16}/></Button></Link>

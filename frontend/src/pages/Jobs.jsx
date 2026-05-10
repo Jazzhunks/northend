@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { api, formatError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import FileUpload from "@/components/FileUpload";
 import { MapPin, Briefcase } from "lucide-react";
 
 export default function Jobs() {
@@ -68,7 +69,11 @@ export default function Jobs() {
               <Input placeholder="Years of experience" value={form.experience} onChange={e => setForm({...form, experience: e.target.value})} required data-testid="job-exp"/>
               <Input placeholder="Subject expertise (if any)" value={form.subject_expertise} onChange={e => setForm({...form, subject_expertise: e.target.value})} data-testid="job-subject"/>
               <Input placeholder="Preferred location" value={form.preferred_location} onChange={e => setForm({...form, preferred_location: e.target.value})} required data-testid="job-loc"/>
-              <Input placeholder="Resume URL (Drive / Dropbox link)" value={form.resume_url} onChange={e => setForm({...form, resume_url: e.target.value})} data-testid="job-resume"/>
+              <div>
+                <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-2 block">Resume (PDF preferred)</label>
+                <FileUpload label="Upload resume" accept="application/pdf,image/jpeg,image/png" testId="job-resume-upload"
+                  onUploaded={(f)=>setForm({...form, resume_url: f?.url || ""})}/>
+              </div>
               <textarea className="w-full border border-border rounded-md px-3 py-2 bg-background min-h-24" placeholder="Short cover letter" value={form.cover_letter} onChange={e => setForm({...form, cover_letter: e.target.value})} data-testid="job-cover"/>
               <Button type="submit" className="w-full bg-primary text-primary-foreground" data-testid="job-submit">Submit Application</Button>
             </form>

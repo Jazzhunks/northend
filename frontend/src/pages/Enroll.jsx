@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { api, formatError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import FileUpload from "@/components/FileUpload";
 
 export default function Enroll() {
   const [params] = useSearchParams();
@@ -12,7 +13,7 @@ export default function Enroll() {
   const [submitted, setSubmitted] = useState(null);
   const [form, setForm] = useState({
     course_id: params.get("course") || "",
-    name: "", email: "", phone: "", address: "", center: "",
+    name: "", email: "", phone: "", address: "", center: "", id_proof_url: "",
   });
 
   useEffect(() => {
@@ -62,6 +63,11 @@ export default function Enroll() {
             <select className="border border-border rounded-md px-3 py-2 bg-background" value={form.center} onChange={e => setForm({...form, center: e.target.value})} data-testid="enr-center">
               {centers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
             </select>
+          </div>
+          <div>
+            <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-2 block">ID Proof (optional)</label>
+            <FileUpload label="Upload Aadhaar / school ID (PDF / image)" testId="enr-id-upload"
+              onUploaded={(f)=>setForm({...form, id_proof_url: f?.url || ""})}/>
           </div>
           <Button type="submit" className="w-full bg-primary text-primary-foreground h-12" data-testid="enr-submit">Submit Enrollment</Button>
         </form>
