@@ -6,7 +6,7 @@ import { api } from "@/lib/api";
 import Counter from "@/components/Counter";
 import { SectionHeader } from "@/components/SectionHeader";
 
-const HERO_IMG = "https://images.unsplash.com/photo-1773499951138-8d52c966bedf?crop=entropy&cs=srgb&fm=jpg&w=1600";
+const HERO_IMG = "https://lh3.googleusercontent.com/p/AF1QipNJi9ktWhKPKIxJE2b_TtkFkM8VItvYUWdPmeUJ=s1360-w1360-h1020-rw";
 const KASHMIR = "https://images.unsplash.com/photo-1606355792317-4dcadc93ed26?w=1200";
 
 export default function Home() {
@@ -124,7 +124,7 @@ export default function Home() {
             {[
               [Target, "National-grade curriculum", "Same Unacademy syllabus that produces AIIMS, IIT and NIT toppers — adapted for Kashmir."],
               [Users, "Mentorship that scales", "1 mentor for every 30 students. Direct doubt sessions, not just lectures."],
-              [Trophy, "Proven selections", "850+ NEET, JEE and CUET selections in the last 4 years."],
+              [Trophy, "Proven selections", "850+ NEET, JEE and CBSE selections in the last 4 years."],
               [BookOpen, "Test discipline", "Weekly Mock Tests + Detailed PDF analytics every Sunday."],
             ].map(([Icon, t, d]) => (
               <div key={t} className="bg-background border border-border p-6 rounded-md hover:-translate-y-0.5 transition">

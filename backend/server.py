@@ -111,14 +111,17 @@ class LoginIn(BaseModel):
     email: EmailStr
     password: str
 
+ALLOWED_CATEGORIES = ["NEET", "IIT-JEE", "Foundation", "CBSE", "JKBOSE"]
+
 class CourseIn(BaseModel):
     title: str
-    category: Literal["NEET", "IIT-JEE", "Foundation", "CUET", "NDA", "JKBOSE", "Crash"]
+    category: Literal["NEET", "IIT-JEE", "Foundation", "CBSE", "JKBOSE"]
     duration: str
     fee: int
     description: str
     syllabus: List[str] = []
     faculty: List[str] = []
+    features: List[str] = []
     scholarship_available: bool = True
     featured: bool = False
     image_url: Optional[str] = None
@@ -192,6 +195,20 @@ class ContactIn(BaseModel):
     phone: Optional[str] = None
     subject: str
     message: str
+
+class CenterIn(BaseModel):
+    name: str
+    city: str
+    address: str
+    phone: str
+    timing: str = "8:00 AM – 8:00 PM"
+    lat: float = 34.0837
+    lng: float = 74.7973
+
+class TestimonialIn(BaseModel):
+    name: str
+    role: str
+    quote: str
 
 # ---------- Helpers ----------
 def now_iso():
@@ -447,6 +464,20 @@ async def delete_notice(nid: str, _admin = Depends(require_admin)):
 async def list_centers():
     return await db.centers.find({}, {"_id": 0}).to_list(100)
 
+@api.post("/centers")
+async def create_center(payload: CenterIn, _admin = Depends(require_admin)):
+    doc = payload.model_dump(); doc["id"] = new_id(); doc["created_at"] = now_iso()
+    await db.centers.insert_one(doc); doc.pop("_id", None); return doc
+
+@api.put("/centers/{cid}")
+async def update_center(cid: str, payload: CenterIn, _admin = Depends(require_admin)):
+    await db.centers.update_one({"id": cid}, {"$set": payload.model_dump()})
+    return await db.centers.find_one({"id": cid}, {"_id": 0})
+
+@api.delete("/centers/{cid}")
+async def delete_center(cid: str, _admin = Depends(require_admin)):
+    await db.centers.delete_one({"id": cid}); return {"ok": True}
+
 # ---------- Results ----------
 @api.get("/results")
 async def list_results():
@@ -457,6 +488,11 @@ async def create_result(payload: ResultIn, _admin = Depends(require_admin)):
     doc = payload.model_dump(); doc["id"] = new_id(); doc["created_at"] = now_iso()
     await db.results.insert_one(doc); doc.pop("_id", None); return doc
 
+@api.put("/results/{rid}")
+async def update_result(rid: str, payload: ResultIn, _admin = Depends(require_admin)):
+    await db.results.update_one({"id": rid}, {"$set": payload.model_dump()})
+    return await db.results.find_one({"id": rid}, {"_id": 0})
+
 @api.delete("/results/{rid}")
 async def delete_result(rid: str, _admin = Depends(require_admin)):
     await db.results.delete_one({"id": rid}); return {"ok": True}
@@ -465,6 +501,20 @@ async def delete_result(rid: str, _admin = Depends(require_admin)):
 @api.get("/testimonials")
 async def list_testimonials():
     return await db.testimonials.find({}, {"_id": 0}).to_list(50)
+
+@api.post("/testimonials")
+async def create_testimonial(payload: TestimonialIn, _admin = Depends(require_admin)):
+    doc = payload.model_dump(); doc["id"] = new_id(); doc["created_at"] = now_iso()
+    await db.testimonials.insert_one(doc); doc.pop("_id", None); return doc
+
+@api.put("/testimonials/{tid}")
+async def update_testimonial(tid: str, payload: TestimonialIn, _admin = Depends(require_admin)):
+    await db.testimonials.update_one({"id": tid}, {"$set": payload.model_dump()})
+    return await db.testimonials.find_one({"id": tid}, {"_id": 0})
+
+@api.delete("/testimonials/{tid}")
+async def delete_testimonial(tid: str, _admin = Depends(require_admin)):
+    await db.testimonials.delete_one({"id": tid}); return {"ok": True}
 
 # ---------- Contact ----------
 @api.post("/contact")
@@ -616,22 +666,37 @@ async def seed():
         ]
         await db.centers.insert_many(kashmir_centers)
 
+    # Drop courses that are not in the allowed category set (admin requested simplification)
+    await db.courses.delete_many({"category": {"$nin": ALLOWED_CATEGORIES}})
+
     # courses (idempotent: insert any missing course titles)
     courses_data = [
-        ("Class 11–12 NEET Crash", "NEET", "12 months", 65000, "Comprehensive NEET preparation with Unacademy curriculum", True, "https://images.unsplash.com/photo-1571260899304-425eee4c7efc?w=800"),
-        ("IIT-JEE Main + Advanced", "IIT-JEE", "24 months", 95000, "Two-year integrated JEE programme with mock tests", True, "https://images.pexels.com/photos/29534728/pexels-photo-29534728.jpeg?w=800"),
-        ("Foundation 8th–10th", "Foundation", "12 months", 35000, "Strong academic foundation with Olympiad training", False, "https://images.pexels.com/photos/6147219/pexels-photo-6147219.jpeg?w=800"),
-        ("CUET UG", "CUET", "8 months", 28000, "Domain-specific CUET coaching for Indian universities", True, "https://images.unsplash.com/photo-1555967522-37949fc21dcb?w=800"),
-        ("NDA Coaching", "NDA", "10 months", 32000, "NDA written + SSB interview preparation", False, "https://images.unsplash.com/photo-1571260899304-425eee4c7efc?w=800"),
-        ("JKBOSE 12th Boards", "JKBOSE", "10 months", 22000, "Targeted JKBOSE board syllabus mastery", False, "https://images.pexels.com/photos/29534728/pexels-photo-29534728.jpeg?w=800"),
-        ("NEET Crash 90 Days", "Crash", "3 months", 18000, "Last-minute NEET revision and test series", True, "https://images.pexels.com/photos/6147219/pexels-photo-6147219.jpeg?w=800"),
+        ("Class 11–12 NEET", "NEET", "24 months", 95000, "Comprehensive 2-year NEET preparation with Unacademy curriculum.", True, "https://images.unsplash.com/photo-1571260899304-425eee4c7efc?w=800",
+         ["Physics", "Chemistry", "Botany", "Zoology", "NCERT Mastery", "Weekly Mock Tests"],
+         ["Dr. A. Wani (Physics)", "Mr. R. Bhat (Chemistry)", "Ms. S. Kaur (Biology)"],
+         ["1:30 mentor ratio", "Doubt clearing daily", "AIIMS-style test series", "Personal performance dashboard"]),
+        ("IIT-JEE Main + Advanced", "IIT-JEE", "24 months", 105000, "Two-year integrated JEE Main + Advanced programme.", True, "https://images.pexels.com/photos/29534728/pexels-photo-29534728.jpeg?w=800",
+         ["Mathematics", "Physics", "Chemistry", "Numerical Practice", "Past JEE Papers"],
+         ["Mr. F. Lone (Maths)", "Dr. A. Wani (Physics)", "Mr. R. Bhat (Chemistry)"],
+         ["Small batches of 30", "Olympiad-grade problem sets", "All-India test ranking", "Doubt sessions 6 days a week"]),
+        ("Foundation 8th–10th", "Foundation", "12 months", 35000, "Strong academic foundation with Olympiad training.", False, "https://images.pexels.com/photos/6147219/pexels-photo-6147219.jpeg?w=800",
+         ["Maths Foundation", "Science Foundation", "English", "Mental Ability", "Olympiad Prep"],
+         ["Ms. M. Khan", "Mr. T. Rather"],
+         ["NTSE & NSO support", "Concept-first teaching", "Weekly parent reports"]),
+        ("CBSE Class 11–12 Sciences", "CBSE", "24 months", 40000, "CBSE-aligned programme for PCM / PCB streams with Boards-grade rigor.", True, "https://images.unsplash.com/photo-1555967522-37949fc21dcb?w=800",
+         ["NCERT Mastery", "Sample Paper Drills", "Practical Lab Notes", "Pre-Board Tests"],
+         ["Mr. F. Lone", "Dr. A. Wani", "Ms. S. Kaur"],
+         ["100% NCERT coverage", "Boards + competitive integration", "Pre-board mock series"]),
+        ("JKBOSE 12th Boards", "JKBOSE", "10 months", 22000, "Targeted JKBOSE board syllabus mastery for Kashmir students.", False, "https://images.pexels.com/photos/29534728/pexels-photo-29534728.jpeg?w=800",
+         ["JKBOSE Textbooks", "Weekly Topic Tests", "Previous Year Papers", "Viva Practice"],
+         ["Local Faculty Panel"],
+         ["JKBOSE-pattern test series", "One-on-one revision plans", "Affordable monthly fee plans"]),
     ]
-    for t, cat, dur, fee, desc, feat, img in courses_data:
+    for t, cat, dur, fee, desc, feat, img, syl, fac, feats in courses_data:
         if not await db.courses.find_one({"title": t}):
             await db.courses.insert_one({
                 "id": new_id(), "title": t, "category": cat, "duration": dur, "fee": fee,
-                "description": desc, "syllabus": ["Physics", "Chemistry", "Biology/Maths", "Test Series", "Doubt Sessions"],
-                "faculty": ["Dr. A. Wani", "Mr. R. Bhat", "Ms. S. Kaur"],
+                "description": desc, "syllabus": syl, "faculty": fac, "features": feats,
                 "scholarship_available": True, "featured": feat, "image_url": img, "created_at": now_iso(),
             })
 

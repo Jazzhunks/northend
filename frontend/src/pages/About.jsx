@@ -7,7 +7,7 @@ export default function About() {
       <section className="max-w-7xl mx-auto px-4 lg:px-8 pt-16 pb-12">
         <div className="text-xs uppercase tracking-[0.2em] font-bold text-primary mb-4">About Us</div>
         <h1 className="font-display text-4xl lg:text-6xl font-black tracking-tighter max-w-4xl">A franchise born from one promise — bring India's best teaching to Kashmir.</h1>
-        <p className="mt-6 text-lg text-muted-foreground max-w-3xl">Northend Educational World is the authorized Unacademy partner for the Kashmir region — operating 6 centers and serving thousands of students preparing for NEET, IIT-JEE, CUET and Foundation exams.</p>
+        <p className="mt-6 text-lg text-muted-foreground max-w-3xl">Northend Educational World is the authorized Unacademy partner for the Kashmir region — operating 6 centers and serving thousands of students preparing for NEET, IIT-JEE, Foundation, CBSE and JKBOSE exams.</p>
       </section>
 
       <section className="border-y border-border bg-secondary/30">

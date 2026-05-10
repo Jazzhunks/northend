@@ -111,7 +111,7 @@ function Footer() {
             <div className="font-display font-black">Northend</div>
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Authorized Unacademy franchise partner. Empowering Kashmir's future through quality education across NEET, IIT-JEE, Foundation and CUET.
+            Authorized Unacademy franchise partner. Empowering Kashmir's future through quality education across NEET, IIT-JEE, Foundation, CBSE and JKBOSE.
           </p>
         </div>
         <div>

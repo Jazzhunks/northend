@@ -82,7 +82,7 @@ export default function Scholarship() {
                 <Input placeholder="Standard / Class" value={form.standard} onChange={e => setForm({...form, standard: e.target.value})} required data-testid="sch-standard"/>
                 <Input placeholder="City" value={form.city} onChange={e => setForm({...form, city: e.target.value})} required data-testid="sch-city"/>
                 <select className="border border-border rounded-md px-3 py-2 bg-background sm:col-span-2" value={form.target_exam} onChange={e => setForm({...form, target_exam: e.target.value})} data-testid="sch-target">
-                  {["NEET","IIT-JEE","Foundation","CUET","NDA","JKBOSE"].map(x => <option key={x}>{x}</option>)}
+                  {["NEET","IIT-JEE","Foundation","CBSE","JKBOSE"].map(x => <option key={x}>{x}</option>)}
                 </select>
               </div>
               <Button type="submit" className="w-full bg-primary text-primary-foreground h-12" data-testid="sch-submit">Submit Application</Button>

@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 
-const CATS = ["All", "NEET", "IIT-JEE", "Foundation", "CUET", "NDA", "JKBOSE", "Crash"];
+const CATS = ["All", "NEET", "IIT-JEE", "Foundation", "CBSE", "JKBOSE"];
 
 export default function Courses() {
   const [items, setItems] = useState([]);
@@ -19,7 +19,7 @@ export default function Courses() {
     <div className="max-w-7xl mx-auto px-4 lg:px-8 py-16" data-testid="courses-page">
       <div className="text-xs uppercase tracking-[0.2em] font-bold text-primary mb-4">Our Courses</div>
       <h1 className="font-display text-4xl lg:text-6xl font-black tracking-tighter">Find the programme that fits your goal.</h1>
-      <p className="mt-4 text-muted-foreground text-lg max-w-2xl">Choose from NEET, JEE, Foundation, CUET, NDA and JKBOSE coaching — full-time, hybrid or crash.</p>
+      <p className="mt-4 text-muted-foreground text-lg max-w-2xl">Choose from NEET, IIT-JEE, Foundation, CBSE and JKBOSE coaching — full-time, hybrid or accelerated tracks.</p>
 
       <div className="mt-10 flex flex-wrap gap-2">
         {CATS.map(cat => (

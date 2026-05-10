@@ -58,9 +58,12 @@ class TestPublicCatalog:
         r = requests.get(f"{API}/courses", timeout=20)
         assert r.status_code == 200
         data = r.json()
-        assert isinstance(data, list) and len(data) >= 7
+        assert isinstance(data, list) and len(data) >= 5
         cats = {c["category"] for c in data}
-        assert {"NEET", "IIT-JEE", "Foundation", "CUET", "NDA", "JKBOSE", "Crash"}.issubset(cats)
+        # iteration 4: simplified categories
+        ALLOWED = {"NEET", "IIT-JEE", "Foundation", "CBSE", "JKBOSE"}
+        assert cats.issubset(ALLOWED), f"Unexpected categories: {cats - ALLOWED}"
+        assert ALLOWED.issubset(cats), f"Missing categories: {ALLOWED - cats}"
 
     def test_courses_filter_category(self):
         r = requests.get(f"{API}/courses", params={"category": "NEET"}, timeout=20)
@@ -72,7 +75,8 @@ class TestPublicCatalog:
         r = requests.get(f"{API}/centers", timeout=20)
         assert r.status_code == 200
         data = r.json()
-        assert len(data) == 6
+        # iteration 4: centers are admin-mutable; seed only fires on empty collection.
+        assert len(data) >= 1
         assert all("city" in c and "lat" in c for c in data)
 
     def test_stats(self):
@@ -195,8 +199,8 @@ class TestAdminGating:
 
     def test_create_course_admin(self, admin_token):
         r = requests.post(f"{API}/courses", headers=auth_h(admin_token), json={
-            "title": "TEST_AdminCourse", "category": "Crash", "duration": "1 month",
-            "fee": 999, "description": "test", "syllabus": ["A"], "faculty": ["X"], "featured": False
+            "title": "TEST_AdminCourse", "category": "CBSE", "duration": "1 month",
+            "fee": 999, "description": "test", "syllabus": ["A"], "faculty": ["X"], "features": ["F1"], "featured": False
         }, timeout=20)
         assert r.status_code == 200
         cid = r.json()["id"]

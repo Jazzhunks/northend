@@ -32,6 +32,15 @@ export default function CourseDetail() {
             </ul>
           </div>
 
+          {c.features?.length > 0 && (
+            <div className="mt-10">
+              <h3 className="font-display font-bold text-xl mb-4">What you get</h3>
+              <div className="flex flex-wrap gap-2">
+                {c.features.map(f => <span key={f} className="px-3 py-1 bg-accent/15 border border-accent/30 rounded-md text-sm">{f}</span>)}
+              </div>
+            </div>
+          )}
+
           <div className="mt-10">
             <h3 className="font-display font-bold text-xl mb-4">Faculty</h3>
             <div className="flex flex-wrap gap-2">
