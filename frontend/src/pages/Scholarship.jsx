@@ -4,7 +4,7 @@ import { api, formatError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Award, Calendar, MapPin, Clock, Trophy, Download, FileText } from "lucide-react";
+import { Award, Calendar, MapPin, Clock, Trophy, Download, FileText, MessageCircle, X } from "lucide-react";
 
 export default function Scholarship() {
   const [campaigns, setCampaigns] = useState([]);
