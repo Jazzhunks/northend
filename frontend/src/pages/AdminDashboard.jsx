@@ -96,7 +96,8 @@ export default function AdminDashboard() {
   const [newCenter, setNewCenter] = useState({ name:"", city:"", address:"", phone:"", timing:"8:00 AM – 8:00 PM", lat:34.0837, lng:74.7973 });
   const [newTestimonial, setNewTestimonial] = useState({ name:"", role:"", quote:"" });
   const [newResult, setNewResult] = useState({ student_name:"", exam:"", rank:"", year:new Date().getFullYear(), course:"NEET", photo_url:"", quote:"" });
-  const [newCampaign, setNewCampaign] = useState({ title:"", description:"", exam_date:"", deadline:"", eligibility:"", active:true });
+  const [newCampaign, setNewCampaign] = useState({ title:"", description:"", exam_date:"", deadline:"", eligibility:"", venue:"", exam_time:"10:00 AM", total_marks:100, active:true, is_featured:false });
+  const [resultEditor, setResultEditor] = useState({}); // map of app.id -> form state
 
   const load = async () => {
     try {
@@ -135,6 +136,22 @@ export default function AdminDashboard() {
     finally { setBusy(false); }
   };
   const deleteCourse = async (id) => { if (!confirm("Delete this course?")) return; await api.delete(`/courses/${id}`); load(); };
+
+  const saveResult = async (aid, payload) => {
+    try {
+      await api.put(`/scholarship-applications/${aid}/result`, {
+        ...payload,
+        marks_obtained: Number(payload.marks_obtained || 0),
+        total_marks: Number(payload.total_marks || 100),
+        rank: payload.rank ? Number(payload.rank) : null,
+        percentile: payload.percentile ? Number(payload.percentile) : null,
+        scholarship_percentage: Number(payload.scholarship_percentage || 0),
+      });
+      toast.success(payload.publish ? "Result published" : "Result saved (not published)");
+      setResultEditor(prev => ({ ...prev, [aid]: undefined }));
+      load();
+    } catch (e) { toast.error(formatError(e.response?.data?.detail) || e.message); }
+  };
 
   // ----- generic creators
   const post = async (path, body, reset, label) => {
@@ -206,19 +223,52 @@ export default function AdminDashboard() {
         {/* Scholarships */}
         <TabsContent value="scholarships" className="mt-6">
           <div className="flex justify-between mb-3"><div className="font-display font-bold text-lg">Scholarship Applications</div><ExportBtn kind="scholarship-applications"/></div>
-          <div className="border border-border rounded-md overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-secondary text-xs uppercase"><tr><th className="p-3 text-left">App No</th><th className="p-3 text-left">Name</th><th className="p-3 text-left">Class</th><th className="p-3 text-left">Target</th><th className="p-3 text-left">Status</th></tr></thead>
-              <tbody>{scholarshipApps.map(a => (
-                <tr key={a.id} className="border-t border-border">
-                  <td className="p-3 font-mono text-xs">{a.application_no}</td>
-                  <td className="p-3 font-bold">{a.name}</td>
-                  <td className="p-3">{a.standard}</td>
-                  <td className="p-3">{a.target_exam}</td>
-                  <td className="p-3"><select value={a.status} onChange={ev => updateStatus("sch", a.id, ev.target.value)} className="text-xs border border-border rounded px-2 py-1 bg-background"><option>pending</option><option>approved</option><option>rejected</option></select></td>
-                </tr>))}
-              </tbody>
-            </table>
+          <div className="space-y-2">
+            {scholarshipApps.map(a => {
+              const editing = resultEditor[a.id];
+              const r = editing || {
+                marks_obtained: a.result_marks_obtained ?? "",
+                total_marks: a.result_total_marks ?? 100,
+                rank: a.result_rank ?? "",
+                percentile: a.result_percentile ?? "",
+                scholarship_percentage: a.result_scholarship_percentage ?? 0,
+                remarks: a.result_remarks ?? "",
+                publish: a.result_published ?? false,
+              };
+              return (
+                <div key={a.id} className="border border-border rounded-md bg-background" data-testid={`adm-sch-${a.id}`}>
+                  <div className="p-4 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="font-mono text-xs text-muted-foreground">{a.application_no}</div>
+                      <div className="font-bold">{a.name} <span className="text-xs font-normal text-muted-foreground">· {a.standard} · {a.target_exam}</span></div>
+                      <div className="text-xs text-muted-foreground">{a.email} · {a.phone}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {a.result_published && <span className="text-[10px] uppercase tracking-wider bg-green-100 text-green-700 px-2 py-0.5 rounded font-bold">Result Published</span>}
+                      <select value={a.status} onChange={ev => updateStatus("sch", a.id, ev.target.value)} className="text-xs border border-border rounded px-2 py-1 bg-background"><option>pending</option><option>approved</option><option>rejected</option></select>
+                      <Button size="sm" variant={editing ? "outline" : "default"} onClick={() => setResultEditor(prev => ({ ...prev, [a.id]: editing ? undefined : r }))} data-testid={`toggle-result-${a.id}`}>
+                        {editing ? "Close" : (a.result_published ? "Edit Result" : "Add Result")}
+                      </Button>
+                    </div>
+                  </div>
+                  {editing && (
+                    <div className="p-4 border-t border-border bg-secondary/30 grid sm:grid-cols-3 gap-3" data-testid={`result-form-${a.id}`}>
+                      <Input placeholder="Marks obtained" type="number" value={r.marks_obtained} onChange={e=>setResultEditor(prev=>({...prev, [a.id]: {...r, marks_obtained: e.target.value}}))} data-testid={`r-marks-${a.id}`}/>
+                      <Input placeholder="Total marks" type="number" value={r.total_marks} onChange={e=>setResultEditor(prev=>({...prev, [a.id]: {...r, total_marks: e.target.value}}))} data-testid={`r-total-${a.id}`}/>
+                      <Input placeholder="Scholarship %" type="number" min={0} max={100} value={r.scholarship_percentage} onChange={e=>setResultEditor(prev=>({...prev, [a.id]: {...r, scholarship_percentage: e.target.value}}))} data-testid={`r-pct-${a.id}`}/>
+                      <Input placeholder="Rank (optional)" type="number" value={r.rank} onChange={e=>setResultEditor(prev=>({...prev, [a.id]: {...r, rank: e.target.value}}))} data-testid={`r-rank-${a.id}`}/>
+                      <Input placeholder="Percentile (optional)" type="number" step="0.01" value={r.percentile} onChange={e=>setResultEditor(prev=>({...prev, [a.id]: {...r, percentile: e.target.value}}))} data-testid={`r-perc-${a.id}`}/>
+                      <label className="text-sm flex items-center gap-2"><input type="checkbox" checked={!!r.publish} onChange={e=>setResultEditor(prev=>({...prev, [a.id]: {...r, publish: e.target.checked}}))} data-testid={`r-pub-${a.id}`}/>Publish (visible to student)</label>
+                      <textarea className="sm:col-span-3 border border-border rounded-md px-3 py-2 bg-background min-h-16" placeholder="Remarks (optional)" value={r.remarks} onChange={e=>setResultEditor(prev=>({...prev, [a.id]: {...r, remarks: e.target.value}}))} data-testid={`r-rem-${a.id}`}/>
+                      <div className="sm:col-span-3 flex gap-2">
+                        <Button onClick={() => saveResult(a.id, r)} className="bg-primary text-primary-foreground" data-testid={`r-save-${a.id}`}><Save size={14}/>{r.publish ? "Save & Publish" : "Save Draft"}</Button>
+                        <Button variant="outline" onClick={() => setResultEditor(prev => ({ ...prev, [a.id]: undefined }))}>Cancel</Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </TabsContent>
 
@@ -411,11 +461,14 @@ export default function AdminDashboard() {
         {/* Campaigns */}
         <TabsContent value="campaigns" className="mt-6">
           <div className="font-display font-bold text-lg mb-3">Scholarship Campaigns</div>
-          <form onSubmit={(e)=>{e.preventDefault(); post("/scholarships", newCampaign, ()=>setNewCampaign({title:"",description:"",exam_date:"",deadline:"",eligibility:"",active:true}), "Campaign");}} className="border border-border p-5 rounded-md grid sm:grid-cols-2 gap-3 mb-6">
+          <form onSubmit={(e)=>{e.preventDefault(); post("/scholarships", newCampaign, ()=>setNewCampaign({title:"",description:"",exam_date:"",deadline:"",eligibility:"",venue:"",exam_time:"10:00 AM",total_marks:100,active:true,is_featured:false}), "Campaign");}} className="border border-border p-5 rounded-md grid sm:grid-cols-2 gap-3 mb-6">
             <Input placeholder="Title (e.g. NST 2026)" value={newCampaign.title} onChange={e=>setNewCampaign({...newCampaign, title:e.target.value})} required data-testid="ncm-title"/>
             <Input placeholder="Eligibility" value={newCampaign.eligibility} onChange={e=>setNewCampaign({...newCampaign, eligibility:e.target.value})} required data-testid="ncm-elig"/>
             <Input placeholder="Exam date (YYYY-MM-DD)" value={newCampaign.exam_date} onChange={e=>setNewCampaign({...newCampaign, exam_date:e.target.value})} required data-testid="ncm-exam"/>
             <Input placeholder="Deadline (YYYY-MM-DD)" value={newCampaign.deadline} onChange={e=>setNewCampaign({...newCampaign, deadline:e.target.value})} required data-testid="ncm-dead"/>
+            <Input placeholder="Exam time (e.g. 10:00 AM)" value={newCampaign.exam_time} onChange={e=>setNewCampaign({...newCampaign, exam_time:e.target.value})} data-testid="ncm-time"/>
+            <Input placeholder="Total marks" type="number" value={newCampaign.total_marks} onChange={e=>setNewCampaign({...newCampaign, total_marks:Number(e.target.value)})} data-testid="ncm-marks"/>
+            <Input placeholder="Venue (full address)" value={newCampaign.venue} onChange={e=>setNewCampaign({...newCampaign, venue:e.target.value})} className="sm:col-span-2" data-testid="ncm-venue"/>
             <textarea className="sm:col-span-2 border border-border rounded-md px-3 py-2 bg-background min-h-20" placeholder="Description" value={newCampaign.description} onChange={e=>setNewCampaign({...newCampaign, description:e.target.value})} required data-testid="ncm-desc"/>
             <label className="text-sm flex items-center gap-2"><input type="checkbox" checked={newCampaign.active} onChange={e=>setNewCampaign({...newCampaign, active:e.target.checked})}/>Active</label>
             <Button type="submit" className="bg-primary text-primary-foreground" data-testid="ncm-submit"><Plus size={14}/>Launch Campaign</Button>

@@ -24,7 +24,7 @@ from email_client import (
     email_enrollment_received, email_scholarship_received,
     email_job_app_received, email_admin_notification,
 )
-from pdf_client import admit_card_pdf
+from pdf_client import admit_card_pdf, result_card_pdf
 
 ALLOWED_UPLOAD_TYPES = {
     "application/pdf": "pdf",
@@ -143,7 +143,20 @@ class ScholarshipApplicationIn(BaseModel):
     standard: str
     target_exam: str
     city: str
-    scholarship_id: Optional[str] = None
+    scholarship_id: str  # REQUIRED — must reference an admin-uploaded campaign
+
+class ScholarshipResultIn(BaseModel):
+    marks_obtained: float
+    total_marks: float = 100
+    rank: Optional[int] = None
+    percentile: Optional[float] = None
+    scholarship_percentage: int  # 0-100
+    remarks: Optional[str] = None
+    publish: bool = False  # set true to make result publicly viewable
+
+class ScholarshipLookupIn(BaseModel):
+    phone: str
+    application_no: str
 
 class EnrollmentIn(BaseModel):
     course_id: str
@@ -378,16 +391,23 @@ async def delete_scholarship(sid: str, _admin = Depends(require_admin)):
 
 @api.post("/scholarship-applications")
 async def apply_scholarship(payload: ScholarshipApplicationIn, background: BackgroundTasks):
+    # Must reference an existing, active scholarship campaign
+    campaign = await db.scholarships.find_one({"id": payload.scholarship_id}, {"_id": 0})
+    if not campaign:
+        raise HTTPException(404, "Scholarship campaign not found")
+    if not campaign.get("active"):
+        raise HTTPException(400, "Scholarship campaign is closed")
     doc = payload.model_dump()
     doc["id"] = new_id()
     doc["application_no"] = "NEW-SCH-" + str(uuid.uuid4().int)[:8]
     doc["status"] = "pending"
+    doc["scholarship_title"] = campaign.get("title", "")
     doc["created_at"] = now_iso()
     await db.scholarship_applications.insert_one(doc)
     doc.pop("_id", None)
     background.add_task(email_scholarship_received, payload.email, payload.name, doc["application_no"], payload.target_exam)
     background.add_task(email_admin_notification, f"New scholarship application: {payload.name}",
-                       f"<p><b>{payload.name}</b> from {payload.school} ({payload.standard}) applied for <b>{payload.target_exam}</b> scholarship.<br/>App No: {doc['application_no']}</p>")
+                       f"<p><b>{payload.name}</b> from {payload.school} ({payload.standard}) applied for <b>{campaign.get('title','')}</b>.<br/>App No: {doc['application_no']}</p>")
     return doc
 
 @api.get("/scholarship-applications")
@@ -400,6 +420,54 @@ async def update_scholarship_status(aid: str, status: str = Query(...), _admin =
         raise HTTPException(400, "Invalid status")
     await db.scholarship_applications.update_one({"id": aid}, {"$set": {"status": status}})
     return {"ok": True}
+
+# ---------- Scholarship Result management ----------
+@api.put("/scholarship-applications/{aid}/result")
+async def set_scholarship_result(aid: str, payload: ScholarshipResultIn, _admin = Depends(require_admin)):
+    app_doc = await db.scholarship_applications.find_one({"id": aid}, {"_id": 0})
+    if not app_doc:
+        raise HTTPException(404, "Application not found")
+    pct = max(0, min(100, payload.scholarship_percentage))
+    update = {
+        "result_marks_obtained": payload.marks_obtained,
+        "result_total_marks": payload.total_marks,
+        "result_rank": payload.rank,
+        "result_percentile": payload.percentile,
+        "result_scholarship_percentage": pct,
+        "result_remarks": payload.remarks,
+        "result_published": bool(payload.publish),
+    }
+    if payload.publish:
+        update["result_published_at"] = now_iso()
+    await db.scholarship_applications.update_one({"id": aid}, {"$set": update})
+    return {"ok": True, **update}
+
+@api.post("/scholarship-applications/lookup")
+async def lookup_scholarship(payload: ScholarshipLookupIn):
+    app_doc = await db.scholarship_applications.find_one(
+        {"application_no": payload.application_no.strip(), "phone": payload.phone.strip()},
+        {"_id": 0}
+    )
+    if not app_doc:
+        raise HTTPException(404, "No application found with this number and phone")
+    # Hide result fields if not published
+    if not app_doc.get("result_published"):
+        for k in ("result_marks_obtained", "result_total_marks", "result_rank", "result_percentile", "result_scholarship_percentage", "result_remarks"):
+            app_doc.pop(k, None)
+    return app_doc
+
+@api.get("/scholarship-applications/mine")
+async def my_scholarship_applications(user: dict = Depends(get_current_user)):
+    """Logged-in students see scholarship apps tied to their email or phone."""
+    q = {"$or": [{"email": user.get("email")}]}
+    if user.get("phone"):
+        q["$or"].append({"phone": user["phone"]})
+    apps = await db.scholarship_applications.find(q, {"_id": 0}).sort("created_at", -1).to_list(50)
+    for a in apps:
+        if not a.get("result_published"):
+            for k in ("result_marks_obtained", "result_total_marks", "result_rank", "result_percentile", "result_scholarship_percentage", "result_remarks"):
+                a.pop(k, None)
+    return apps
 
 # ---------- Enrollments ----------
 @api.post("/enrollments")
@@ -647,20 +715,55 @@ async def admit_card(application_no: str):
     app_doc = await db.scholarship_applications.find_one({"application_no": application_no}, {"_id": 0})
     if not app_doc:
         raise HTTPException(404, "Application not found")
-    # exam_date best effort from latest active scholarship campaign
-    camp = await db.scholarships.find_one({"active": True}, {"_id": 0}, sort=[("created_at", -1)])
-    exam_date = (camp or {}).get("exam_date", "TBA")
+    campaign = None
+    if app_doc.get("scholarship_id"):
+        campaign = await db.scholarships.find_one({"id": app_doc["scholarship_id"]}, {"_id": 0})
+    if not campaign:
+        campaign = await db.scholarships.find_one({"active": True}, {"_id": 0}, sort=[("created_at", -1)])
     pdf_bytes = admit_card_pdf(
         application_no=application_no,
         name=app_doc.get("name", ""),
         school=app_doc.get("school", ""),
         standard=app_doc.get("standard", ""),
         target_exam=app_doc.get("target_exam", ""),
-        exam_date=exam_date,
-        center=f"Northend {app_doc.get('city', 'Srinagar')}",
+        exam_date=(campaign or {}).get("exam_date", "TBA"),
+        venue=(campaign or {}).get("venue") or f"Northend {app_doc.get('city', 'Srinagar')}",
+        exam_time=(campaign or {}).get("exam_time", "10:00 AM"),
+        scholarship_title=(campaign or {}).get("title") or app_doc.get("scholarship_title", "Scholarship Test"),
     )
     return Response(content=pdf_bytes, media_type="application/pdf",
                     headers={"Content-Disposition": f'attachment; filename="admit-card-{application_no}.pdf"'})
+
+# ---------- Scholarship result card PDF ----------
+@api.get("/scholarship-applications/{application_no}/result-card")
+async def result_card(application_no: str, phone: Optional[str] = None):
+    """Public download — needs phone match unless admin auth is in cookie."""
+    app_doc = await db.scholarship_applications.find_one({"application_no": application_no}, {"_id": 0})
+    if not app_doc:
+        raise HTTPException(404, "Application not found")
+    if not app_doc.get("result_published"):
+        raise HTTPException(403, "Result not yet published")
+    if phone and app_doc.get("phone") != phone.strip():
+        raise HTTPException(403, "Phone does not match application")
+    campaign = None
+    if app_doc.get("scholarship_id"):
+        campaign = await db.scholarships.find_one({"id": app_doc["scholarship_id"]}, {"_id": 0})
+    pdf_bytes = result_card_pdf(
+        application_no=application_no,
+        name=app_doc.get("name", ""),
+        school=app_doc.get("school", ""),
+        standard=app_doc.get("standard", ""),
+        target_exam=app_doc.get("target_exam", ""),
+        marks_obtained=app_doc.get("result_marks_obtained", 0),
+        total_marks=app_doc.get("result_total_marks", 100),
+        rank=app_doc.get("result_rank"),
+        percentile=app_doc.get("result_percentile"),
+        scholarship_percentage=app_doc.get("result_scholarship_percentage", 0),
+        remarks=app_doc.get("result_remarks"),
+        scholarship_title=(campaign or {}).get("title") or app_doc.get("scholarship_title", "Scholarship Test"),
+    )
+    return Response(content=pdf_bytes, media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="result-{application_no}.pdf"'})
 
 
 def export_excel(rows: list, sheet_name: str, filename: str):

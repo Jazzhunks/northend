@@ -7,11 +7,13 @@ export default function StudentDashboard() {
   const { user } = useAuth();
   const [enrollments, setEnrollments] = useState([]);
   const [notices, setNotices] = useState([]);
+  const [schApps, setSchApps] = useState([]);
 
   useEffect(() => {
     Promise.all([
       api.get("/enrollments/mine").then(r => setEnrollments(r.data)).catch(()=>{}),
       api.get("/notices").then(r => setNotices(r.data.slice(0, 5))),
+      api.get("/scholarship-applications/mine").then(r => setSchApps(r.data)).catch(()=>{}),
     ]);
   }, []);
 
@@ -68,6 +70,33 @@ export default function StudentDashboard() {
             ))}
           </div>
         </section>
+
+        {schApps.length > 0 && (
+          <section className="lg:col-span-12 border border-border rounded-md" data-testid="sch-apps-section">
+            <div className="p-5 border-b border-border font-display font-bold">My Scholarship Applications</div>
+            <div className="divide-y divide-border">
+              {schApps.map(a => (
+                <div key={a.id} className="p-5 flex flex-wrap items-center justify-between gap-3" data-testid={`sch-row-${a.id}`}>
+                  <div>
+                    <div className="font-mono text-xs text-muted-foreground">{a.application_no}</div>
+                    <div className="font-bold">{a.scholarship_title || a.target_exam}</div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 text-sm">
+                    {a.result_published ? (
+                      <>
+                        <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">★ {a.result_scholarship_percentage}% scholarship</span>
+                        <a href={`${process.env.REACT_APP_BACKEND_URL}/api/scholarship-applications/${a.application_no}/result-card?phone=${encodeURIComponent(a.phone)}`} target="_blank" rel="noreferrer" className="text-primary font-bold underline" data-testid={`dl-result-${a.id}`}>Download Result Card</a>
+                      </>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Result pending</span>
+                    )}
+                    <a href={`${process.env.REACT_APP_BACKEND_URL}/api/scholarship-applications/${a.application_no}/admit-card`} target="_blank" rel="noreferrer" className="text-muted-foreground text-xs underline">Admit Card</a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );

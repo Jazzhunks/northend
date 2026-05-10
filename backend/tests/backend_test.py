@@ -132,9 +132,12 @@ class TestAuth:
 # ---- Public submissions ----
 class TestPublicSubmissions:
     def test_scholarship_application(self):
+        scholarships = requests.get(f"{API}/scholarships", timeout=20).json()
+        active = next((s for s in scholarships if s.get("active")), scholarships[0])
         r = requests.post(f"{API}/scholarship-applications", json={
             "name": "TEST_App", "email": "t1@test.com", "phone": "9999900001",
-            "school": "TEST School", "standard": "12", "target_exam": "NEET", "city": "Srinagar"
+            "school": "TEST School", "standard": "12", "target_exam": "NEET", "city": "Srinagar",
+            "scholarship_id": active["id"]
         }, timeout=20)
         assert r.status_code == 200
         d = r.json()
@@ -272,9 +275,12 @@ class TestValidation:
         assert r.status_code == 400, f"expected 400 got {r.status_code}: {r.text}"
 
     def test_status_update_invalid_enum_scholarship(self, admin_token):
+        scholarships = requests.get(f"{API}/scholarships", timeout=20).json()
+        active = next((s for s in scholarships if s.get("active")), scholarships[0])
         sa = requests.post(f"{API}/scholarship-applications", json={
             "name": "TEST_AppS", "email": "ts@test.com", "phone": "9999900061",
-            "school": "S", "standard": "12", "target_exam": "NEET", "city": "Srinagar"
+            "school": "S", "standard": "12", "target_exam": "NEET", "city": "Srinagar",
+            "scholarship_id": active["id"]
         }, timeout=20).json()
         sid = sa["id"]
         r = requests.put(f"{API}/scholarship-applications/{sid}/status",

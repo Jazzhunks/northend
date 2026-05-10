@@ -14,7 +14,7 @@ export default function Centers() {
         <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/85 to-background"/>
         <div className="relative max-w-7xl mx-auto px-4 lg:px-8 py-20">
           <div className="text-xs uppercase tracking-[0.2em] font-bold text-primary mb-4">Centers</div>
-          <h1 className="font-display text-4xl lg:text-6xl font-black tracking-tighter">Six centers. One promise.<br/>The whole valley, covered.</h1>
+          <h1 className="font-display text-4xl lg:text-6xl font-black tracking-tighter">Four centers. One promise.<br/>The whole valley, covered.</h1>
         </div>
       </section>
 
