@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
+import { api, API_BASE } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { BookOpen, Bell, GraduationCap, Wallet } from "lucide-react";
 
@@ -85,12 +85,12 @@ export default function StudentDashboard() {
                     {a.result_published ? (
                       <>
                         <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">★ {a.result_scholarship_percentage}% scholarship</span>
-                        <a href={`${process.env.REACT_APP_BACKEND_URL}/api/scholarship-applications/${a.application_no}/result-card?phone=${encodeURIComponent(a.phone)}`} target="_blank" rel="noreferrer" className="text-primary font-bold underline" data-testid={`dl-result-${a.id}`}>Download Result Card</a>
+                        <a href={`${API_BASE}/scholarship-applications/${a.application_no}/result-card?phone=${encodeURIComponent(a.phone)}`} target="_blank" rel="noreferrer" className="text-primary font-bold underline" data-testid={`dl-result-${a.id}`}>Download Result Card</a>
                       </>
                     ) : (
                       <span className="text-xs text-muted-foreground">Result pending</span>
                     )}
-                    <a href={`${process.env.REACT_APP_BACKEND_URL}/api/scholarship-applications/${a.application_no}/admit-card`} target="_blank" rel="noreferrer" className="text-muted-foreground text-xs underline">Admit Card</a>
+                    <a href={`${API_BASE}/scholarship-applications/${a.application_no}/admit-card`} target="_blank" rel="noreferrer" className="text-muted-foreground text-xs underline">Admit Card</a>
                   </div>
                 </div>
               ))}

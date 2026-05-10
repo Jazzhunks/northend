@@ -34,6 +34,11 @@ Modern, premium, mobile-first educational website for Northend Educational World
 - Idempotent seed: backfills features/syllabus/faculty on legacy course titles
 - pytest **74/74 passing**
 
+### ✅ v1.3 (2026-02-10): Production deployment fixes
+- **Backend**: `server.py` MongoDB resolver now prefers `client.get_default_database()` (Atlas URIs embed a default DB), falling back to `DB_NAME` for local dev. Fixes Atlas auth-error on production deploy.
+- **Frontend**: removed all hardcoded `process.env.REACT_APP_BACKEND_URL` outside `lib/api.js`. `Scholarship.jsx` and `StudentDashboard.jsx` now use the centralised `API_BASE` from `lib/api.js`.
+- Verified: backend boots, `/api/scholarships` returns 200, scholarship page renders cleanly.
+
 ### ⏭ P1 Backlog
 - Brute-force lockout + per-IP rate limit on public POST endpoints (especially `/api/upload`)
 - Refer-a-Friend program (₹1,000 fee discount per converted referral)

@@ -37,7 +37,14 @@ MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 # ---------- Setup ----------
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+# Prefer the default database embedded in the connection URI (Atlas deployments inject one);
+# fall back to DB_NAME for local/dev environments where the URI has no default database.
+try:
+    db = client.get_default_database()
+    if db is None:
+        raise ValueError("no default database in MONGO_URL")
+except Exception:
+    db = client[os.environ['DB_NAME']]
 
 app = FastAPI(title="Northend Educational World API")
 api = APIRouter(prefix="/api")

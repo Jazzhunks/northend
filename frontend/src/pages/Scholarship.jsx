@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { api, formatError } from "@/lib/api";
+import { api, API_BASE, formatError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -58,7 +58,7 @@ export default function Scholarship() {
   const pct = calc.marks ? Math.min(Math.max(Math.round(Number(calc.marks)), 0), 100) : 0;
   const scholarshipPct = pct >= 90 ? 100 : pct >= 80 ? 75 : pct >= 70 ? 50 : pct >= 60 ? 25 : pct >= 50 ? 10 : 0;
 
-  const BACKEND = process.env.REACT_APP_BACKEND_URL;
+  const BACKEND = API_BASE;
   const selectedCampaign = campaigns.find(c => c.id === form.scholarship_id);
 
   return (
@@ -116,7 +116,7 @@ export default function Scholarship() {
                   <div className="font-mono text-2xl mt-4 p-4 bg-background border border-border rounded-md">{submitted.application_no}</div>
                   <p className="text-sm text-muted-foreground mt-4">Save this number along with your phone <b className="font-mono">{submitted.phone}</b> — you'll need both to view your result later.</p>
                   <div className="flex flex-wrap gap-2 mt-4">
-                    <a href={`${BACKEND}/api/scholarship-applications/${submitted.application_no}/admit-card`} target="_blank" rel="noreferrer">
+                    <a href={`${BACKEND}/scholarship-applications/${submitted.application_no}/admit-card`} target="_blank" rel="noreferrer">
                       <Button className="bg-primary text-primary-foreground" data-testid="download-admit-card"><Download size={14}/>Download Admit Card</Button>
                     </a>
                     <Button onClick={() => setSubmitted(null)} variant="outline" data-testid="another-app-btn">Submit another</Button>
@@ -223,10 +223,10 @@ export default function Scholarship() {
                   )}
 
                   <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
-                    <a href={`${BACKEND}/api/scholarship-applications/${resultData.application_no}/result-card?phone=${encodeURIComponent(resultData.phone)}`} target="_blank" rel="noreferrer">
+                    <a href={`${BACKEND}/scholarship-applications/${resultData.application_no}/result-card?phone=${encodeURIComponent(resultData.phone)}`} target="_blank" rel="noreferrer">
                       <Button className="bg-primary text-primary-foreground" data-testid="download-result-card"><FileText size={14}/>Download Result Card (PDF)</Button>
                     </a>
-                    <a href={`${BACKEND}/api/scholarship-applications/${resultData.application_no}/admit-card`} target="_blank" rel="noreferrer">
+                    <a href={`${BACKEND}/scholarship-applications/${resultData.application_no}/admit-card`} target="_blank" rel="noreferrer">
                       <Button variant="outline"><Download size={14}/>Admit Card</Button>
                     </a>
                   </div>
