@@ -11,10 +11,11 @@ const KASHMIR = "https://images.unsplash.com/photo-1606355792317-4dcadc93ed26?w=
 
 export default function Home() {
   const [courses, setCourses] = useState([]);
-  const [stats, setStats] = useState({ students_trained: 0, selections: 0, educators: 0, centers: 0 });
+  const [stats, setStats] = useState({ students_trained: 1323, selections: 100, educators: 52, centers: 5 });
   const [notices, setNotices] = useState([]);
   const [results, setResults] = useState([]);
   const [testimonials, setTestimonials] = useState([]);
+  const [featured, setFeatured] = useState(null);
 
   useEffect(() => {
     Promise.all([
@@ -23,6 +24,7 @@ export default function Home() {
       api.get("/notices").then(r => setNotices(r.data.slice(0, 3))),
       api.get("/results").then(r => setResults(r.data.slice(0, 6))),
       api.get("/testimonials").then(r => setTestimonials(r.data)),
+      api.get("/featured").then(r => setFeatured(r.data)),
     ]).catch(()=>{});
   }, []);
 
@@ -43,7 +45,7 @@ export default function Home() {
               <span className="text-primary">quality education.</span>
             </h1>
             <p className="mt-6 text-base lg:text-lg text-muted-foreground max-w-xl leading-relaxed">
-              NEET · IIT-JEE · Foundation · CBSE · JKBOSE — taught by India's best educators, anchored by 5 centers across the valley.
+              NEET · IIT-JEE · Foundation · CBSE · JKBOSE — taught by India's best educators, anchored by 4 centers across the valley.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link to="/enroll"><Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md h-12 px-6" data-testid="hero-enroll-btn">Enroll Now <ArrowRight size={16}/></Button></Link>
@@ -52,7 +54,7 @@ export default function Home() {
             </div>
             <div className="mt-10 flex items-center gap-6 text-xs text-muted-foreground">
               <div className="flex items-center gap-1"><Star size={14} className="fill-accent text-accent"/> 4.9 / 5 by 2,400+ parents</div>
-              <div className="hidden sm:flex items-center gap-1"><ShieldCheck size={14} className="text-primary"/> Trusted since 2018</div>
+              <div className="hidden sm:flex items-center gap-1"><ShieldCheck size={14} className="text-primary"/> Trusted since 2023</div>
             </div>
           </div>
           <div className="lg:col-span-5 relative">
@@ -60,9 +62,17 @@ export default function Home() {
               <img src={HERO_IMG} alt="Kashmir classroom" className="w-full h-full object-cover"/>
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"/>
               <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-sm rounded-md p-4 border border-white/40">
-                <div className="text-xs uppercase tracking-[0.18em] text-primary font-bold mb-1">Featured</div>
-                <div className="font-display font-bold">NEET Scholarship Test 2026</div>
-                <div className="text-xs text-muted-foreground mt-1">Up to 100% fee waiver · Feb 28</div>
+                <div className="text-xs uppercase tracking-[0.18em] text-primary font-bold mb-1">{featured ? `★ Featured ${featured.kind}` : "Featured"}</div>
+                <div className="font-display font-bold">{featured?.title || "NEET Scholarship Test 2026"}</div>
+                <div className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                  {featured?.kind === "scholarship"
+                    ? `Exam ${featured.exam_date} · Deadline ${featured.deadline}`
+                    : featured?.kind === "job"
+                    ? `${featured.department} · ${featured.location}`
+                    : featured?.kind === "notice"
+                    ? (featured.content?.slice(0, 80) + (featured.content?.length > 80 ? "…" : ""))
+                    : "Up to 90% fee waiver · Feb 28"}
+                </div>
               </div>
             </div>
           </div>

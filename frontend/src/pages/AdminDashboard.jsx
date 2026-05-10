@@ -274,9 +274,18 @@ export default function AdminDashboard() {
             <Button type="submit" className="bg-primary text-primary-foreground" data-testid="nn-submit"><Plus size={14}/>Post</Button>
           </form>
           <div className="space-y-2">{notices.map(n => (
-            <div key={n.id} className="border border-border p-4 rounded-md flex items-start justify-between gap-3">
-              <div><div className="text-xs uppercase tracking-[0.18em] font-bold text-primary">{n.category}</div><div className="font-bold">{n.title}</div></div>
-              <Button size="sm" variant="outline" onClick={() => del(`/notices/${n.id}`, "notice")} data-testid={`del-notice-${n.id}`}><Trash2 size={14}/></Button>
+            <div key={n.id} className={`border ${n.is_featured ? "border-accent ring-1 ring-accent/30" : "border-border"} p-4 rounded-md flex items-start justify-between gap-3`}>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <div className="text-xs uppercase tracking-[0.18em] font-bold text-primary">{n.category}</div>
+                  {n.is_featured && <span className="text-[10px] uppercase tracking-wider bg-accent text-accent-foreground px-2 py-0.5 rounded font-bold">★ Featured</span>}
+                </div>
+                <div className="font-bold mt-1">{n.title}</div>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button size="sm" variant={n.is_featured ? "default" : "outline"} onClick={() => n.is_featured ? clearFeatured() : setFeatured("notice", n.id)} data-testid={`feat-notice-${n.id}`}>{n.is_featured ? "Unfeature" : "Feature"}</Button>
+                <Button size="sm" variant="outline" onClick={() => del(`/notices/${n.id}`, "notice")} data-testid={`del-notice-${n.id}`}><Trash2 size={14}/></Button>
+              </div>
             </div>
           ))}</div>
         </TabsContent>
@@ -295,9 +304,18 @@ export default function AdminDashboard() {
             <Button type="submit" className="bg-primary text-primary-foreground" data-testid="nj-submit"><Plus size={14}/>Post Job</Button>
           </form>
           <div className="space-y-2">{jobs.map(j => (
-            <div key={j.id} className="border border-border p-4 rounded-md flex items-center justify-between">
-              <div><div className="font-bold">{j.title}</div><div className="text-xs text-muted-foreground">{j.department} · {j.location}</div></div>
-              <Button size="sm" variant="outline" onClick={() => del(`/jobs/${j.id}`, "job")} data-testid={`del-job-${j.id}`}><Trash2 size={14}/></Button>
+            <div key={j.id} className={`border ${j.is_featured ? "border-accent ring-1 ring-accent/30" : "border-border"} p-4 rounded-md flex items-center justify-between`}>
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="font-bold">{j.title}</div>
+                  {j.is_featured && <span className="text-[10px] uppercase tracking-wider bg-accent text-accent-foreground px-2 py-0.5 rounded font-bold">★ Featured</span>}
+                </div>
+                <div className="text-xs text-muted-foreground">{j.department} · {j.location}</div>
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" variant={j.is_featured ? "default" : "outline"} onClick={() => j.is_featured ? clearFeatured() : setFeatured("job", j.id)} data-testid={`feat-job-${j.id}`}>{j.is_featured ? "Unfeature" : "Feature"}</Button>
+                <Button size="sm" variant="outline" onClick={() => del(`/jobs/${j.id}`, "job")} data-testid={`del-job-${j.id}`}><Trash2 size={14}/></Button>
+              </div>
             </div>
           ))}</div>
         </TabsContent>
@@ -393,13 +411,19 @@ export default function AdminDashboard() {
             <Button type="submit" className="bg-primary text-primary-foreground" data-testid="ncm-submit"><Plus size={14}/>Launch Campaign</Button>
           </form>
           <div className="space-y-2">{campaigns.map(c => (
-            <div key={c.id} className="border border-border p-4 rounded-md flex items-start justify-between gap-3">
-              <div>
-                <div className="text-xs uppercase tracking-[0.18em] font-bold text-primary">{c.active ? "Live" : "Closed"}</div>
+            <div key={c.id} className={`border ${c.is_featured ? "border-accent ring-1 ring-accent/30" : "border-border"} p-4 rounded-md flex items-start justify-between gap-3`}>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <div className="text-xs uppercase tracking-[0.18em] font-bold text-primary">{c.active ? "Live" : "Closed"}</div>
+                  {c.is_featured && <span className="text-[10px] uppercase tracking-wider bg-accent text-accent-foreground px-2 py-0.5 rounded font-bold">★ Featured</span>}
+                </div>
                 <div className="font-bold">{c.title}</div>
                 <div className="text-xs text-muted-foreground mt-1">Exam {c.exam_date} · Deadline {c.deadline}</div>
               </div>
-              <Button size="sm" variant="outline" onClick={() => del(`/scholarships/${c.id}`, "campaign")} data-testid={`del-camp-${c.id}`}><Trash2 size={14}/></Button>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button size="sm" variant={c.is_featured ? "default" : "outline"} onClick={() => c.is_featured ? clearFeatured() : setFeatured("scholarship", c.id)} data-testid={`feat-camp-${c.id}`}>{c.is_featured ? "Unfeature" : "Feature"}</Button>
+                <Button size="sm" variant="outline" onClick={() => del(`/scholarships/${c.id}`, "campaign")} data-testid={`del-camp-${c.id}`}><Trash2 size={14}/></Button>
+              </div>
             </div>
           ))}</div>
         </TabsContent>

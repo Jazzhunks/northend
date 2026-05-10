@@ -133,6 +133,7 @@ class ScholarshipIn(BaseModel):
     deadline: str
     eligibility: str
     active: bool = True
+    is_featured: bool = False
 
 class ScholarshipApplicationIn(BaseModel):
     name: str
@@ -161,6 +162,7 @@ class JobIn(BaseModel):
     description: str
     requirements: List[str] = []
     active: bool = True
+    is_featured: bool = False
 
 class JobApplicationIn(BaseModel):
     name: str
@@ -179,6 +181,7 @@ class NoticeIn(BaseModel):
     content: str
     category: str = "General"
     pinned: bool = False
+    is_featured: bool = False
 
 class ResultIn(BaseModel):
     student_name: str
@@ -276,6 +279,43 @@ async def stats():
         "enrollments": enrollments,
     }
 
+# ---------- Featured highlight (single across notices/jobs/scholarships) ----------
+FEATURED_COLLECTIONS = ["notices", "jobs", "scholarships"]
+
+async def _clear_featured_except(keep_coll: str | None, keep_id: str | None):
+    """Set is_featured=False on every doc in the three collections except (keep_coll, keep_id)."""
+    for coll in FEATURED_COLLECTIONS:
+        q = {"is_featured": True}
+        if coll == keep_coll and keep_id:
+            q["id"] = {"$ne": keep_id}
+        await db[coll].update_many(q, {"$set": {"is_featured": False}})
+
+@api.get("/featured")
+async def get_featured():
+    for coll, kind in [("notices", "notice"), ("jobs", "job"), ("scholarships", "scholarship")]:
+        doc = await db[coll].find_one({"is_featured": True}, {"_id": 0})
+        if doc:
+            doc["kind"] = kind
+            return doc
+    return None
+
+@api.post("/admin/feature")
+async def set_featured(kind: str = Query(...), id: str = Query(...), _admin = Depends(require_admin)):
+    """Mark exactly one item as featured across notices/jobs/scholarships. Pass kind=clear to unfeature all."""
+    if kind == "clear":
+        await _clear_featured_except(None, None)
+        return {"ok": True, "featured": None}
+    coll_map = {"notice": "notices", "job": "jobs", "scholarship": "scholarships"}
+    coll = coll_map.get(kind)
+    if not coll:
+        raise HTTPException(400, "kind must be notice|job|scholarship|clear")
+    target = await db[coll].find_one({"id": id})
+    if not target:
+        raise HTTPException(404, f"{kind} not found")
+    await _clear_featured_except(coll, id)
+    await db[coll].update_one({"id": id}, {"$set": {"is_featured": True}})
+    return {"ok": True, "kind": kind, "id": id}
+
 # ---------- Courses ----------
 @api.get("/courses")
 async def list_courses(category: Optional[str] = None, featured: Optional[bool] = None):
@@ -319,11 +359,17 @@ async def list_scholarships():
 @api.post("/scholarships")
 async def create_scholarship(payload: ScholarshipIn, _admin = Depends(require_admin)):
     doc = payload.model_dump(); doc["id"] = new_id(); doc["created_at"] = now_iso()
-    await db.scholarships.insert_one(doc); doc.pop("_id", None); return doc
+    await db.scholarships.insert_one(doc)
+    if doc.get("is_featured"):
+        await _clear_featured_except("scholarships", doc["id"])
+    doc.pop("_id", None); return doc
 
 @api.put("/scholarships/{sid}")
 async def update_scholarship(sid: str, payload: ScholarshipIn, _admin = Depends(require_admin)):
-    await db.scholarships.update_one({"id": sid}, {"$set": payload.model_dump()})
+    data = payload.model_dump()
+    await db.scholarships.update_one({"id": sid}, {"$set": data})
+    if data.get("is_featured"):
+        await _clear_featured_except("scholarships", sid)
     return await db.scholarships.find_one({"id": sid}, {"_id": 0})
 
 @api.delete("/scholarships/{sid}")
@@ -405,11 +451,17 @@ async def list_all_jobs(_admin = Depends(require_admin)):
 @api.post("/jobs")
 async def create_job(payload: JobIn, _admin = Depends(require_admin)):
     doc = payload.model_dump(); doc["id"] = new_id(); doc["created_at"] = now_iso()
-    await db.jobs.insert_one(doc); doc.pop("_id", None); return doc
+    await db.jobs.insert_one(doc)
+    if doc.get("is_featured"):
+        await _clear_featured_except("jobs", doc["id"])
+    doc.pop("_id", None); return doc
 
 @api.put("/jobs/{jid}")
 async def update_job(jid: str, payload: JobIn, _admin = Depends(require_admin)):
-    await db.jobs.update_one({"id": jid}, {"$set": payload.model_dump()})
+    data = payload.model_dump()
+    await db.jobs.update_one({"id": jid}, {"$set": data})
+    if data.get("is_featured"):
+        await _clear_featured_except("jobs", jid)
     return await db.jobs.find_one({"id": jid}, {"_id": 0})
 
 @api.delete("/jobs/{jid}")
@@ -448,11 +500,17 @@ async def list_notices():
 @api.post("/notices")
 async def create_notice(payload: NoticeIn, _admin = Depends(require_admin)):
     doc = payload.model_dump(); doc["id"] = new_id(); doc["created_at"] = now_iso()
-    await db.notices.insert_one(doc); doc.pop("_id", None); return doc
+    await db.notices.insert_one(doc)
+    if doc.get("is_featured"):
+        await _clear_featured_except("notices", doc["id"])
+    doc.pop("_id", None); return doc
 
 @api.put("/notices/{nid}")
 async def update_notice(nid: str, payload: NoticeIn, _admin = Depends(require_admin)):
-    await db.notices.update_one({"id": nid}, {"$set": payload.model_dump()})
+    data = payload.model_dump()
+    await db.notices.update_one({"id": nid}, {"$set": data})
+    if data.get("is_featured"):
+        await _clear_featured_except("notices", nid)
     return await db.notices.find_one({"id": nid}, {"_id": 0})
 
 @api.delete("/notices/{nid}")

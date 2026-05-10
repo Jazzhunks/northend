@@ -107,8 +107,7 @@ function Footer() {
       <div className="max-w-7xl mx-auto px-4 lg:px-8 py-14 grid grid-cols-1 md:grid-cols-4 gap-10">
         <div>
           <div className="flex items-center gap-2 mb-4">
-            <div className="h-9 w-9 bg-primary text-primary-foreground grid place-items-center rounded-md"><GraduationCap size={20} /></div>
-            <div className="font-display font-black">Northend</div>
+            <div className="font-display font-black">Northend Educational World</div>
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
             Authorized Unacademy franchise partner. Empowering Kashmir's future through quality education across NEET, IIT-JEE, Foundation, CBSE and JKBOSE.
@@ -123,9 +122,9 @@ function Footer() {
         <div>
           <div className="text-xs uppercase tracking-[0.2em] font-bold text-primary mb-4">Reach Us</div>
           <ul className="space-y-3 text-sm text-muted-foreground">
-            <li className="flex items-start gap-2"><MapPin size={16} className="mt-0.5"/> Lal Chowk, Srinagar, J&K – 190001</li>
-            <li className="flex items-center gap-2"><Phone size={16}/> +91-9876500001</li>
-            <li className="flex items-center gap-2"><Mail size={16}/> hello@northend.edu</li>
+            <li className="flex items-start gap-2"><MapPin size={16} className="mt-0.5"/> I G ROAD, Parray Pora, Srinagar, Jammu and Kashmir 190005</li>
+            <li className="flex items-center gap-2"><Phone size={16}/> +91-8766238623</li>
+            <li className="flex items-center gap-2"><Mail size={16}/> info@northendedu.com</li>
           </ul>
         </div>
         <div>
@@ -147,7 +146,7 @@ function Footer() {
 function WhatsAppFab() {
   return (
     <a
-      href="https://wa.me/919876500001?text=Hi%20Northend%2C%20I%20want%20to%20know%20about%20your%20courses"
+      href="https://wa.me/917006149481?text=Hi%20Northend%2C%20I%20want%20to%20know%20about%20your%20courses"
       target="_blank" rel="noreferrer"
       data-testid="floating-whatsapp"
       className="fixed bottom-6 right-6 z-40 h-14 w-14 grid place-items-center rounded-full bg-[#25D366] text-white shadow-lg hover:scale-105 transition"

@@ -21,10 +21,10 @@ export default function Contact() {
           <h1 className="font-display text-4xl lg:text-5xl font-black tracking-tighter">Talk to a counselor.</h1>
           <p className="mt-4 text-muted-foreground">We respond within a few hours, six days a week.</p>
           <div className="mt-8 space-y-4 text-sm">
-            <div className="flex items-center gap-3"><div className="h-10 w-10 grid place-items-center bg-primary/10 text-primary rounded-md"><Phone size={18}/></div>+91-9876500001</div>
-            <div className="flex items-center gap-3"><div className="h-10 w-10 grid place-items-center bg-primary/10 text-primary rounded-md"><Mail size={18}/></div>hello@northend.edu</div>
-            <div className="flex items-center gap-3"><div className="h-10 w-10 grid place-items-center bg-primary/10 text-primary rounded-md"><MapPin size={18}/></div>Lal Chowk, Srinagar, J&K</div>
-            <a href="https://wa.me/919876500001" target="_blank" rel="noreferrer" className="flex items-center gap-3 hover:text-primary"><div className="h-10 w-10 grid place-items-center bg-[#25D366]/10 text-[#25D366] rounded-md"><MessageCircle size={18}/></div>Chat on WhatsApp</a>
+            <div className="flex items-center gap-3"><div className="h-10 w-10 grid place-items-center bg-primary/10 text-primary rounded-md"><Phone size={18}/></div>+91-8766238623</div>
+            <div className="flex items-center gap-3"><div className="h-10 w-10 grid place-items-center bg-primary/10 text-primary rounded-md"><Mail size={18}/></div>info@northendedu.com</div>
+            <div className="flex items-center gap-3"><div className="h-10 w-10 grid place-items-center bg-primary/10 text-primary rounded-md"><MapPin size={18}/></div>I G ROAD, Parray Pora, Srinagar, Jammu and Kashmir 190005</div>
+            <a href="https://wa.me/917006149481" target="_blank" rel="noreferrer" className="flex items-center gap-3 hover:text-primary"><div className="h-10 w-10 grid place-items-center bg-[#25D366]/10 text-[#25D366] rounded-md"><MessageCircle size={18}/></div>Chat on WhatsApp</a>
           </div>
         </div>
         <div className="lg:col-span-7">

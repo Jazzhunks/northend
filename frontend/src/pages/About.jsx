@@ -7,7 +7,7 @@ export default function About() {
       <section className="max-w-7xl mx-auto px-4 lg:px-8 pt-16 pb-12">
         <div className="text-xs uppercase tracking-[0.2em] font-bold text-primary mb-4">About Us</div>
         <h1 className="font-display text-4xl lg:text-6xl font-black tracking-tighter max-w-4xl">A franchise born from one promise — bring India's best teaching to Kashmir.</h1>
-        <p className="mt-6 text-lg text-muted-foreground max-w-3xl">Northend Educational World is the authorized Unacademy partner for the Kashmir region — operating 6 centers and serving thousands of students preparing for NEET, IIT-JEE, Foundation, CBSE and JKBOSE exams.</p>
+        <p className="mt-6 text-lg text-muted-foreground max-w-3xl">Northend Educational World is the authorized Unacademy partner for the Kashmir region — operating 4 centers and serving thousands of students preparing for NEET, IIT-JEE, Foundation, CBSE and JKBOSE exams.</p>
       </section>
 
       <section className="border-y border-border bg-secondary/30">
@@ -30,10 +30,11 @@ export default function About() {
         <SectionHeader overline="Partnership" title="Authorized franchise of Unacademy." subtitle="We bring Unacademy's national curriculum, top educators and assessment systems — directly to Kashmir, with on-ground mentorship from local academic leaders."/>
         <div className="grid md:grid-cols-4 gap-4 mt-8">
           {[
-            ["2018", "Founded in Srinagar"],
-            ["2020", "Unacademy partnership"],
-            ["2022", "Expanded to 6 centers"],
-            ["2025", "12,000+ students"],
+            ["2022", "Founded in Srinagar"],
+            ["2023", "Unacademy partnership"],
+            ["2025", "Expanded to 3 centers"],
+            ["2026", "Expanded to 4 centers"],
+            
           ].map(([year, txt]) => (
             <div key={year} className="border border-border p-6 rounded-md">
               <div className="font-display text-3xl font-black text-primary">{year}</div>
