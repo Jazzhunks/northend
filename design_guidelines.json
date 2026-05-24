@@ -1,111 +1,164 @@
 {
-  "theme": "light",
-  "archetype": "Archetype 4 (Swiss & High-Contrast)",
-  "vibe": "Elite, authoritative, outcome-oriented, minimalist, high-trust",
-  "colors": {
-    "background": "#FFFFFF",
-    "surface": "#F8FAFC",
-    "surface_glass": "rgba(255, 255, 255, 0.7)",
-    "primary": "#002FA7",
-    "primary_hover": "#001F70",
-    "accent": "#FFC107",
-    "text_primary": "#0F172A",
-    "text_secondary": "#475569",
-    "border": "#E2E8F0",
-    "success": "#10B981",
-    "error": "#EF4444"
+  "theme_and_archetype": {
+    "primary_theme": "Dark",
+    "adaptive_theme": "Light",
+    "archetype": "Archetype 5 (Luxury) mixed with Archetype 4 (Swiss & High-Contrast)",
+    "rationale": "The requirement for a 'cinematic, futuristic, premium luxury edtech' experience with a 'spatial UI' aligns perfectly with a dark-first luxury archetype. It breaks the standard organic/light edtech mold to position Northend Educational World as a premium, next-generation Apple/Tesla-level educational brand."
+  },
+  "brand_dna": {
+    "name": "Northend Educational World",
+    "core_identity": "Authorised Unacademy franchise for Kashmir, India",
+    "categories": ["NEET", "IIT-JEE", "Foundation", "CBSE", "JKBOSE"],
+    "vibe": "Prestige, highly focused, futuristic command centre, aspirational, cinematic"
+  },
+  "color_system": {
+    "dark_mode": {
+      "background": "#020617",
+      "surface": "rgba(255, 255, 255, 0.03)",
+      "surface_elevated": "rgba(255, 255, 255, 0.08)",
+      "primary": "#002FA7",
+      "primary_glow": "rgba(0, 47, 167, 0.4)",
+      "accent": "#FFC107",
+      "accent_glow": "rgba(255, 193, 7, 0.3)",
+      "text_primary": "#F8FAFC",
+      "text_secondary": "#94A3B8",
+      "border": "rgba(255, 255, 255, 0.1)"
+    },
+    "light_mode": {
+      "background": "#FAFAFA",
+      "surface": "#FFFFFF",
+      "surface_elevated": "#F1F5F9",
+      "primary": "#002FA7",
+      "primary_glow": "rgba(0, 47, 167, 0.15)",
+      "accent": "#FFC107",
+      "accent_glow": "rgba(255, 193, 7, 0.1)",
+      "text_primary": "#0F172A",
+      "text_secondary": "#475569",
+      "border": "rgba(0, 0, 0, 0.05)"
+    },
+    "rules": {
+      "gradient_usage": "Strictly limited to text-clipping for key headlines or subtle background glowing orbs. NO full-screen gradients. Use glass textures and particle fields instead.",
+      "glassmorphism": "Dark mode glass must have border-white/10 and backdrop-blur-2xl. Light mode glass uses border-black/5 and backdrop-blur-xl."
+    }
   },
   "typography": {
-    "heading_font": "Cabinet Grotesk",
-    "body_font": "IBM Plex Sans",
-    "font_weights": {
-      "light": 300,
-      "regular": 400,
-      "medium": 500,
-      "bold": 700,
-      "black": 900
+    "font_pairings": {
+      "display": {
+        "family": "'Outfit', sans-serif",
+        "usage": "Headlines, Impact numbers, Hero titles",
+        "weights": [300, 500, 700],
+        "tracking": "tracking-tight (-0.02em to -0.04em)"
+      },
+      "body": {
+        "family": "'Manrope', sans-serif",
+        "usage": "Body copy, UI elements, Dashboard widgets",
+        "weights": [400, 500, 600],
+        "tracking": "tracking-normal"
+      }
     },
-    "scales": {
-      "h1": "text-4xl sm:text-5xl lg:text-6xl tracking-tighter leading-none font-black",
-      "h2": "text-2xl sm:text-3xl lg:text-4xl tracking-tight leading-tight font-bold",
-      "h3": "text-xl sm:text-2xl tracking-tight font-bold",
-      "h4": "text-lg sm:text-xl font-medium",
+    "scale": {
+      "h1": "text-5xl sm:text-6xl lg:text-7xl font-light tracking-tighter",
+      "h2": "text-3xl sm:text-4xl lg:text-5xl font-medium tracking-tight",
+      "h3": "text-2xl sm:text-3xl font-medium tracking-tight",
       "body": "text-base leading-relaxed",
-      "small": "text-sm",
-      "overline": "text-xs tracking-[0.2em] uppercase font-bold text-primary"
+      "overline": "text-xs font-bold uppercase tracking-[0.2em] text-accent"
     }
   },
   "spacing_and_layout": {
-    "general": "Generous spacing. p-8, p-12, p-16 for structural sections. Containers with borders must use internal padding p-8.",
-    "marketing_grid": "Mode A: The Tetris Grid (Asymmetric Bento). grid-cols-1 md:grid-cols-8 lg:grid-cols-12, gap-8.",
-    "dashboard_grid": "Mode B: The Control Room Grid. grid-cols-1 md:grid-cols-3 lg:grid-cols-4, gap-4. Strict data density.",
-    "border_radius": "rounded-none or max rounded-md (8px) for a strict, disciplined academic feel."
+    "marketing_pages": {
+      "grid": "Bento Grid Protocol: MODE A ('Tetris' Grid). Asymmetrical 12-column layouts with generous p-8 to p-16 paddings. Elements must overlap slightly using negative margins to create depth."
+    },
+    "dashboards": {
+      "grid": "Bento Grid Protocol: MODE B ('Control Room' Grid). Dense, pixel-perfect 4-column layouts. gap-4 or gap-6. All cards must stretch to fill vertical space identically (h-full)."
+    }
   },
-  "surface_strategies": {
-    "header": "Crystal Glassmorphism: backdrop-blur-xl bg-white/70, 1px inner border border-white/40.",
-    "dashboard_cards": "Grid Borders: flat background, border-collapse, subtle border-r border-b border-border/40, no shadow. Hover: slight lift, subtle shadow.",
-    "marketing_cards": "Neumorphism (Tactile): off-white bg, 1px sharp border-black/5, high-contrast text."
+  "motion_and_interaction": {
+    "scroll": "MANDATORY: @studio-freight/lenis for momentum scrolling on desktop.",
+    "page_transitions": "Framer Motion <AnimatePresence>. Cinematic dissolve: initial={opacity: 0, scale: 0.98}, animate={opacity: 1, scale: 1}, transition={duration: 0.8, ease: [0.16, 1, 0.3, 1]}.",
+    "hover_states": "Physical spring animations (stiffness: 400, damping: 30). Elevate elements with -translate-y-1 and intensify border/glow opacities.",
+    "scroll_triggers": "GSAP ScrollTrigger for pinning storytelling sections, fading in 3D assets, and parallax image depth."
   },
-  "motion_and_interactions": {
-    "hover_states": "ALWAYS explicitly set text color on hover. focus:ring-2 focus:ring-primary/50.",
-    "animations": "Scroll-triggered micro-interactions for statistics counters. Staggered entrance for course lists.",
-    "accessibility": "Respect prefers-reduced-motion. High contrast on focus states."
+  "3d_and_webgl_strategy": {
+    "libraries": "@react-three/fiber, @react-three/drei",
+    "desktop": "Full immersive R3F <Canvas>. Includes <Environment preset='city'>, <Float> wrappers for geometry, and <Points> for particle fields.",
+    "mobile_degrade": "CRITICAL: If window.innerWidth < 768px, unmount heavy R3F <Canvas> elements. Replace with Framer Motion 2.5D CSS parallax layers and background gradients. Ensure battery and performance are preserved on mid-tier Androids.",
+    "home_hero_scene": "A cinematic spatial environment featuring a subtle, slowly orbiting geometric mesh (like an abstract floating chinar leaf or a 'knowledge core' ring). Surrounded by a slow-moving particle field (amber dust). The camera tracks mouse movement slightly using useFrame."
   },
-  "components_instructions": {
-    "general": "Use raw HTML + Tailwind for creative marketing layouts (Hero, Bento Grids). Use Shadcn UI for forms, tabs, dropdowns, dashboards.",
-    "forms": "Use Shadcn Input, Select, Checkbox. High-contrast active states.",
-    "tables": "Shadcn Table for Results, Rank Lists, Admin CRUD. Striped rows for readability.",
-    "charts": "Shadcn Charts (Recharts) for Admin Dashboard analytics (selections, student growth).",
-    "navigation": "Sticky nav with solid background/glassmorphism (z-50). Mobile-native hamburger.",
-    "testing": "All interactive elements MUST have data-testid attributes (e.g., data-testid='enroll-now-btn')."
+  "component_specs": {
+    "CinematicHero": {
+      "structure": "Full viewport height. R3F Canvas strictly as a fixed background layer (-z-10). UI elements overlaid using absolute positioning. Heavy Outfit typography centered or asymmetrical.",
+      "ui": "Primary CTA uses a 'Tracing Beam' glowing border effect (Aceternity style)."
+    },
+    "CourseCard3D": {
+      "style": "Glassmorphism. bg-white/5, backdrop-blur-xl, border-white/10.",
+      "interaction": "On hover, Framer Motion handles a slight 3D tilt (rotateX, rotateY) tracking the mouse, while dropping a shadow-[0_0_30px_rgba(0,47,167,0.5)].",
+      "mobile": "Standard CSS hover, no 3D tilt on touch."
+    },
+    "StudentDashboard": {
+      "style": "Futuristic Command Centre. Uses 'Control Room' dense grid.",
+      "widgets": "Orbital progress rings (SVG or minimal R3F). Live notice feeds with seamless marquee scrolling. Course tiles are solid dark surface-elevated with sharp 1px borders."
+    },
+    "GlassPanel": {
+      "style": "Universal spatial UI container. backdrop-blur-2xl, background tint, 1px inner stroke.",
+      "usage": "Scholarship calculator, forms, login panels."
+    },
+    "ERP_Polished_Tile": {
+      "style": "Subtle premium layer. Light theme default. bg-white, shadow-sm, border-black/5. Soft Framer Motion entrance (opacity and slight Y translation). NO heavy 3D."
+    }
   },
-  "page_specific_guidelines": {
-    "home": "Anti-Design Hero with open lead capture or bold CTAs. Trust-first elements (numbers, selections) immediately visible. Generous whitespace.",
-    "scholarship_portal": "High visual hierarchy for registration form vs results. Use yellow accent for highlights.",
-    "dashboards": "Control Room Grid. Strict monochrome with primary color only for active/actionable elements. No unnecessary padding."
+  "page_by_page_treatments": {
+    "Home": "Cinematic R3F particle hero. Hover-physics course cards. 3D animated number counters for student impact.",
+    "About": "Scroll-triggered Lenis + GSAP storytelling. Parallax images of students/campus fading in against a deep navy spatial background.",
+    "Courses": "Grid of CourseCard3D components. Path streams (SVG dashed lines with marching ants animation) connecting learning phases.",
+    "Scholarship": "Immersive interactive experience. GlassPanel form overlaying a dark, moody background. Calculator feels like a Tesla config screen.",
+    "Centers": "3D Kashmir Map (React Globe GL or static R3F plane with glowing nodes). Nodes pulse in amber. Clicking a node flies the camera to the location.",
+    "Notices": "Clean, list-based. Terminal/Technical look with sharp borders.",
+    "Results": "Student success showcase. Masonry grid of testimonials. Images use black/white filter, turning full color on hover.",
+    "Jobs": "Clean, professional layout. Swiss High-Contrast styling.",
+    "Contact": "Spatial UI form in a GlassPanel.",
+    "Enroll & Login/Register": "Minimal distraction. Full-screen split layout. Left side: Abstract 3D slow-loop video/canvas. Right side: Glassmorphic form.",
+    "Student Dashboard": "The 'Command Centre'. Personal progress rings, holographic-style UI for upcoming classes.",
+    "ERP Backoffice": "Light mode, ultra-clean, data-dense. Uses Shadcn charts and standard crisp tables. Fast and functional."
   },
-  "media": {
-    "icons_library": "lucide-react",
+  "media_and_assets": {
+    "icon_library": "@phosphor-icons/react for Duotone weight (matches premium brand feel).",
     "image_urls": [
       {
-        "category": "hero_background",
-        "url": "https://images.unsplash.com/photo-1773499951138-8d52c966bedf?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTF8MHwxfHNlYXJjaHwyfHxtb2Rlcm4lMjBjbGFzc3Jvb20lMjBhcmNoaXRlY3R1cmV8ZW58MHx8fHwxNzc4NDA1MTM3fDA&ixlib=rb-4.1.0&q=85",
-        "description": "Modern reflective glass institute architecture, used as a subtle hero background with white/glass overlay"
+        "category": "Hero / Abstract 3D Vis",
+        "url": "https://static.prod-images.emergentagent.com/jobs/a45bd1d4-76f0-4af4-ad82-32d69559e47c/images/46ebb242bd9038d98536f51992665ba51e9d35e5ea4ec937f7a13a7f86d025ad.png",
+        "description": "Cinematic 3D abstract visualization of knowledge, glowing amber particles"
       },
       {
-        "category": "student_success_1",
-        "url": "https://images.unsplash.com/photo-1571260899304-425eee4c7efc?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NjZ8MHwxfHNlYXJjaHwxfHxzdHVkZW50cyUyMHN0dWR5aW5nJTIwaGFwcHl8ZW58MHx8fHwxNzc4NDA1MTM3fDA&ixlib=rb-4.1.0&q=85",
-        "description": "Student with textbook for testimonials or course features"
+        "category": "Map / Location Vis",
+        "url": "https://static.prod-images.emergentagent.com/jobs/a45bd1d4-76f0-4af4-ad82-32d69559e47c/images/230312d35883d78fdca09b1807924d56b32b32270033d6ea994a39b23a7d9883.png",
+        "description": "Futuristic holographic map of Kashmir region"
       },
       {
-        "category": "student_success_2",
-        "url": "https://images.pexels.com/photos/6147219/pexels-photo-6147219.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-        "description": "Group of students studying on campus"
+        "category": "Background Texture",
+        "url": "https://static.prod-images.emergentagent.com/jobs/a45bd1d4-76f0-4af4-ad82-32d69559e47c/images/5c93c0e890632060b8280986638a2259883df5beb81befb73f704772af1cc889.png",
+        "description": "Clean, premium glassmorphic UI background texture, deep navy blue"
       },
       {
-        "category": "classroom",
-        "url": "https://images.pexels.com/photos/29534728/pexels-photo-29534728.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-        "description": "Modern classroom seating"
+        "category": "Student Profile / Testimonial",
+        "url": "https://images.unsplash.com/photo-1617009762269-c062aaf6b3a0?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2Mzl8MHwxfHNlYXJjaHwyfHxpbmRpYW4lMjBzdHVkZW50JTIwc3R1ZHlpbmd8ZW58MHx8fHwxNzc5NjAwMTczfDA&ixlib=rb-4.1.0&q=85",
+        "description": "Indian student studying"
       },
       {
-        "category": "kashmir_landscape",
-        "url": "https://images.unsplash.com/photo-1606355792317-4dcadc93ed26?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MTJ8MHwxfHNlYXJjaHwxfHxrYXNobWlyJTIwbGFuZHNjYXBlJTIwc25vd3xlbnwwfHx8fDE3Nzg0MDUxNTB8MA&ixlib=rb-4.1.0&q=85",
-        "description": "Aerial view of snow-covered mountains, for localizing the centers/about sections"
+        "category": "Classroom / Study Vibe",
+        "url": "https://images.pexels.com/photos/16504588/pexels-photo-16504588.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Focused young woman reading at university"
       },
       {
-        "category": "scholarship",
-        "url": "https://images.unsplash.com/photo-1555967522-37949fc21dcb?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwxfHxncmFkdWF0aW9uJTIwY2FwJTIwZ29sZHxlbnwwfHx8fDE3Nzg0MDUxNTB8MA&ixlib=rb-4.1.0&q=85",
-        "description": "Student holding book, representing scholarship achievement"
+        "category": "Abstract Texture Fallback",
+        "url": "https://images.pexels.com/photos/6485524/pexels-photo-6485524.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Dark textured surface with shimmering highlights"
       }
     ]
   },
-  "instructions_to_main_agent": [
-    "Install fonts: `npm install @fontsource/cabinet-grotesk @fontsource/ibm-plex-sans` or use Google Fonts/local font files.",
-    "Do NOT use 'Inter', 'Roboto', or 'Open Sans' for headings.",
-    "Implement the 'Swiss & High-Contrast' aesthetic. Heavily rely on monochrome structure (white, grays, black) and use Primary Blue (#002FA7) strictly for actions/highlights.",
-    "Ensure the hero overlay on images is max bg-black/50 (dark mode) or bg-white/40 (light mode). Do not obscure images heavily.",
-    "For the 'Centers' page, weave in the 'kashmir_landscape' image.",
-    "Ensure dashboards use Shadcn components extensively and follow the Control Room Grid layout.",
-    "Ensure data-testid attributes are included on all CTAs, inputs, and major interaction points."
-  ]
+  "instructions_to_main_agent": {
+    "file_type_rule": "USE ONLY .js AND .jsx FILES. Do NOT create .ts or .tsx files.",
+    "testing": "CRITICAL: All interactive and key informational elements MUST include a 'data-testid' attribute (e.g., data-testid='hero-cta-button', data-testid='course-card-physics').",
+    "shadcn_usage": "Use Shadcn mostly for the ERP backoffice (where functionality > cinematic visuals) and for complex accessible logic (Dropdowns, Dialogs). For the main public site, build pure HTML/Tailwind/Framer elements for maximum creative control over glassmorphism and bento grids.",
+    "performance": "Ensure all R3F Canvas components are wrapped in <Suspense>. Monitor the auto-degrade mobile strategy meticulously."
+  }
 }
