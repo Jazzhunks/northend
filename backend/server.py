@@ -1215,6 +1215,10 @@ async def _run_initial_seed():
     })
 
 # ---------- App wiring ----------
+# Mount ERP module under /api/erp/*
+from erp_routes import build_erp_router, erp_seed  # noqa: E402
+erp_router = build_erp_router(db, get_current_user, hash_password, verify_password, require_admin)
+api.include_router(erp_router)
 app.include_router(api)
 
 # CORS: allow preview, production custom domain, and any extra comma-separated origins via env.
@@ -1248,6 +1252,7 @@ logging.basicConfig(level=logging.INFO)
 @app.on_event("startup")
 async def on_start():
     await seed()
+    await erp_seed(db, hash_password)
     await init_storage()
     logging.info("Northend backend ready.")
 

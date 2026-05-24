@@ -11,7 +11,7 @@ const KASHMIR = "https://images.unsplash.com/photo-1606355792317-4dcadc93ed26?w=
 
 export default function Home() {
   const [courses, setCourses] = useState([]);
-  const [stats, setStats] = useState({ students_trained: 1323, selections: 100, educators: 52, centers: 5 });
+  const [stats, setStats] = useState({ students_trained: 1323, selections: 100, educators: 52, centers: 4 });
   const [notices, setNotices] = useState([]);
   const [results, setResults] = useState([]);
   const [testimonials, setTestimonials] = useState([]);
@@ -228,7 +228,7 @@ export default function Home() {
           <div className="relative z-10 p-8 lg:p-12 text-primary-foreground h-full flex flex-col justify-end">
             <div className="text-xs uppercase tracking-[0.2em] font-bold text-accent mb-3">Made for Kashmir</div>
             <h3 className="font-display text-3xl font-black leading-tight">Built in the valley.<br/>Built for the valley.</h3>
-            <p className="mt-3 text-primary-foreground/80 text-sm">5 centers across Anantnag, Soura, Zakura and Parraypora — and growing.</p>
+            <p className="mt-3 text-primary-foreground/80 text-sm">4 centers across Anantnag, Soura, Zakura and Parraypora — and growing.</p>
             <Link to="/centers" className="mt-6"><Button variant="secondary" data-testid="see-centers-btn">See our centers <ArrowRight size={16}/></Button></Link>
           </div>
         </div>

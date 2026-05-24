@@ -18,6 +18,16 @@ import Register from "@/pages/Register";
 import StudentDashboard from "@/pages/StudentDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
 import Examiner from "@/pages/Examiner";
+import ErpLayout from "@/pages/erp/ErpLayout";
+import ErpDashboard from "@/pages/erp/ErpDashboard";
+import ErpStudents from "@/pages/erp/ErpStudents";
+import ErpStudentDetail from "@/pages/erp/ErpStudentDetail";
+import ErpPayments from "@/pages/erp/ErpPayments";
+import ErpExpenses from "@/pages/erp/ErpExpenses";
+import ErpLeads from "@/pages/erp/ErpLeads";
+import ErpStaff from "@/pages/erp/ErpStaff";
+import ErpBranches from "@/pages/erp/ErpBranches";
+import ErpAudit from "@/pages/erp/ErpAudit";
 
 function Protected({ children, role }) {
   const { user, loading } = useAuth();
@@ -34,6 +44,18 @@ export default function App() {
         <Toaster position="top-right" richColors />
         <Routes>
           <Route path="/examiner" element={<Examiner />} />
+          {/* ERP — separate console for staff (super_admin/manager/accountant/counsellor) */}
+          <Route path="/erp" element={<ErpLayout />}>
+            <Route index element={<ErpDashboard />} />
+            <Route path="students" element={<ErpStudents />} />
+            <Route path="students/:id" element={<ErpStudentDetail />} />
+            <Route path="payments" element={<ErpPayments />} />
+            <Route path="expenses" element={<ErpExpenses />} />
+            <Route path="leads" element={<ErpLeads />} />
+            <Route path="staff" element={<ErpStaff />} />
+            <Route path="branches" element={<ErpBranches />} />
+            <Route path="audit" element={<ErpAudit />} />
+          </Route>
           <Route element={<Layout />}>
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<About />} />
