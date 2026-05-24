@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
+import PageHero from "@/components/PageHero";
+import GlassPanel from "@/components/GlassPanel";
+import { CTAPrimary } from "@/components/Cinematic";
 import { api, formatError } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import FileUpload from "@/components/FileUpload";
 
 export default function Enroll() {
@@ -37,41 +38,53 @@ export default function Enroll() {
     } catch (e) { toast.error(formatError(e.response?.data?.detail)); }
   };
 
-  return (
-    <div className="max-w-4xl mx-auto px-4 lg:px-8 py-16" data-testid="enroll-page">
-      <div className="text-xs uppercase tracking-[0.2em] font-bold text-primary mb-4">Enrollment</div>
-      <h1 className="font-display text-4xl lg:text-5xl font-black tracking-tighter">Two minutes to your seat.</h1>
-      <p className="mt-3 text-muted-foreground">Submit this form and our admissions team will reach out within 24 hours.</p>
+  const inputCls = "w-full px-4 py-3 rounded-xl glass text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:border-accent/50 transition";
 
-      {submitted ? (
-        <div className="mt-10 border border-primary p-8 rounded-md bg-primary/5" data-testid="enroll-success">
-          <div className="text-xs uppercase tracking-[0.2em] font-bold text-primary">Enrollment received</div>
-          <h3 className="font-display text-2xl font-black mt-2">Receipt: <span className="font-mono">{submitted.receipt_no}</span></h3>
-          <p className="text-sm text-muted-foreground mt-3">Status: <span className="font-bold text-foreground">{submitted.status}</span>. We'll call you on {submitted.phone}.</p>
-          <Button className="mt-4" variant="outline" onClick={() => setSubmitted(null)}>Submit another</Button>
+  return (
+    <div data-testid="enroll-page">
+      <PageHero
+        eyebrow="Enrollment"
+        title="Two minutes to"
+        accent="your seat."
+        subtitle="Submit this form and our admissions team will reach out within 24 hours with batch details and fee plans."
+      />
+      <section className="relative pb-24 -mt-8">
+        <div className="max-w-3xl mx-auto px-4 lg:px-8">
+          {submitted ? (
+            <GlassPanel elevated className="p-8" data-testid="enroll-success">
+              <div className="text-[10px] uppercase tracking-[0.22em] font-bold text-accent">Enrollment received</div>
+              <h3 className="font-display text-3xl font-medium mt-3">Receipt: <span className="font-mono text-accent">{submitted.receipt_no}</span></h3>
+              <p className="text-sm text-muted-foreground mt-3 leading-relaxed">Status: <b className="text-foreground capitalize">{submitted.status}</b>. We'll call you on {submitted.phone}.</p>
+              <button onClick={() => setSubmitted(null)} className="mt-5 text-xs font-bold uppercase tracking-[0.18em] text-accent hover:underline">Submit another →</button>
+            </GlassPanel>
+          ) : (
+            <GlassPanel elevated className="p-7" as="form" onSubmit={submit}>
+              <div className="space-y-3">
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <input className={inputCls} placeholder="Full name" value={form.name} onChange={e => setForm({...form, name: e.target.value})} required data-testid="enr-name"/>
+                  <input className={inputCls} type="email" placeholder="Email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} required data-testid="enr-email"/>
+                  <input className={inputCls} placeholder="Phone" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} required data-testid="enr-phone"/>
+                  <input className={inputCls} placeholder="Address" value={form.address} onChange={e => setForm({...form, address: e.target.value})} required data-testid="enr-address"/>
+                  <select className={inputCls} value={form.course_id} onChange={e => setForm({...form, course_id: e.target.value})} data-testid="enr-course">
+                    {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                  </select>
+                  <select className={inputCls} value={form.center} onChange={e => setForm({...form, center: e.target.value})} data-testid="enr-center">
+                    {centers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div className="pt-2">
+                  <label className="text-[10px] uppercase tracking-[0.22em] font-bold text-muted-foreground mb-2 block">ID Proof (optional)</label>
+                  <FileUpload label="Upload Aadhaar / school ID (PDF / image)" testId="enr-id-upload"
+                    onUploaded={(f)=>setForm({...form, id_proof_url: f?.url || ""})}/>
+                </div>
+              </div>
+              <div className="mt-5">
+                <CTAPrimary type="submit" className="w-full justify-center" data-testid="enr-submit">Submit enrollment</CTAPrimary>
+              </div>
+            </GlassPanel>
+          )}
         </div>
-      ) : (
-        <form onSubmit={submit} className="mt-10 border border-border p-8 rounded-md space-y-4 bg-background">
-          <div className="grid sm:grid-cols-2 gap-3">
-            <Input placeholder="Full name" value={form.name} onChange={e => setForm({...form, name: e.target.value})} required data-testid="enr-name"/>
-            <Input type="email" placeholder="Email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} required data-testid="enr-email"/>
-            <Input placeholder="Phone" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} required data-testid="enr-phone"/>
-            <Input placeholder="Address" value={form.address} onChange={e => setForm({...form, address: e.target.value})} required data-testid="enr-address"/>
-            <select className="border border-border rounded-md px-3 py-2 bg-background" value={form.course_id} onChange={e => setForm({...form, course_id: e.target.value})} data-testid="enr-course">
-              {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
-            </select>
-            <select className="border border-border rounded-md px-3 py-2 bg-background" value={form.center} onChange={e => setForm({...form, center: e.target.value})} data-testid="enr-center">
-              {centers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-2 block">ID Proof (optional)</label>
-            <FileUpload label="Upload Aadhaar / school ID (PDF / image)" testId="enr-id-upload"
-              onUploaded={(f)=>setForm({...form, id_proof_url: f?.url || ""})}/>
-          </div>
-          <Button type="submit" className="w-full bg-primary text-primary-foreground h-12" data-testid="enr-submit">Submit Enrollment</Button>
-        </form>
-      )}
+      </section>
     </div>
   );
 }

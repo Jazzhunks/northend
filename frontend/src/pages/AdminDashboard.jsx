@@ -227,6 +227,7 @@ export default function AdminDashboard() {
   };
 
   return (
+    <div className="light bg-background min-h-screen" data-theme="light">
     <div className="max-w-7xl mx-auto px-4 lg:px-8 py-12" data-testid="admin-dashboard">
       <div className="text-xs uppercase tracking-[0.2em] font-bold text-primary mb-2">Admin Console</div>
       <h1 className="font-display text-4xl lg:text-5xl font-black tracking-tighter">Northend Operations.</h1>
@@ -601,6 +602,7 @@ export default function AdminDashboard() {
           </div>
         </TabsContent>
       </Tabs>
+    </div>
     </div>
   );
 }

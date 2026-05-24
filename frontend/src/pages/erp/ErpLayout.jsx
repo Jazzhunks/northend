@@ -34,7 +34,7 @@ export default function ErpLayout() {
 
   if (err === "not-erp") {
     return (
-      <div className="min-h-screen grid place-items-center p-8" data-testid="erp-no-access">
+      <div className="light min-h-screen grid place-items-center p-8" data-theme="light" data-testid="erp-no-access">
         <div className="text-center max-w-md">
           <div className="text-xs uppercase tracking-[0.2em] font-bold text-primary mb-2">Access Denied</div>
           <h2 className="font-display text-3xl font-black mb-3">ERP staff only</h2>
@@ -50,7 +50,7 @@ export default function ErpLayout() {
   const navItems = NAV.filter(n => n.show(erpUser));
 
   return (
-    <div className="min-h-screen flex bg-secondary/20">
+    <div className="light min-h-screen flex bg-secondary/20" data-theme="light">
       {/* Sidebar */}
       <aside className={`${open ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-64 bg-primary text-primary-foreground transition-transform`} data-testid="erp-sidebar">
         <div className="p-6 border-b border-white/10">

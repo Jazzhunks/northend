@@ -1,238 +1,433 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Award, Star, BookOpen, Users, MapPin, Sparkles, Target, ShieldCheck, Trophy, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import HeroScene, { HeroSceneFallback } from "@/components/three/HeroScene";
+import GlassPanel from "@/components/GlassPanel";
+import CourseCard3D from "@/components/CourseCard3D";
+import { CTAPrimary, CTAGhost, Eyebrow, Reveal } from "@/components/Cinematic";
+import { AnimatedCounter } from "@/components/Metrics";
 import { api } from "@/lib/api";
-import Counter from "@/components/Counter";
-import { SectionHeader } from "@/components/SectionHeader";
+import {
+  Star, Sparkle, Trophy, GraduationCap, Lightning, Compass,
+  ShieldCheck, ChartLineUp, Quotes, MapPin, ArrowUpRight
+} from "@phosphor-icons/react";
 
-const HERO_IMG = "https://lh3.googleusercontent.com/p/AF1QipNJi9ktWhKPKIxJE2b_TtkFkM8VItvYUWdPmeUJ=s1360-w1360-h1020-rw";
-const KASHMIR = "https://images.unsplash.com/photo-1606355792317-4dcadc93ed26?w=1200";
+const EASE = [0.16, 1, 0.3, 1];
 
 export default function Home() {
+  const isMobile = useIsMobile();
   const [courses, setCourses] = useState([]);
-  const [stats, setStats] = useState({ students_trained: 1323, selections: 100, educators: 52, centers: 4 });
-  const [notices, setNotices] = useState([]);
+  const [stats, setStats] = useState({ students_trained: 1323, selections: 100, educators: 52, centers: 6 });
   const [results, setResults] = useState([]);
   const [testimonials, setTestimonials] = useState([]);
-  const [featured, setFeatured] = useState(null);
+  const [centers, setCenters] = useState([]);
 
   useEffect(() => {
     Promise.all([
-      api.get("/courses?featured=true").then(r => setCourses(r.data)),
-      api.get("/stats").then(r => setStats(r.data)),
-      api.get("/notices").then(r => setNotices(r.data.slice(0, 3))),
-      api.get("/results").then(r => setResults(r.data.slice(0, 6))),
-      api.get("/testimonials").then(r => setTestimonials(r.data)),
-      api.get("/featured").then(r => setFeatured(r.data)),
-    ]).catch(()=>{});
+      api.get("/courses?featured=true").then(r => setCourses(r.data)).catch(()=>{}),
+      api.get("/stats").then(r => setStats(r.data)).catch(()=>{}),
+      api.get("/results").then(r => setResults(r.data.slice(0, 6))).catch(()=>{}),
+      api.get("/testimonials").then(r => setTestimonials(r.data)).catch(()=>{}),
+      api.get("/centers").then(r => setCenters(r.data)).catch(()=>{}),
+    ]);
   }, []);
 
   return (
     <div data-testid="home-page">
-      {/* HERO */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-grid opacity-60"/>
-        <div className="absolute -right-20 -top-20 h-[500px] w-[500px] rounded-full opacity-30" style={{background:"radial-gradient(circle, hsl(var(--primary)/.25), transparent 60%)"}}/>
-        <div className="relative max-w-7xl mx-auto px-4 lg:px-8 pt-16 lg:pt-24 pb-16 grid lg:grid-cols-12 gap-10 items-center">
-          <div className="lg:col-span-7 fade-up">
-            <div className="inline-flex items-center gap-2 px-3 py-1 border border-primary/20 bg-primary/5 rounded-full text-xs font-medium text-primary mb-6" data-testid="hero-badge">
-              <Sparkles size={14}/> Authorized Unacademy Franchise · Kashmir
-            </div>
-            <h1 className="font-display text-4xl sm:text-5xl lg:text-7xl font-black tracking-tighter leading-[0.95]">
-              Empowering <span className="italic font-light">Kashmir's</span><br/>
-              future through<br/>
-              <span className="text-primary">quality education.</span>
-            </h1>
-            <p className="mt-6 text-base lg:text-lg text-muted-foreground max-w-xl leading-relaxed">
-              NEET · IIT-JEE · Foundation · CBSE · JKBOSE — taught by India's best educators, anchored by 4 centers across the valley.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/enroll"><Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md h-12 px-6" data-testid="hero-enroll-btn">Enroll Now <ArrowRight size={16}/></Button></Link>
-              <Link to="/scholarship"><Button size="lg" variant="outline" className="rounded-md h-12 px-6 border-2" data-testid="hero-scholarship-btn">Apply Scholarship</Button></Link>
-              <Link to="/courses"><Button size="lg" variant="ghost" className="rounded-md h-12 px-6" data-testid="hero-courses-btn">Explore Courses <ChevronRight size={16}/></Button></Link>
-            </div>
-            <div className="mt-10 flex items-center gap-6 text-xs text-muted-foreground">
-              <div className="flex items-center gap-1"><Star size={14} className="fill-accent text-accent"/> 4.9 / 5 by 2,400+ parents</div>
-              <div className="hidden sm:flex items-center gap-1"><ShieldCheck size={14} className="text-primary"/> Trusted since 2023</div>
-            </div>
+      {/* ============================== CINEMATIC HERO ============================== */}
+      <section className="relative min-h-[100vh] flex items-center overflow-hidden">
+        {/* 3D background scene (desktop) / CSS fallback (mobile) */}
+        {isMobile ? <HeroSceneFallback /> : <HeroScene />}
+
+        {/* Ambient orbs for extra depth */}
+        <div className="ambient-orb ambient-orb--primary drift" style={{ width: 500, height: 500, top: "10%", left: "-100px" }} />
+
+        <div className="relative max-w-7xl mx-auto px-4 lg:px-8 w-full grid lg:grid-cols-12 gap-10 items-center py-24">
+          <div className="lg:col-span-7">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, ease: EASE }}
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 glass rounded-full text-[10px] font-bold uppercase tracking-[0.22em] mb-8"
+              data-testid="hero-badge"
+            >
+              <Sparkle weight="fill" size={12} className="text-accent" />
+              Authorised Unacademy Franchise · Kashmir
+            </motion.div>
+
+            <motion.h1
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 1, ease: EASE, delay: 0.1 }}
+              className="font-display text-5xl sm:text-6xl lg:text-[88px] font-light tracking-[-0.04em] leading-[0.95]"
+            >
+              The future of<br/>
+              Kashmir's classrooms,<br/>
+              <span className="font-medium italic bg-gradient-to-r from-accent via-amber-300 to-accent bg-clip-text text-transparent text-glow-accent">
+                engineered.
+              </span>
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, ease: EASE, delay: 0.3 }}
+              className="mt-8 text-lg lg:text-xl text-muted-foreground max-w-xl leading-relaxed font-light"
+            >
+              A next-generation learning ecosystem for <b className="text-foreground/90">NEET, IIT-JEE, CBSE, JKBOSE</b> and Foundation —
+              taught by India's finest educators, anchored across <b className="text-foreground/90">6 centres</b> in the valley.
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, ease: EASE, delay: 0.5 }}
+              className="mt-10 flex flex-wrap gap-3"
+            >
+              <Link to="/enroll"><CTAPrimary data-testid="hero-enroll-btn">Enroll now</CTAPrimary></Link>
+              <Link to="/scholarship"><CTAGhost iconRight data-testid="hero-scholarship-btn">Apply for scholarship</CTAGhost></Link>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8, duration: 0.8 }}
+              className="mt-12 flex flex-wrap items-center gap-6 text-xs text-muted-foreground"
+            >
+              <div className="flex items-center gap-2"><Star weight="fill" size={14} className="text-accent"/> 4.9 · 2,400+ parents</div>
+              <div className="hidden sm:flex items-center gap-2"><ShieldCheck weight="duotone" size={14} className="text-primary"/> Trusted since 2023</div>
+              <div className="hidden md:flex items-center gap-2"><Trophy weight="duotone" size={14} className="text-accent"/> 100+ NEET/JEE selections</div>
+            </motion.div>
           </div>
-          <div className="lg:col-span-5 relative">
-            <div className="relative aspect-[4/5] rounded-md overflow-hidden border border-border">
-              <img src={HERO_IMG} alt="Kashmir classroom" className="w-full h-full object-cover"/>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"/>
-              <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-sm rounded-md p-4 border border-white/40">
-                <div className="text-xs uppercase tracking-[0.18em] text-primary font-bold mb-1">{featured ? `★ Featured ${featured.kind}` : "Featured"}</div>
-                <div className="font-display font-bold">{featured?.title || "NEET Scholarship Test 2026"}</div>
-                <div className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                  {featured?.kind === "scholarship"
-                    ? `Exam ${featured.exam_date} · Deadline ${featured.deadline}`
-                    : featured?.kind === "job"
-                    ? `${featured.department} · ${featured.location}`
-                    : featured?.kind === "notice"
-                    ? (featured.content?.slice(0, 80) + (featured.content?.length > 80 ? "…" : ""))
-                    : "Up to 90% fee waiver · Feb 28"}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
-      {/* STATS */}
-      <section className="border-y border-border bg-secondary/30">
-        <div className="max-w-7xl mx-auto px-4 lg:px-8 py-12 grid grid-cols-2 lg:grid-cols-4 gap-8">
-          {[
-            { i: Users, label: "Students trained", n: stats.students_trained, suffix: "+", id: "stat-students" },
-            { i: Trophy, label: "Top selections", n: stats.selections, suffix: "+", id: "stat-selections" },
-            { i: Award, label: "Expert educators", n: stats.educators, suffix: "+", id: "stat-educators" },
-            { i: MapPin, label: "Centers in Kashmir", n: stats.centers, suffix: "", id: "stat-centers" },
-          ].map(({ i: Icon, label, n, suffix, id }) => (
-            <div key={label} className="border-r last:border-r-0 border-border/60 pr-4">
-              <Icon className="text-primary mb-2" size={20}/>
-              <div className="font-display text-3xl lg:text-4xl font-black"><Counter end={n} suffix={suffix} testId={id}/></div>
-              <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground mt-1">{label}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* FEATURED COURSES */}
-      <section className="max-w-7xl mx-auto px-4 lg:px-8 section">
-        <div className="flex items-end justify-between mb-12 gap-4 flex-wrap">
-          <SectionHeader overline="Featured Courses" title="Built for the toughest exams in India." subtitle="Curated programmes from Class 8 to NEET-PG aspirants."/>
-          <Link to="/courses"><Button variant="outline" data-testid="view-all-courses-btn">View all courses <ChevronRight size={16}/></Button></Link>
-        </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {courses.map((c) => (
-            <Link key={c.id} to={`/courses/${c.id}`} className="group border border-border rounded-md overflow-hidden hover:border-primary/40 transition" data-testid={`course-card-${c.id}`}>
-              <div className="aspect-[16/10] relative overflow-hidden bg-secondary">
-                {c.image_url && <img src={c.image_url} alt={c.title} className="h-full w-full object-cover group-hover:scale-105 transition duration-700"/>}
-                <span className="absolute top-3 left-3 bg-primary text-primary-foreground text-xs font-bold px-2 py-1 rounded">{c.category}</span>
-              </div>
-              <div className="p-5">
-                <h3 className="font-display font-bold text-lg leading-tight">{c.title}</h3>
-                <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{c.description}</p>
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/60">
-                  <span className="text-sm font-mono">{c.duration}</span>
-                  <span className="font-display font-bold text-primary">₹{c.fee.toLocaleString()}</span>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* WHY US */}
-      <section className="bg-secondary/40 border-y border-border">
-        <div className="max-w-7xl mx-auto px-4 lg:px-8 section grid lg:grid-cols-12 gap-10 items-start">
+          {/* Right column — floating glass stats card */}
           <div className="lg:col-span-5">
-            <SectionHeader overline="Why Northend" title="The most disciplined coaching ecosystem in Kashmir."/>
-            <p className="text-muted-foreground leading-relaxed">An authorized Unacademy partnership backed by Kashmir's most committed academic team — built on small batches, weekly tests and personal mentoring.</p>
-          </div>
-          <div className="lg:col-span-7 grid sm:grid-cols-2 gap-4">
-            {[
-              [Target, "National-grade curriculum", "Same Unacademy syllabus that produces AIIMS, IIT and NIT toppers — adapted for Kashmir."],
-              [Users, "Mentorship that scales", "1 mentor for every 30 students. Direct doubt sessions, not just lectures."],
-              [Trophy, "Proven selections", "850+ NEET, JEE and CBSE selections in the last 4 years."],
-              [BookOpen, "Test discipline", "Weekly Mock Tests + Detailed PDF analytics every Sunday."],
-            ].map(([Icon, t, d]) => (
-              <div key={t} className="bg-background border border-border p-6 rounded-md hover:-translate-y-0.5 transition">
-                <Icon className="text-primary mb-3" size={22}/>
-                <div className="font-display font-bold mb-1">{t}</div>
-                <div className="text-sm text-muted-foreground">{d}</div>
-              </div>
-            ))}
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.9, ease: EASE, delay: 0.4 }}
+            >
+              <GlassPanel elevated className="p-7 lg:p-8 relative overflow-hidden" data-testid="hero-stats-panel">
+                <div className="absolute -top-20 -right-20 w-60 h-60 rounded-full bg-accent/10 blur-3xl" />
+                <div className="relative">
+                  <div className="text-[10px] uppercase tracking-[0.28em] text-accent font-bold mb-6">Live · Impact Snapshot</div>
+                  <div className="grid grid-cols-2 gap-6">
+                    <Stat value={stats.students_trained} suffix="+" label="Students trained" testid="stat-students"/>
+                    <Stat value={stats.selections} suffix="+" label="NEET / JEE selections" testid="stat-selections"/>
+                    <Stat value={stats.educators} suffix="+" label="Master educators" testid="stat-educators"/>
+                    <Stat value={stats.centers} suffix="" label="Kashmir centres" testid="stat-centers"/>
+                  </div>
+                </div>
+              </GlassPanel>
+            </motion.div>
           </div>
         </div>
+
+        {/* Scroll cue */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1, y: [0, 8, 0] }}
+          transition={{ opacity: { delay: 1.4 }, y: { repeat: Infinity, duration: 2 } }}
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 text-[10px] uppercase tracking-[0.3em] text-muted-foreground"
+        >
+          Scroll to explore ↓
+        </motion.div>
       </section>
 
-      {/* SCHOLARSHIP BANNER */}
-      <section className="max-w-7xl mx-auto px-4 lg:px-8 section">
-        <div className="relative overflow-hidden rounded-md border border-border bg-primary text-primary-foreground p-8 lg:p-14">
-          <div className="absolute right-0 top-0 h-full w-1/2 opacity-15" style={{background:"radial-gradient(circle at right, white, transparent 60%)"}}/>
-          <div className="relative grid lg:grid-cols-2 items-center gap-8">
-            <div>
-              <div className="text-xs uppercase tracking-[0.2em] font-bold text-accent mb-3">Northend Scholarship Test 2026</div>
-              <h3 className="font-display text-3xl lg:text-5xl font-black leading-tight">Win up to <span className="text-accent">100% off</span> on tuition fees.</h3>
-              <p className="mt-4 text-primary-foreground/80 max-w-md">Open for Class 8–12 students. Online + offline modes. Result on Day-3 with detailed feedback report.</p>
-            </div>
-            <div className="flex lg:justify-end gap-3">
-              <Link to="/scholarship"><Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 h-12 px-6" data-testid="banner-apply-scholarship">Apply now <ArrowRight size={16}/></Button></Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* TOPPERS */}
-      <section className="max-w-7xl mx-auto px-4 lg:px-8 section">
-        <SectionHeader overline="Results" title="Selections that speak louder." subtitle="A glimpse of our students rewriting Kashmir's academic story."/>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {results.map((r) => (
-            <div key={r.id} className="border border-border rounded-md p-6 bg-background" data-testid={`topper-${r.id}`}>
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="font-display font-bold text-lg">{r.student_name}</div>
-                  <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground mt-1">{r.exam}</div>
-                </div>
-                <div className="text-right">
-                  <div className="font-mono text-sm">{r.year}</div>
-                  <div className="font-display font-black text-primary">{r.rank}</div>
-                </div>
-              </div>
-              {r.quote && <p className="mt-4 text-sm text-muted-foreground italic leading-relaxed">"{r.quote}"</p>}
-            </div>
+      {/* ============================== MARQUEE — programs ============================== */}
+      <section className="relative py-10 border-y border-white/[0.06] overflow-hidden bg-white/[0.02]">
+        <div className="marquee-track flex gap-16 whitespace-nowrap">
+          {[...Array(2)].flatMap((_, i) => (
+            ["NEET", "IIT-JEE", "Foundation 8th–10th", "CBSE 11–12", "JKBOSE 12th", "Scholarship Test 2026", "Doubt clearing daily", "AIIMS-style mocks"]
+              .map((t, j) => (
+                <span key={`${i}-${j}`} className="font-display text-3xl lg:text-4xl font-light tracking-tight text-muted-foreground/60">
+                  {t} <span className="text-accent mx-2">✦</span>
+                </span>
+              ))
           ))}
         </div>
       </section>
 
-      {/* TESTIMONIALS */}
-      <section className="bg-secondary/40 border-y border-border">
-        <div className="max-w-7xl mx-auto px-4 lg:px-8 section">
-          <SectionHeader overline="Testimonials" title="Words from parents and students."/>
-          <div className="grid md:grid-cols-3 gap-6">
-            {testimonials.map(t => (
-              <div key={t.id} className="bg-background border border-border p-6 rounded-md">
-                <Star className="text-accent fill-accent mb-3" size={18}/>
-                <p className="text-base leading-relaxed">"{t.quote}"</p>
-                <div className="mt-4 pt-4 border-t border-border/60">
-                  <div className="font-bold">{t.name}</div>
-                  <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t.role}</div>
-                </div>
-              </div>
-            ))}
+      {/* ============================== FEATURED COURSES ============================== */}
+      <section className="relative section">
+        <div className="ambient-orb ambient-orb--primary drift" style={{ width: 600, height: 600, top: "10%", right: "-200px" }} />
+        <div className="max-w-7xl mx-auto px-4 lg:px-8 relative">
+          <div className="grid lg:grid-cols-12 gap-8 mb-14">
+            <div className="lg:col-span-7">
+              <Eyebrow>Programmes</Eyebrow>
+              <Reveal>
+                <h2 className="font-display text-4xl lg:text-6xl font-light tracking-tight leading-[1.02] mt-4">
+                  Curriculum built for<br/>
+                  <span className="font-medium italic text-accent">India's hardest exams.</span>
+                </h2>
+              </Reveal>
+            </div>
+            <div className="lg:col-span-5 flex lg:items-end lg:justify-end">
+              <Reveal>
+                <p className="text-muted-foreground max-w-md leading-relaxed">
+                  Every programme runs on the same playbook used by top Kota institutes — adapted for J&K students,
+                  delivered by AIR rankers and Unacademy mentors.
+                </p>
+              </Reveal>
+            </div>
           </div>
-        </div>
-      </section>
 
-      {/* NOTICES + KASHMIR */}
-      <section className="max-w-7xl mx-auto px-4 lg:px-8 section grid lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-7">
-          <SectionHeader overline="Latest Notices" title="What's happening at Northend."/>
-          <div className="space-y-3">
-            {notices.map(n => (
-              <Link to="/notices" key={n.id} className="flex items-start gap-4 p-5 border border-border rounded-md hover:border-primary/40 transition" data-testid={`notice-${n.id}`}>
-                <div className="text-xs uppercase tracking-[0.18em] font-bold text-primary mt-1 w-24 shrink-0">{n.category}</div>
-                <div className="flex-1">
-                  <div className="font-display font-bold">{n.title}</div>
-                  <div className="text-sm text-muted-foreground mt-1 line-clamp-2">{n.content}</div>
-                </div>
-                <ArrowRight size={16} className="mt-1 text-muted-foreground"/>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {courses.slice(0, 6).map(c => (
+              <Link to={`/courses/${c.id}`} key={c.id}>
+                <CourseCard3D course={c} />
               </Link>
             ))}
           </div>
-        </div>
-        <div className="lg:col-span-5 relative rounded-md overflow-hidden border border-border min-h-[300px]">
-          <img src={KASHMIR} alt="Kashmir" className="absolute inset-0 w-full h-full object-cover"/>
-          <div className="absolute inset-0 bg-primary/70"/>
-          <div className="relative z-10 p-8 lg:p-12 text-primary-foreground h-full flex flex-col justify-end">
-            <div className="text-xs uppercase tracking-[0.2em] font-bold text-accent mb-3">Made for Kashmir</div>
-            <h3 className="font-display text-3xl font-black leading-tight">Built in the valley.<br/>Built for the valley.</h3>
-            <p className="mt-3 text-primary-foreground/80 text-sm">4 centers across Anantnag, Soura, Zakura and Parraypora — and growing.</p>
-            <Link to="/centers" className="mt-6"><Button variant="secondary" data-testid="see-centers-btn">See our centers <ArrowRight size={16}/></Button></Link>
+
+          <div className="mt-10 text-center">
+            <Link to="/courses"><CTAGhost iconRight data-testid="view-all-courses-btn">View all programmes</CTAGhost></Link>
           </div>
         </div>
       </section>
+
+      {/* ============================== HOW IT WORKS — learning path ============================== */}
+      <section className="relative section">
+        <div className="max-w-7xl mx-auto px-4 lg:px-8 relative">
+          <div className="text-center mb-16">
+            <Eyebrow className="justify-center">The journey</Eyebrow>
+            <Reveal>
+              <h2 className="font-display text-4xl lg:text-6xl font-light tracking-tight mt-4">
+                From <span className="font-medium italic">curious</span> to <span className="text-accent font-medium">conquering AIRs.</span>
+              </h2>
+            </Reveal>
+          </div>
+          <div className="relative grid md:grid-cols-4 gap-6">
+            {/* Path connector */}
+            <div className="hidden md:block absolute top-1/2 left-10 right-10 h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent -translate-y-1/2" />
+            {[
+              { n: "01", icon: Compass, t: "Diagnose", d: "Free scholarship test pinpoints your strengths and gaps." },
+              { n: "02", icon: Lightning, t: "Personalise", d: "AI-mapped study plan, mentor pairing, batch slotting." },
+              { n: "03", icon: GraduationCap, t: "Train", d: "Daily mentor-led classes + Unacademy national mocks." },
+              { n: "04", icon: Trophy, t: "Conquer", d: "Rank-day strategy, exam-week war-room, AIR mastery." },
+            ].map((s, i) => (
+              <Reveal key={s.n} delay={i * 0.08}>
+                <div className="relative">
+                  <GlassPanel className="p-6 h-full" data-testid={`path-step-${i + 1}`}>
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="font-mono text-xs text-accent">{s.n}</span>
+                      <s.icon weight="duotone" size={28} className="text-accent" />
+                    </div>
+                    <h3 className="font-display text-xl font-medium">{s.t}</h3>
+                    <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{s.d}</p>
+                  </GlassPanel>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============================== IMPACT — counter band ============================== */}
+      <section className="relative py-24 lg:py-32 overflow-hidden">
+        <div className="absolute inset-0 bg-grid opacity-30" />
+        <div className="ambient-orb ambient-orb--accent" style={{ width: 700, height: 700, top: "-200px", right: "-200px", opacity: 0.3 }} />
+        <div className="max-w-7xl mx-auto px-4 lg:px-8 relative">
+          <div className="grid lg:grid-cols-3 gap-8 items-center">
+            <div>
+              <Eyebrow>Impact in numbers</Eyebrow>
+              <Reveal>
+                <h2 className="font-display text-4xl lg:text-5xl font-light tracking-tight mt-4">
+                  Numbers that go <span className="text-accent italic font-medium">beyond</span> a brochure.
+                </h2>
+              </Reveal>
+            </div>
+            <div className="lg:col-span-2 grid grid-cols-2 lg:grid-cols-4 gap-px bg-white/[0.06] rounded-2xl overflow-hidden">
+              {[
+                { n: stats.students_trained, s: "+", l: "Aspirants trained" },
+                { n: stats.selections, s: "+", l: "NEET / JEE ranks" },
+                { n: stats.educators, s: "+", l: "Master educators" },
+                { n: stats.centers, s: "", l: "Branches valley-wide" },
+              ].map((x, i) => (
+                <div key={i} className="bg-background p-6 lg:p-8" data-testid={`impact-${i}`}>
+                  <div className="font-display text-4xl lg:text-5xl font-medium tracking-tight">
+                    <AnimatedCounter value={x.n} suffix={x.s} />
+                  </div>
+                  <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground mt-2">{x.l}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============================== STUDENT WALL OF FAME ============================== */}
+      {results.length > 0 && (
+        <section className="relative section">
+          <div className="max-w-7xl mx-auto px-4 lg:px-8">
+            <div className="flex items-end justify-between flex-wrap gap-6 mb-12">
+              <div>
+                <Eyebrow>Wall of fame</Eyebrow>
+                <Reveal>
+                  <h2 className="font-display text-4xl lg:text-6xl font-light tracking-tight mt-4">
+                    Recent <span className="font-medium italic text-accent">conquerors.</span>
+                  </h2>
+                </Reveal>
+              </div>
+              <Link to="/results"><CTAGhost iconRight data-testid="all-results-btn">All results</CTAGhost></Link>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {results.slice(0, 6).map((r, i) => (
+                <Reveal key={r.id} delay={i * 0.05}>
+                  <GlassPanel className="p-6 h-full group transition-all hover:-translate-y-1" data-testid={`result-${r.id}`}>
+                    <div className="flex items-center justify-between mb-5">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-accent">{r.exam}</span>
+                      <span className="font-mono text-xs text-muted-foreground">{r.year}</span>
+                    </div>
+                    <div className="font-display text-3xl font-medium tracking-tight">{r.rank}</div>
+                    <div className="text-sm text-muted-foreground mt-1">{r.student_name}</div>
+                    {r.quote && <p className="mt-5 text-sm leading-relaxed border-l-2 border-accent pl-3 italic text-muted-foreground">"{r.quote}"</p>}
+                  </GlassPanel>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ============================== TESTIMONIALS ============================== */}
+      {testimonials.length > 0 && (
+        <section className="relative section">
+          <div className="max-w-7xl mx-auto px-4 lg:px-8">
+            <div className="text-center mb-12">
+              <Eyebrow className="justify-center">Voices</Eyebrow>
+              <Reveal>
+                <h2 className="font-display text-4xl lg:text-5xl font-light tracking-tight mt-4">
+                  Trusted by <span className="font-medium italic">families</span> across Kashmir.
+                </h2>
+              </Reveal>
+            </div>
+            <div className="grid md:grid-cols-3 gap-5">
+              {testimonials.slice(0, 3).map((t, i) => (
+                <Reveal key={t.id} delay={i * 0.08}>
+                  <GlassPanel elevated className="p-7 h-full" data-testid={`testimonial-${t.id}`}>
+                    <Quotes weight="fill" size={28} className="text-accent mb-4 opacity-60" />
+                    <p className="text-base leading-relaxed">"{t.quote}"</p>
+                    <div className="mt-5 pt-5 border-t border-white/[0.08]">
+                      <div className="font-medium">{t.name}</div>
+                      <div className="text-xs text-muted-foreground">{t.role}</div>
+                    </div>
+                  </GlassPanel>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ============================== SCHOLARSHIP CTA — Tesla-config feel ============================== */}
+      <section className="relative section">
+        <div className="max-w-6xl mx-auto px-4 lg:px-8">
+          <Reveal>
+            <GlassPanel elevated className="relative overflow-hidden p-10 lg:p-16">
+              <div className="ambient-orb ambient-orb--accent" style={{ width: 500, height: 500, top: "-100px", right: "-100px" }} />
+              <div className="absolute inset-0 bg-grid opacity-20" />
+              <div className="relative grid lg:grid-cols-2 gap-10 items-center">
+                <div>
+                  <Eyebrow>Scholarship · NST 2026</Eyebrow>
+                  <h2 className="font-display text-4xl lg:text-6xl font-light tracking-tight mt-4 leading-[1.05]">
+                    Up to <span className="font-medium italic text-accent">100% off</span><br/>on tuition fees.
+                  </h2>
+                  <p className="mt-5 text-muted-foreground max-w-md leading-relaxed">
+                    Sit the Northend Scholarship Test 2026 and unlock partial to full waivers across all programmes.
+                  </p>
+                  <div className="mt-8 flex flex-wrap gap-3">
+                    <Link to="/scholarship"><CTAPrimary data-testid="scholarship-cta-btn">Apply now</CTAPrimary></Link>
+                    <Link to="/scholarship"><CTAGhost iconRight>Calculate eligibility</CTAGhost></Link>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { pct: "100%", marks: "≥ 90%" },
+                    { pct: "75%", marks: "≥ 80%" },
+                    { pct: "50%", marks: "≥ 70%" },
+                    { pct: "25%", marks: "≥ 60%" },
+                  ].map((s, i) => (
+                    <Reveal key={s.pct} delay={i * 0.05}>
+                      <div className="glass rounded-xl p-5 text-center">
+                        <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Marks {s.marks}</div>
+                        <div className="font-display text-4xl font-medium text-accent mt-2 text-glow-accent">{s.pct}</div>
+                        <div className="text-xs text-muted-foreground mt-1">off tuition</div>
+                      </div>
+                    </Reveal>
+                  ))}
+                </div>
+              </div>
+            </GlassPanel>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ============================== CENTERS QUICK MAP ============================== */}
+      {centers.length > 0 && (
+        <section className="relative section">
+          <div className="max-w-7xl mx-auto px-4 lg:px-8">
+            <div className="grid lg:grid-cols-12 gap-8 mb-12">
+              <div className="lg:col-span-7">
+                <Eyebrow>Network</Eyebrow>
+                <Reveal>
+                  <h2 className="font-display text-4xl lg:text-6xl font-light tracking-tight mt-4">
+                    Six centres.<br/>
+                    <span className="font-medium italic text-accent">One valley.</span>
+                  </h2>
+                </Reveal>
+              </div>
+              <div className="lg:col-span-5 flex lg:items-end">
+                <Link to="/centers"><CTAGhost iconRight data-testid="all-centers-btn">Visit any centre</CTAGhost></Link>
+              </div>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {centers.slice(0, 6).map((c, i) => (
+                <Reveal key={c.id} delay={i * 0.05}>
+                  <GlassPanel className="p-6 h-full group transition-all hover:-translate-y-1 hover:border-accent/30" data-testid={`center-${c.id}`}>
+                    <div className="flex items-start justify-between mb-3">
+                      <MapPin weight="duotone" size={22} className="text-accent" />
+                      <ArrowUpRight weight="bold" size={16} className="text-muted-foreground group-hover:text-accent group-hover:rotate-45 transition-all" />
+                    </div>
+                    <h3 className="font-display text-xl font-medium">{c.name}</h3>
+                    <p className="text-xs text-muted-foreground mt-1">{c.address}</p>
+                    <p className="text-xs text-muted-foreground/80 mt-3 font-mono">{c.phone}</p>
+                  </GlassPanel>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ============================== FINAL CTA ============================== */}
+      <section className="relative section text-center">
+        <div className="max-w-3xl mx-auto px-4 lg:px-8">
+          <Reveal>
+            <h2 className="font-display text-5xl lg:text-7xl font-light tracking-tight leading-[0.95]">
+              Your AIR is <span className="font-medium italic text-accent">closer</span> than you think.
+            </h2>
+            <p className="mt-6 text-lg text-muted-foreground">
+              Walk into your nearest Northend centre, or enrol online in 90 seconds.
+            </p>
+            <div className="mt-10 flex justify-center gap-3 flex-wrap">
+              <Link to="/enroll"><CTAPrimary data-testid="final-enroll-btn">Start my journey</CTAPrimary></Link>
+              <Link to="/contact"><CTAGhost iconRight data-testid="final-contact-btn">Talk to a counsellor</CTAGhost></Link>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function Stat({ value, suffix, label, testid }) {
+  return (
+    <div data-testid={testid}>
+      <div className="font-display text-4xl lg:text-5xl font-medium tracking-tight text-accent">
+        <AnimatedCounter value={value} suffix={suffix} />
+      </div>
+      <div className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground mt-2">{label}</div>
     </div>
   );
 }

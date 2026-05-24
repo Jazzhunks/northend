@@ -1,0 +1,60 @@
+{
+  "summary": "Frontend visual+functional regression test for the cinematic redesign (Northend Educational World). All 11 public pages render with new PageHero, dark-luxury palette, Outfit display, ambient orbs and italic accents. Course filters, registration → StudentDashboard (with OrbitalProgress KPIs), admin login → /admin (light), /erp (8 nav items, .light class applied), student-detail page, scholarship/contact/enroll/jobs form submissions, footer links, WhatsApp FAB, mobile menu toggle, hero-rings hidden on mobile, and /api/erp/me regression — all pass. 3 non-blocking issues found: (1) Home page data-testid names differ from spec, (2) ambient-orb decorative divs cause minor horizontal scroll on 375px mobile, (3) ERP sidebar still visually dark-navy even though the .light class is applied to the wrapper.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Home.jsx data-testids",
+        "issue": "Review request expected testids: hero, impact-snapshot, programs-marquee, featured-courses, how-it-works, impact-stats, wall-of-fame, testimonials, scholarship-cta, centers-preview, final-cta. Actual implementation uses: home-page, hero-badge, hero-stats-panel, hero-enroll-btn, path-step-{n}, impact-{n}, result-{id}, testimonial-{id}, scholarship-cta-btn, center-{id}, final-enroll-btn. Sections all render correctly — only the naming convention differs from the spec.",
+        "selector": "[data-testid=\"hero\"], etc.",
+        "priority": "LOW"
+      },
+      {
+        "component": "Layout/PageHero ambient-orb on mobile",
+        "issue": "On 375px viewport, document scrollWidth = 579px (horizontal scroll possible). Cause: DIV.ambient-orb absolute-positioned decorative divs are 380–620px wide and extend past the viewport. Add `overflow-x:hidden` to body OR `overflow:hidden` to the containers that host ambient-orb elements. Hero rings are correctly hidden (display:none) on lg breakpoint, so this is purely the floating orbs.",
+        "selector": "body / .ambient-orb",
+        "priority": "MEDIUM"
+      },
+      {
+        "component": "ErpLayout sidebar theme",
+        "issue": "ErpLayout wrapper has `.light` class + `data-theme='light'`, and content cards render in light mode (white cards, light grey background). However the LEFT SIDEBAR still renders dark navy with white text — visually mixed, not fully light. The review request expected ERP sidebar in LIGHT mode (different from public dark site). All 8 nav items are present and clickable; this is purely a visual deviation.",
+        "selector": "aside, [data-testid='erp-sidebar']",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "ERP layout",
+        "issues": ["Sidebar remains dark navy under .light wrapper while cards are light — feels half-themed. Either commit to dark sidebar/light content (intentional dual-tone) or push sidebar bg to surface/elevated light tokens."]
+      },
+      {
+        "screen": "Public pages mobile",
+        "issues": ["Ambient orbs are not clipped — they cause a ~200px horizontal overflow on 375px. Add `overflow-x:hidden` to body or to each section wrapping the orbs."]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_erp_smoke.py"
+  ],
+  "action_items": [
+    "Optional: rename Home.jsx data-testids to match the spec (hero / impact-snapshot / programs-marquee / featured-courses / how-it-works / impact-stats / wall-of-fame / testimonials / scholarship-cta / centers-preview / final-cta) OR update the spec/testing notes to match the current naming.",
+    "Fix mobile horizontal scroll: add `overflow-x:hidden` to <body> in index.css OR wrap ambient-orb hosts in `overflow-hidden` containers. Affects Home + every page using PageHero.",
+    "If ERP fully-light was the intent, update ErpLayout sidebar bg/text to the light surface tokens. Currently the `.light` class is present but the sidebar is hard-coded dark navy.",
+    "Optional UX: after successful /login?next=/erp the form still navigates to /admin (carryover from iteration_5). Direct navigation to /erp post-login still works."
+  ],
+  "critical_code_review_comments": [
+    "HeroScene.jsx is CSS-only (R3F WebGL disabled). The file comment documents the CRA + r3f9 JSX __source incompatibility — fine for now, but the user explicitly asked for a futuristic 3D experience. If WebGL is desired later, migrate the frontend to Vite or use the r3f babel preset to fix the __source/jsx prop collision.",
+    "ambient-orb elements are visible to layout (cause overflow). Either mark them aria-hidden + pointer-events:none + parent overflow:hidden, or move into a single fixed-position background layer that doesn't affect scrollWidth.",
+    "Multiple pages use `useEffect(reload, deps)` style pattern; iteration_5 fixed the 4 ERP pages but the new StudentDashboard.jsx and public pages should be audited for the same Promise-as-cleanup React 18 trap.",
+    "ERP sidebar — once theme-mode (.light) is set on the wrapper, downstream components should consume CSS variables, not hard-coded navy. Recommend moving sidebar palette to tokens (--surface, --surface-fg) and binding via .light selectors in index.css."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "100% (1/1 regression endpoint)", "frontend": "100% functional, 95% visual (3 minor visual deviations)" },
+  "test_credentials": "Super: admin@northend.edu / Admin@2025 (verified). Newly registered student during this run: test_<random>@example.com / Test@2025.",
+  "seed_data_creation": "Created during this run: 1 student registration (test_<random>@example.com), 1 contact inquiry (POST /api/contact 200), 1 enrolment, 1 scholarship application (success state shown), 1 job application for 'DTP Operator' (Application Sent confirmation).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Visual redesign is solid; all functional flows from iteration_5 still pass post-redesign. The R3F WebGL hero is intentionally CSS-only — don't flag as a bug. The 401s on /api/auth/me at initial page load are expected (pre-auth bootstrap) and were filtered out. Three minor visual nits remain (testid naming on Home, mobile horizontal overflow from ambient-orbs, ERP sidebar still dark) — none block any user flow. Backend untouched.",
+  "rca of the issue": "Mobile horizontal scroll RCA: PageHero/Home render absolute-positioned `.ambient-orb` divs (380–620px diameter) outside section bounds; on a 375px viewport, doc.scrollWidth = 579px > window.innerWidth, allowing the page to scroll right. The orbs are decorative (no functional content) so the fix is to clip them via `overflow-x:hidden` on body or `overflow:hidden` on the orb host. ERP sidebar RCA: ErpLayout wrapper applies `className='light'` but the inner <aside> uses Tailwind classes pinned to dark tokens (bg-[#0c1424] equivalent), so the theme toggle has no effect on it — needs token-driven palette."
+}

@@ -4,6 +4,7 @@ import { api, API_BASE, formatError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import PageHero from "@/components/PageHero";
 import { Award, Calendar, MapPin, Clock, Trophy, Download, FileText, MessageCircle, X } from "lucide-react";
 
 export default function Scholarship() {
@@ -62,11 +63,14 @@ export default function Scholarship() {
   const selectedCampaign = campaigns.find(c => c.id === form.scholarship_id);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 lg:px-8 py-16" data-testid="scholarship-page">
-      <div className="text-xs uppercase tracking-[0.2em] font-bold text-primary mb-4">Scholarship Portal</div>
-      <h1 className="font-display text-4xl lg:text-6xl font-black tracking-tighter">Up to <span className="text-accent">100% off</span><br/>on tuition fees.</h1>
-      <p className="mt-4 text-lg text-muted-foreground max-w-3xl">Take an active Northend Scholarship Test and unlock partial to full scholarships across all programmes.</p>
-
+    <div data-testid="scholarship-page">
+      <PageHero
+        eyebrow="Scholarship Portal"
+        title="Up to"
+        accent="100% off on tuition."
+        subtitle="Sit the Northend Scholarship Test (NST) and unlock partial to full waivers across every programme — open to all Class 8–12 students of J&K."
+      />
+      <div className="max-w-7xl mx-auto px-4 lg:px-8 pb-24 -mt-8">
       <Tabs defaultValue="apply" className="mt-12">
         <TabsList data-testid="scholarship-tabs">
           <TabsTrigger value="apply" data-testid="tab-apply">Apply</TabsTrigger>
@@ -256,6 +260,7 @@ export default function Scholarship() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

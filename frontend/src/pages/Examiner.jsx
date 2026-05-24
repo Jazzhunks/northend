@@ -115,6 +115,7 @@ export default function Examiner() {
   }
 
   return (
+    <div className="light bg-background min-h-screen" data-theme="light">
     <div className="max-w-7xl mx-auto px-4 lg:px-8 py-10" data-testid="examiner-page">
       <div className="text-xs uppercase tracking-[0.2em] font-bold text-primary mb-2">Examiner Console</div>
       <h1 className="font-display text-3xl lg:text-4xl font-black tracking-tighter">{campaign.title}</h1>
@@ -213,6 +214,7 @@ export default function Examiner() {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }
