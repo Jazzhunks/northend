@@ -39,6 +39,36 @@ Modern, premium, mobile-first educational website for Northend Educational World
 - **Frontend**: removed all hardcoded `process.env.REACT_APP_BACKEND_URL` outside `lib/api.js`. `Scholarship.jsx` and `StudentDashboard.jsx` now use the centralised `API_BASE` from `lib/api.js`.
 - Verified: backend boots, `/api/scholarships` returns 200, scholarship page renders cleanly.
 
+### ✅ v1.4 (2026-02-10): Seed marker — admin deletes are permanent
+- Seed runs ONCE on a fresh database, gated by `system_meta.initial_seed` marker. For existing deployments with data, the marker is auto-recorded without re-inserting (so already-deleted items stay deleted). Removed destructive per-restart `delete_many` for legacy categories. Kept admin upsert, field backfills, and index creation as always-safe operations.
+
+### ✅ v2.0 (2026-02-10): Multi-Branch ERP module (`/erp/*`)
+Complete educational ERP grafted onto existing public site without touching the legacy admin/student flows.
+
+**Backend** (`/app/backend/erp_routes.py` + `erp_pdf.py`, ~700 lines):
+- Roles: `super_admin` (admin auto-aliased), `center_manager`, `accountant`, `counsellor` — branch-isolated except super.
+- Collections: `erp_students`, `erp_payments`, `erp_expenses`, `erp_leads`, `erp_audit`, `erp_counters` (per-branch sequential receipt/student numbers).
+- `centers` repurposed as branches (added `gstin`, `signatory_name`, `state_code`, `manager_user_id`).
+- Fee receipts: A4 PDF (reportlab) with branch GSTIN, CGST 9% + SGST 9% inclusive math (`amount = base + cgst + sgst`), receipt no like `NES-SRI/YYMM/00001`.
+- Expense approval workflow: accountant entries → `pending`, manager/super entries → auto-`approved`. Manager can approve/reject accountant entries.
+- Student statement endpoint: total_fee, scholarship_amount, discount, net_fee, total_paid, pending, payments[].
+- Dashboards: super (all branches aggregated) + branch-level (revenue / expense / pending / category split / counsellor performance / recent payments).
+- Audit log: every create/update/delete recorded with actor, role, entity, payload. Super-admin readable.
+- Excel exports: `/erp/exports/payments.xlsx`, `expenses.xlsx`, `students.xlsx` (branch-scoped).
+- Cross-branch access denied with 403 at every endpoint.
+
+**Frontend** (`/app/frontend/src/pages/erp/*.jsx`, ~1200 lines, 9 files):
+- `ErpLayout` — role-aware sidebar (NAV array hides items per role: counsellor sees only Dashboard/Students/Leads).
+- `ErpDashboard` — branches between SuperView (all branches table) and BranchView (single branch stats + counsellor table + recent payments).
+- `ErpStudents` (+ create modal), `ErpStudentDetail` (ledger summary + payment history + RecordPaymentModal with GST toggle + PDF receipt download).
+- `ErpPayments`, `ErpExpenses` (create + manager approve/reject), `ErpLeads` (inline status change), `ErpStaff` (super/manager can create), `ErpBranches` (super only — GSTIN/signatory), `ErpAudit` (super only).
+- Route `/login?next=/erp` now honoured; ERP-role users auto-redirect to `/erp` after login.
+- `lib/erpApi.js` — typed wrapper + role helpers (isSuper, isManagerPlus, isFinance, isERPUser, fmtINR, fmtDate).
+
+**Testing**:
+- Backend smoke test `/app/backend/tests/test_erp_smoke.py` — 24+ assertions, IDEMPOTENT (passes twice in a row): roles, branch isolation, GST math, scholarship math, receipt PDF, expense approval, cross-branch 403, counsellor visibility, exports, audit log.
+- Frontend tested by testing agent — 100% pass after two race-condition fixes (ErpLayout auth-loading guard + useEffect Promise-return wrapping in 4 list pages).
+
 ### ⏭ P1 Backlog
 - Brute-force lockout + per-IP rate limit on public POST endpoints (especially `/api/upload`)
 - Refer-a-Friend program (₹1,000 fee discount per converted referral)

@@ -1,13 +1,16 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+const ERP_ROLES = ["super_admin", "center_manager", "accountant", "counsellor"];
+
 export default function Login() {
   const { login, formatError } = useAuth();
   const nav = useNavigate();
+  const [params] = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -17,6 +20,9 @@ export default function Login() {
     try {
       const u = await login(email, password);
       toast.success("Welcome back!");
+      const next = params.get("next");
+      if (next && next.startsWith("/")) { nav(next); return; }
+      if (ERP_ROLES.includes(u.role)) { nav("/erp"); return; }
       nav(u.role === "admin" ? "/admin" : "/dashboard");
     } catch (err) {
       toast.error(formatError(err.response?.data?.detail) || err.message);
