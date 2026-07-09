@@ -2,12 +2,12 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import HeroScene, { HeroSceneFallback } from "@/components/three/HeroScene";
 import GlassPanel from "@/components/GlassPanel";
 import CourseCard3D from "@/components/CourseCard3D";
 import { CTAPrimary, CTAGhost, Eyebrow, Reveal } from "@/components/Cinematic";
 import { AnimatedCounter } from "@/components/Metrics";
 import { api } from "@/lib/api";
+import { isReactSnap } from "@/utils/isBot";
 import {
   Star, Sparkle, Trophy, GraduationCap, Lightning, Compass,
   ShieldCheck, ChartLineUp, Quotes, MapPin, ArrowUpRight
@@ -17,33 +17,48 @@ const EASE = [0.16, 1, 0.3, 1];
 
 export default function Home() {
   const isMobile = useIsMobile();
+  const isBot = isReactSnap(); 
+  
   const [courses, setCourses] = useState([]);
-  const [stats, setStats] = useState({ students_trained: 1323, selections: 100, educators: 52, centers: 6 });
+  const [stats, setStats] = useState({ students_trained: 1323, selections: 100, educators: 100, centers: 4});
   const [results, setResults] = useState([]);
   const [testimonials, setTestimonials] = useState([]);
   const [centers, setCenters] = useState([]);
 
-  useEffect(() => {
-    Promise.all([
-      api.get("/courses?featured=true").then(r => setCourses(r.data)).catch(()=>{}),
-      api.get("/stats").then(r => setStats(r.data)).catch(()=>{}),
-      api.get("/results").then(r => setResults(r.data.slice(0, 6))).catch(()=>{}),
-      api.get("/testimonials").then(r => setTestimonials(r.data)).catch(()=>{}),
-      api.get("/centers").then(r => setCenters(r.data)).catch(()=>{}),
-    ]);
-  }, []);
+ useEffect(() => {
+  Promise.all([
+    api.get("/courses?featured=true").then(r => setCourses(r.data)).catch(()=>{}),
+    // api.get("/stats").then(r => setStats(r.data)).catch(()=>{}), 
+    api.get("/results").then(r => setResults(r.data.slice(0, 6))).catch(()=>{}),
+    api.get("/testimonials").then(r => setTestimonials(r.data)).catch(()=>{}),
+    api.get("/centers").then(r => setCenters(r.data)).catch(()=>{}),
+  ]);
+}, []);
 
   return (
     <div data-testid="home-page">
       {/* ============================== CINEMATIC HERO ============================== */}
       <section className="relative min-h-[100vh] flex items-center overflow-hidden">
-        {/* 3D background scene (desktop) / CSS fallback (mobile) */}
-        {isMobile ? <HeroSceneFallback /> : <HeroScene />}
+        
+        {/* Background Video */}
+        <video 
+          autoPlay 
+          loop 
+          muted 
+          playsInline 
+          className="absolute inset-0 w-full h-full object-cover z-0 opacity-30 pointer-events-none"
+        >
+          <source src="https://quark.uacdn.net/acquisition/AboutUsHeader--compressed.webm" type="video/webm" />
+          <source src="https://quark.uacdn.net/acquisition/AboutUsHeader--compressed.mp4" type="video/mp4" />
+        </video>
+
+        {/* Gradient Overlay to blend the video into your dark theme */}
+        <div className="absolute inset-0 bg-background/40 bg-gradient-to-t from-background via-background/20 to-transparent z-0 pointer-events-none" />
 
         {/* Ambient orbs for extra depth */}
-        <div className="ambient-orb ambient-orb--primary drift" style={{ width: 500, height: 500, top: "10%", left: "-100px" }} />
+        <div className="relative z-10 ambient-orb ambient-orb--primary drift" style={{ width: 500, height: 500, top: "10%", left: "-100px" }} />
 
-        <div className="relative max-w-7xl mx-auto px-4 lg:px-8 w-full grid lg:grid-cols-12 gap-10 items-center py-24">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 lg:px-8 w-full grid lg:grid-cols-12 gap-10 items-center py-24">
           <div className="lg:col-span-7">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -75,8 +90,8 @@ export default function Home() {
               transition={{ duration: 0.8, ease: EASE, delay: 0.3 }}
               className="mt-8 text-lg lg:text-xl text-muted-foreground max-w-xl leading-relaxed font-light"
             >
-              A next-generation learning ecosystem for <b className="text-foreground/90">NEET, IIT-JEE, CBSE, JKBOSE</b> and Foundation —
-              taught by India's finest educators, anchored across <b className="text-foreground/90">6 centres</b> in the valley.
+              A next-generation learning ecosystem for <b className="text-foreground/90">NEET, IIT-JEE, CBSE, JKBOSE, Cambridge</b> and Foundation —
+              taught by India's finest educators, anchored across <b className="text-foreground/90">4 centres</b> in the valley.
             </motion.p>
 
             <motion.div
@@ -122,28 +137,33 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Scroll cue */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1, y: [0, 8, 0] }}
-          transition={{ opacity: { delay: 1.4 }, y: { repeat: Infinity, duration: 2 } }}
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 text-[10px] uppercase tracking-[0.3em] text-muted-foreground"
+          transition={{ opacity: { delay: 1.4 }, y: { repeat: isBot ? 0 : Infinity, duration: 2 } }}
+          className="relative z-10 absolute bottom-8 left-1/2 -translate-x-1/2 text-[10px] uppercase tracking-[0.3em] text-muted-foreground"
         >
           Scroll to explore ↓
         </motion.div>
       </section>
 
       {/* ============================== MARQUEE — programs ============================== */}
-      <section className="relative py-10 border-y border-white/[0.06] overflow-hidden bg-white/[0.02]">
-        <div className="marquee-track flex gap-16 whitespace-nowrap">
-          {[...Array(2)].flatMap((_, i) => (
-            ["NEET", "IIT-JEE", "Foundation 8th–10th", "CBSE 11–12", "JKBOSE 12th", "Scholarship Test 2026", "Doubt clearing daily", "AIIMS-style mocks"]
-              .map((t, j) => (
-                <span key={`${i}-${j}`} className="font-display text-3xl lg:text-4xl font-light tracking-tight text-muted-foreground/60">
-                  {t} <span className="text-accent mx-2">✦</span>
-                </span>
-              ))
-          ))}
+      <section className="relative overflow-hidden border-y border-white/[0.06] bg-white/[0.02] py-10">
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-32 bg-gradient-to-r from-background to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-32 bg-gradient-to-l from-background to-transparent" />
+
+        <div className="marquee-wrapper">
+          <div className="marquee-track">
+            {[
+              "NEET", "IIT-JEE", "Foundation 8th–10th", "CBSE | JKBOSE 11th 12th", "Daily Doubt Clearing", "AITS Mock Tests",
+              "NEET", "IIT-JEE", "Foundation 8th–10th", "CBSE | JKBOSE 11th 12th", "Daily Doubt Clearing", "AITS Mock Tests",
+            ].map((t, i) => (
+              <div key={i} className="flex items-center gap-5 px-8 shrink-0">
+                <span className="font-display text-3xl lg:text-4xl font-light tracking-tight text-white/70">{t}</span>
+                <span className="text-accent text-2xl">✦</span>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -164,7 +184,7 @@ export default function Home() {
             <div className="lg:col-span-5 flex lg:items-end lg:justify-end">
               <Reveal>
                 <p className="text-muted-foreground max-w-md leading-relaxed">
-                  Every programme runs on the same playbook used by top Kota institutes — adapted for J&K students,
+                  Every programme runs on the same playbook used by Unacademy — adapted for J&K students,
                   delivered by AIR rankers and Unacademy mentors.
                 </p>
               </Reveal>
@@ -197,7 +217,6 @@ export default function Home() {
             </Reveal>
           </div>
           <div className="relative grid md:grid-cols-4 gap-6">
-            {/* Path connector */}
             <div className="hidden md:block absolute top-1/2 left-10 right-10 h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent -translate-y-1/2" />
             {[
               { n: "01", icon: Compass, t: "Diagnose", d: "Free scholarship test pinpoints your strengths and gaps." },
@@ -320,7 +339,7 @@ export default function Home() {
         </section>
       )}
 
-      {/* ============================== SCHOLARSHIP CTA — Tesla-config feel ============================== */}
+      {/* ============================== SCHOLARSHIP CTA ============================== */}
       <section className="relative section">
         <div className="max-w-6xl mx-auto px-4 lg:px-8">
           <Reveal>
@@ -372,7 +391,7 @@ export default function Home() {
                 <Eyebrow>Network</Eyebrow>
                 <Reveal>
                   <h2 className="font-display text-4xl lg:text-6xl font-light tracking-tight mt-4">
-                    Six centres.<br/>
+                    Four centres.<br/>
                     <span className="font-medium italic text-accent">One valley.</span>
                   </h2>
                 </Reveal>

@@ -6,14 +6,16 @@ Roles: super_admin (full), center_manager (own branch), accountant (own branch f
 from __future__ import annotations
 import io
 import os
+import json
 import uuid
+import asyncio
+import openpyxl
 from datetime import datetime, timezone, timedelta
-from typing import List, Optional, Literal
+from typing import List, Optional, Literal, Dict, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, EmailStr, Field
-import openpyxl
 
 from erp_pdf import fee_receipt_pdf
 
@@ -27,16 +29,16 @@ LEAD_STATUSES = ["new", "contacted", "follow_up", "converted", "lost"]
 CGST_RATE = 9.0
 SGST_RATE = 9.0
 
+# Broadcasters Memory Matrix Mapping Layer
+branch_broadcast_queues: Dict[str, List[asyncio.Queue]] = {}
 
 def now_iso():
     return datetime.now(timezone.utc).isoformat()
 
-
 def new_id():
     return str(uuid.uuid4())
 
-
-# ====== MODELS ======
+# ====== PYDANTIC COMPLIANCE VALIDATORS ======
 class StaffCreate(BaseModel):
     name: str
     email: EmailStr
@@ -44,7 +46,6 @@ class StaffCreate(BaseModel):
     role: Literal["center_manager", "accountant", "counsellor"]
     branch_id: str
     phone: Optional[str] = None
-
 
 class StaffUpdate(BaseModel):
     name: Optional[str] = None
@@ -54,13 +55,11 @@ class StaffUpdate(BaseModel):
     active: Optional[bool] = None
     new_password: Optional[str] = None
 
-
 class BranchUpdate(BaseModel):
     gstin: Optional[str] = None
     signatory_name: Optional[str] = None
     state_code: Optional[str] = None
     manager_user_id: Optional[str] = None
-
 
 class StudentCreate(BaseModel):
     full_name: str
@@ -81,8 +80,7 @@ class StudentCreate(BaseModel):
     total_fee: float
     documents: List[dict] = Field(default_factory=list)
     notes: Optional[str] = None
-    public_user_id: Optional[str] = None  # link to existing public users.id
-
+    public_user_id: Optional[str] = None
 
 class StudentUpdate(BaseModel):
     full_name: Optional[str] = None
@@ -102,7 +100,6 @@ class StudentUpdate(BaseModel):
     notes: Optional[str] = None
     status: Optional[Literal["active", "inactive", "alumni"]] = None
 
-
 class PaymentCreate(BaseModel):
     student_id: str
     amount: float
@@ -111,7 +108,6 @@ class PaymentCreate(BaseModel):
     notes: Optional[str] = None
     transaction_ref: Optional[str] = None
     apply_gst: bool = True
-
 
 class ExpenseCreate(BaseModel):
     branch_id: str
@@ -122,11 +118,9 @@ class ExpenseCreate(BaseModel):
     bill_url: Optional[str] = None
     expense_date: Optional[str] = None
 
-
 class ExpenseDecision(BaseModel):
     decision: Literal["approve", "reject"]
     note: Optional[str] = None
-
 
 class LeadCreate(BaseModel):
     name: str
@@ -137,22 +131,27 @@ class LeadCreate(BaseModel):
     counsellor_id: Optional[str] = None
     notes: Optional[str] = None
 
-
 class LeadUpdate(BaseModel):
     status: Optional[Literal["new", "contacted", "follow_up", "converted", "lost"]] = None
     counsellor_id: Optional[str] = None
     notes: Optional[str] = None
     next_followup_at: Optional[str] = None
 
+class AttendanceScanRequest(BaseModel):
+    student_no: str
+    device_signature: Optional[str] = "TER-GATE-01"
 
-# ====== FACTORY: builds the ERP router with injected helpers ======
+class AttendanceOverrideRequest(BaseModel):
+    student_id: str
+    status: Literal["present", "late"]
+
+# ====== FACTORY MODULE INFRASTRUCTURE ======
 def build_erp_router(db, get_current_user, hash_password, verify_password, require_admin):
 
     erp = APIRouter(prefix="/erp", tags=["erp"])
 
     # ---- Role guards
     async def require_erp(user: dict = Depends(get_current_user)) -> dict:
-        # admin (legacy) is treated as super_admin
         role = user.get("role")
         if role == "admin":
             user["role"] = "super_admin"
@@ -177,17 +176,15 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
         return user.get("branch_id") == branch_id
 
     def scope_branch_filter(user: dict, branch_id_param: Optional[str] = None) -> dict:
-        """Returns a Mongo filter that respects role-based branch isolation."""
         if user["role"] == "super_admin":
             return {"branch_id": branch_id_param} if branch_id_param else {}
-        # Branch users see only their branch
         if not user.get("branch_id"):
             raise HTTPException(403, "User has no branch assigned")
         if branch_id_param and branch_id_param != user["branch_id"]:
             raise HTTPException(403, "Cross-branch access denied")
         return {"branch_id": user["branch_id"]}
 
-    # ---- Audit logger (best-effort, never blocks API)
+    # ---- Audit logger
     async def audit(user: dict, action: str, entity: str, entity_id: str, branch_id: Optional[str] = None, payload: Optional[dict] = None):
         try:
             await db.erp_audit.insert_one({
@@ -205,13 +202,22 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
         except Exception:
             pass
 
-    # ---- Receipt number generator (per-branch sequential)
+    async def broadcast_attendance_event(branch_id: str, event_payload: dict):
+        if branch_id in branch_broadcast_queues:
+            disconnected_queues = []
+            for q in branch_broadcast_queues[branch_id]:
+                try:
+                    await q.put(event_payload)
+                except Exception:
+                    disconnected_queues.append(q)
+            for dq in disconnected_queues:
+                branch_broadcast_queues[branch_id].remove(dq)
+
     async def gen_receipt_no(branch_id: str) -> str:
         b = await db.centers.find_one({"id": branch_id}, {"_id": 0})
         prefix = "NES"
-        if b and b.get("city"):
-            prefix = "NES-" + b["city"][:3].upper()
-        # atomically increment a counter
+        if b and b.get("name"):
+            prefix = "NES-" + b["name"][:3].upper()
         result = await db.erp_counters.find_one_and_update(
             {"_id": f"receipt_{branch_id}"},
             {"$inc": {"seq": 1}},
@@ -222,12 +228,11 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
         ymd = datetime.now(timezone.utc).strftime("%y%m")
         return f"{prefix}/{ymd}/{seq:05d}"
 
-    # ---- Student no generator
     async def gen_student_no(branch_id: str) -> str:
         b = await db.centers.find_one({"id": branch_id}, {"_id": 0})
         prefix = "NES"
-        if b and b.get("city"):
-            prefix = "NES-" + b["city"][:3].upper()
+        if b and b.get("name"):
+            prefix = "NES-" + b["name"][:3].upper()
         result = await db.erp_counters.find_one_and_update(
             {"_id": f"student_{branch_id}"},
             {"$inc": {"seq": 1}},
@@ -245,7 +250,119 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
             branch = await db.centers.find_one({"id": user["branch_id"]}, {"_id": 0})
         return {**user, "branch": branch}
 
-    # ===== BRANCHES (super_admin) =====
+    # ===== AUTOMATED QR ATTENDANCE LOGIC MODULES =====
+    @erp.post("/erpattendance/scan")
+    async def handle_attendance_scan(payload: AttendanceScanRequest, user: dict = Depends(require_erp)):
+        """Parses active raw structural card scanner token text validations asynchronously."""
+        current_time = datetime.now(timezone.utc)
+        
+        student = await db.erp_students.find_one({"student_no": payload.student_no, "status": "active"})
+        if not student:
+            raise HTTPException(404, "Invalid registration card signature code or suspended profile record match line")
+            
+        if not can_view_branch(user, student["branch_id"]):
+            raise HTTPException(403, "Terminal hardware mapping authorization scope fault")
+
+        min_bound_time = (current_time - timedelta(hours=12)).isoformat()
+        double_check = await db.erp_attendance.find_one({
+            "student_id": student["id"],
+            "scanned_at": {"$gte": min_bound_time}
+        })
+        if double_check:
+            raise HTTPException(422, "Student credential matrix entry sequence has already logged verification for this block loop context")
+
+        calculated_status = "present"
+        target_start_hour = 9 
+        grace_period_threshold_minutes = 15
+        
+        local_adjusted_time = current_time + timedelta(hours=5, minutes=30) 
+        gate_opening_time = local_adjusted_time.replace(hour=target_start_hour, minute=0, second=0, microsecond=0)
+        
+        minutes_deviation = (local_adjusted_time - gate_opening_time).total_seconds() / 60.0
+        if minutes_deviation > grace_period_threshold_minutes:
+            calculated_status = "late"
+
+        log_entry = {
+            "id": new_id(),
+            "student_id": student["id"],
+            "student_no": student["student_no"],
+            "full_name": student["full_name"],
+            "batch": student.get("batch", "GENERAL COHORT"),
+            "branch_id": student["branch_id"],
+            "status": calculated_status,
+            "mode": "QR Badge Scan via Gate Terminal",
+            "device_signature": payload.device_signature,
+            "scanned_at": now_iso()
+        }
+        
+        await db.erp_attendance.insert_one(log_entry)
+        log_entry.pop("_id", None)
+
+        asyncio.create_task(broadcast_attendance_event(student["branch_id"], log_entry))
+        asyncio.create_task(audit(user, "scan_verification", "attendance", log_entry["id"], student["branch_id"], {"status": calculated_status}))
+
+        return log_entry
+
+    @erp.post("/erpattendance/override")
+    async def handle_manual_override(payload: AttendanceOverrideRequest, user: dict = Depends(require_manager_plus)):
+        """Injects artificial administrative records cleanly bypassing physical scanners."""
+        student = await db.erp_students.find_one({"id": payload.student_id})
+        if not student:
+            raise HTTPException(404, "Target educational tracking record node index empty")
+            
+        if not can_view_branch(user, student["branch_id"]):
+            raise HTTPException(403, "Cross-branch asset operational violation tracking logs intercept")
+
+        log_entry = {
+            "id": new_id(),
+            "student_id": student["id"],
+            "student_no": student["student_no"],
+            "full_name": student["full_name"],
+            "batch": student.get("batch", "GENERAL COHORT"),
+            "branch_id": student["branch_id"],
+            "status": payload.status,
+            "mode": f"Manual Entry Override by {user.get('name', 'Admin')}",
+            "device_signature": "CONSOLE_OVERRIDE_DESK",
+            "scanned_at": now_iso()
+        }
+
+        await db.erp_attendance.insert_one(log_entry)
+        log_entry.pop("_id", None)
+
+        asyncio.create_task(broadcast_attendance_event(student["branch_id"], log_entry))
+        asyncio.create_task(audit(user, "manual_override", "attendance", log_entry["id"], student["branch_id"]))
+        
+        return log_entry
+
+    @erp.get("/erpattendance")
+    async def list_attendance_logs(branch_id: Optional[str] = None, user: dict = Depends(require_erp)):
+        f = scope_branch_filter(user, branch_id)
+        items = await db.erp_attendance.find(f, {"_id": 0}).sort("scanned_at", -1).to_list(1000)
+        return items
+
+    @erp.get("/erpattendance/stream/{branch_id}")
+    async def live_attendance_sse_stream(branch_id: str, user: dict = Depends(require_erp)):
+        if not can_view_branch(user, branch_id):
+            raise HTTPException(403, "Stream intercept mapping rejection access token parameter error")
+
+        async def event_generator_loop():
+            client_queue = asyncio.Queue()
+            branch_broadcast_queues.setdefault(branch_id, []).append(client_queue)
+            
+            try:
+                yield "retry: 10000\ndata: {\"system_status\": \"CONNECTED_STREAM_SYNC_OK\"}\n\n"
+                while True:
+                    incoming_scan_event = await client_queue.get()
+                    yield f"event: attendance_scanned_event\ndata: {json.dumps(incoming_scan_event)}\n\n"
+            except asyncio.CancelledError:
+                pass
+            finally:
+                if branch_id in branch_broadcast_queues and client_queue in branch_broadcast_queues[branch_id]:
+                    branch_broadcast_queues[branch_id].remove(client_queue)
+
+        return StreamingResponse(event_generator_loop(), media_type="text/event-stream")
+
+    # ===== BRANCHES =====
     @erp.get("/branches")
     async def list_branches(user: dict = Depends(require_erp)):
         if user["role"] == "super_admin":
@@ -265,7 +382,7 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
         await audit(user, "update", "branch", branch_id, branch_id, patch)
         return await db.centers.find_one({"id": branch_id}, {"_id": 0})
 
-    # ===== STAFF (super_admin and center_manager for their branch) =====
+    # ===== STAFF =====
     @erp.get("/staff")
     async def list_staff(branch_id: Optional[str] = None, user: dict = Depends(require_manager_plus)):
         f: dict = {"role": {"$in": list(ROLES_BRANCH)}}
@@ -300,7 +417,6 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
         }
         await db.users.insert_one(doc)
         doc.pop("_id", None); doc.pop("password_hash", None)
-        # If creating a manager, link branch.manager_user_id
         if payload.role == "center_manager":
             await db.centers.update_one({"id": payload.branch_id}, {"$set": {"manager_user_id": doc["id"]}})
         await audit(user, "create", "staff", doc["id"], payload.branch_id, {"role": payload.role})
@@ -350,7 +466,6 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
         if counsellor_id:
             f["counsellor_id"] = counsellor_id
         if user["role"] == "counsellor":
-            # Counsellors only see their assigned students
             f["counsellor_id"] = user["id"]
         if q:
             f["$or"] = [
@@ -516,7 +631,6 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
         s = await db.erp_students.find_one({"id": p["student_id"]}, {"_id": 0}) or {}
         b = await db.centers.find_one({"id": p["branch_id"]}, {"_id": 0}) or {}
         c = await db.courses.find_one({"id": p.get("course_id")}, {"_id": 0}) or {}
-        # prev_paid before this payment
         prev = await db.erp_payments.find(
             {"student_id": p["student_id"], "paid_at": {"$lt": p["paid_at"]}}, {"_id": 0, "amount": 1}
         ).to_list(500)
@@ -540,7 +654,6 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
             raise HTTPException(403, "Cross-branch denied")
         if not await db.centers.find_one({"id": payload.branch_id}):
             raise HTTPException(400, "Branch not found")
-        # super_admin and manager → auto-approved; accountant → pending approval
         auto_approved = user["role"] in {"super_admin", "center_manager"}
         doc = payload.dict()
         doc.update({
@@ -600,7 +713,7 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
         await audit(user, payload.decision, "expense", expense_id, e["branch_id"])
         return await db.erp_expenses.find_one({"id": expense_id}, {"_id": 0})
 
-    # ===== LEADS (counsellor pipeline) =====
+    # ===== LEADS =====
     @erp.post("/leads")
     async def create_lead(payload: LeadCreate, user: dict = Depends(require_erp)):
         if user["role"] not in {"super_admin", "center_manager", "counsellor"}:
@@ -648,7 +761,6 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
     # ===== DASHBOARDS =====
     @erp.get("/dashboard/super")
     async def super_dashboard(user: dict = Depends(require_super)):
-        # Aggregate all branches
         branches = await db.centers.find({}, {"_id": 0}).to_list(100)
         rows = []
         total_rev = 0.0
@@ -670,7 +782,6 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
                 "net": rev - exp,
                 "students": students,
             })
-        # pending fees system-wide
         all_students = await db.erp_students.find({"status": "active"}, {"_id": 0}).to_list(10000)
         pending_total = 0.0
         for s in all_students:
@@ -699,18 +810,15 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
         expenses = await db.erp_expenses.find({"branch_id": branch_id, "status": "approved"}, {"_id": 0}).to_list(10000)
         students = await db.erp_students.find({"branch_id": branch_id, "status": "active"}, {"_id": 0}).to_list(10000)
         leads = await db.erp_leads.find({"branch_id": branch_id}, {"_id": 0}).to_list(10000)
-        # pending
         pending_total = 0.0
         for s in students:
             paid = sum(p["amount"] for p in payments if p["student_id"] == s["id"])
             scholarship_amt = float(s["total_fee"]) * float(s.get("scholarship_percent", 0)) / 100.0
             net_fee = max(float(s["total_fee"]) - scholarship_amt - float(s.get("discount", 0)), 0)
             pending_total += max(net_fee - paid, 0)
-        # category split for expenses
         cat_split = {}
         for e in expenses:
             cat_split[e["category"]] = cat_split.get(e["category"], 0) + e["amount"]
-        # counsellor performance
         cperf: dict = {}
         for s in students:
             cid = s.get("counsellor_id")
@@ -723,7 +831,6 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
                 cperf.setdefault(cid, {"converted": 0})
                 cperf[cid].setdefault("leads", 0)
                 cperf[cid]["leads"] = cperf[cid].get("leads", 0) + 1
-        # Resolve names
         cnames = {}
         if cperf:
             for u in await db.users.find({"id": {"$in": list(cperf.keys())}}, {"_id": 0, "id": 1, "name": 1}).to_list(100):
@@ -784,6 +891,104 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
         return StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                                  headers={"Content-Disposition": 'attachment; filename="students.xlsx"'})
 
+    # ============================================================================
+    # COMPREHENSIVE DAILY ATTENDANCE EXCEL EXPORTER ENDPOINT
+    # ============================================================================
+    @erp.get("/erpattendance/exports/attendance_today.xlsx")
+    async def export_todays_attendance_matrix(branch_id: Optional[str] = None, user: dict = Depends(require_erp)):
+        if user["role"] == "counsellor":
+            raise HTTPException(403, "Access Denied: Administrative permission clearance required.")
+            
+        f = scope_branch_filter(user, branch_id)
+        
+        # Calculate localized ISO boundaries tracking today's date metrics strictly
+        today_start_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        f["scanned_at"] = {"$gte": f"{today_start_date}T00:00:00"}
+        
+        # Pull raw real-time gate log entries matching system configurations
+        raw_attendance_logs = await db.erp_attendance.find(f).sort("scanned_at", 1).to_list(10000)
+        
+        # Extract metadata mapping configurations safely via isolated asynchronous db list blocks
+        courses_cursor = db.courses.find({}, {"id": 1, "title": 1})
+        all_courses = {c["id"]: c.get("title", "Unknown Track") for c in await courses_cursor.to_list(1000)}
+        
+        students_cursor = db.erp_students.find({}, {"id": 1, "course_id": 1, "contact_phone": 1, "parent_phone": 1})
+        all_students = {s["id"]: s for s in await students_cursor.to_list(10000)}
+
+        # Construct structural memory grid mapped under [Course_Title][Batch_Tag] matrices
+        grouped_workbook_data = {}
+        for entry in raw_attendance_logs:
+            student_meta = all_students.get(entry["student_id"], {})
+            course_id = student_meta.get("course_id", "GENERAL")
+            course_title = all_courses.get(course_id, "General Roster").replace("/", "-")[:30] # Spreadsheet sheetname safety truncation cap
+            
+            raw_batch = entry.get("batch")
+            batch_tag = "UNASSIGNED_BATCH" if not raw_batch else str(raw_batch).replace("/", "-").upper()
+            
+            grouped_workbook_data.setdefault(course_title, {}).setdefault(batch_tag, []).append(entry)
+
+        # Initialize raw workbook compiler container
+        wb = openpyxl.Workbook()
+        
+        if not grouped_workbook_data:
+            ws = wb.active
+            ws.title = "No Attendance Today"
+            ws.append(["System Status Note", "No entry gate verification logs recorded yet for today."])
+        else:
+            for class_title, batches_sub_dict in grouped_workbook_data.items():
+                ws = wb.create_sheet(title=class_title)
+                
+                for batch_code, record_rows in batches_sub_dict.items():
+                    # Format sheet data alignment blocks
+                    ws.append([]) 
+                    ws.append([f"CLASS TRACK: {class_title} — BATCH COHORT: {batch_code}"])
+                    ws.append([
+                        "Enrollment No", 
+                        "Student Profile Full Name", 
+                        "Student Mobile No", 
+                        "Parent Mobile No", 
+                        "Check-In Verified Clock", 
+                        "Status Block Status", 
+                        "Gate Gateway Mode"
+                    ])
+                    
+                    for r in record_rows:
+                        # Re-verify tracking loops context records cleanly from mapping cache
+                        meta = all_students.get(r["student_id"], {})
+                        student_phone = meta.get("contact_phone", "—")
+                        parent_phone = meta.get("parent_phone", "—")
+                        
+                        scan_time = r.get("scanned_at", "")
+                        local_time_string = scan_time[11:16] if len(scan_time) > 16 else scan_time
+                        
+                        ws.append([
+                            r.get("student_no", "—"), 
+                            r.get("full_name", "—"), 
+                            student_phone,
+                            parent_phone,
+                            local_time_string, 
+                            str(r.get("status", "PRESENT")).upper(), 
+                            r.get("mode", "Scan Entry")
+                        ])
+            
+            # Flush out structural artifact default workspace sheets safely
+            if "Sheet" in wb.sheetnames and len(wb.sheetnames) > 1:
+                wb.remove(wb["Sheet"])
+            elif "Sheet" in wb.sheetnames:
+                wb["Sheet"].title = "Empty Roster Summary"
+
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        
+        asyncio.create_task(audit(user, "export_todays_metrics", "attendance", "today_xlsx", branch_id))
+        
+        return StreamingResponse(
+            buf, 
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="attendance_report_{today_start_date}.xlsx"'}
+        )
+
     # ===== AUDIT LOG (super_admin) =====
     @erp.get("/audit")
     async def audit_log(branch_id: Optional[str] = None, limit: int = 200, user: dict = Depends(require_super)):
@@ -806,12 +1011,8 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
     return erp
 
 
-# ====== ERP seed (idempotent): ensures indexes (role aliasing happens at request time) ======
+# ====== ERP seed (idempotent): ensures indexes ======
 async def erp_seed(db, hash_password):
-    """Ensure ERP indexes. Legacy 'admin' role is treated as super_admin at request time
-    (see require_erp), so we deliberately do NOT mutate user roles here — it would break
-    the /admin route and Protected role guards on the public site."""
-    # Indexes
     await db.erp_students.create_index("student_no", unique=True, sparse=True)
     await db.erp_students.create_index([("branch_id", 1), ("created_at", -1)])
     await db.erp_payments.create_index("receipt_no", unique=True, sparse=True)
@@ -820,3 +1021,5 @@ async def erp_seed(db, hash_password):
     await db.erp_expenses.create_index([("branch_id", 1), ("expense_date", -1)])
     await db.erp_leads.create_index([("branch_id", 1), ("status", 1)])
     await db.erp_audit.create_index([("created_at", -1)])
+    await db.erp_attendance.create_index([("branch_id", 1), ("scanned_at", -1)])
+    await db.erp_attendance.create_index([("student_id", 1), ("scanned_at", -1)])

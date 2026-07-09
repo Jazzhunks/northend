@@ -1,70 +1,323 @@
-import { motion } from "framer-motion";
+import { forwardRef, memo } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight } from "@phosphor-icons/react";
+
+/* -------------------------------------------------------------------------- */
+/* CONFIG */
+/* -------------------------------------------------------------------------- */
 
 const EASE = [0.16, 1, 0.3, 1];
 
-/** Primary cinematic CTA — tracing-beam border + arrow that slides on hover. */
-export function CTAPrimary({ children, className = "", iconRight = true, ...rest }) {
-  return (
-    <motion.button
-      whileHover={{ y: -2 }}
-      whileTap={{ y: 0 }}
-      transition={{ type: "spring", stiffness: 400, damping: 30 }}
-      className={`group tracing-beam relative inline-flex items-center gap-3 px-7 py-4 rounded-full
-                  bg-primary text-primary-foreground font-bold text-sm uppercase tracking-[0.18em]
-                  glow-primary hover:shadow-[0_0_50px_rgba(0,47,167,0.6)] transition-shadow ${className}`}
-      {...rest}
-    >
-      <span className="relative z-10">{children}</span>
-      {iconRight && <ArrowRight weight="bold" size={16} className="relative z-10 transition-transform group-hover:translate-x-1" />}
-    </motion.button>
-  );
+const SPRING = {
+  type: "spring",
+  stiffness: 320,
+  damping: 26,
+  mass: 0.8,
+};
+
+const fadeUp = {
+  hidden: (y = 30) => ({
+    opacity: 0,
+    y,
+    filter: "blur(10px)",
+  }),
+
+  visible: {
+    opacity: 1,
+    y: 0,
+    filter: "blur(0px)",
+  },
+};
+
+/* -------------------------------------------------------------------------- */
+/* UTILS */
+/* -------------------------------------------------------------------------- */
+
+function cn(...classes) {
+  return classes.filter(Boolean).join(" ");
 }
 
-/** Secondary ghost CTA — outline + subtle hover */
-export function CTAGhost({ children, className = "", iconRight = false, ...rest }) {
-  return (
-    <motion.button
-      whileHover={{ y: -2 }}
-      transition={{ type: "spring", stiffness: 400, damping: 30 }}
-      className={`group inline-flex items-center gap-3 px-7 py-4 rounded-full
-                  border border-white/15 bg-white/[0.03] backdrop-blur-md
-                  hover:bg-white/[0.06] hover:border-white/25
-                  text-foreground font-bold text-sm uppercase tracking-[0.18em] transition-all ${className}`}
-      {...rest}
-    >
-      <span>{children}</span>
-      {iconRight && <ArrowRight weight="bold" size={16} className="transition-transform group-hover:translate-x-1" />}
-    </motion.button>
-  );
-}
+/* -------------------------------------------------------------------------- */
+/* PRIMARY CTA */
+/* -------------------------------------------------------------------------- */
 
-/** Section eyebrow — small uppercase tag */
-export function Eyebrow({ children, className = "" }) {
+export const CTAPrimary = forwardRef(
+  (
+    {
+      children,
+      className = "",
+      iconRight = true,
+      isLoading = false,
+      disabled = false,
+      size = "md",
+      ...rest
+    },
+    ref
+  ) => {
+    const reduceMotion = useReducedMotion();
+
+    const sizes = {
+      sm: "h-11 px-5 text-[11px]",
+      md: "h-14 px-7 text-sm",
+      lg: "h-16 px-9 text-base",
+    };
+
+    return (
+      <motion.button
+        ref={ref}
+        type="button"
+        disabled={disabled || isLoading}
+        whileHover={
+          reduceMotion
+            ? {}
+            : {
+                y: -2,
+                scale: 1.01,
+              }
+        }
+        whileTap={
+          reduceMotion
+            ? {}
+            : {
+                scale: 0.98,
+              }
+        }
+        transition={SPRING}
+        className={cn(
+          "group tracing-beam relative inline-flex items-center justify-center gap-3",
+          "overflow-hidden rounded-full",
+          "transform-gpu will-change-transform",
+          "font-bold uppercase tracking-[0.18em]",
+          "bg-primary text-primary-foreground",
+          "shadow-[0_10px_40px_rgba(0,47,167,0.35)]",
+          "transition-all duration-300",
+          "hover:shadow-[0_0_60px_rgba(0,47,167,0.55)]",
+          "active:shadow-[0_0_30px_rgba(0,47,167,0.4)]",
+          "focus:outline-none",
+          "focus-visible:ring-2",
+          "focus-visible:ring-primary",
+          "focus-visible:ring-offset-2",
+          "focus-visible:ring-offset-background",
+          "disabled:pointer-events-none disabled:opacity-50",
+          sizes[size],
+          className
+        )}
+        {...rest}
+      >
+        {/* hover glow */}
+        <span
+          className={cn(
+            "absolute inset-0 opacity-0 transition-opacity duration-500",
+            "bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.18),transparent_65%)]",
+            "group-hover:opacity-100"
+          )}
+        />
+
+        {/* content */}
+        <span className="relative z-10 flex items-center gap-3">
+          <span>
+            {isLoading ? "Loading..." : children}
+          </span>
+
+          {iconRight && !isLoading && (
+            <motion.span
+              className="flex items-center justify-center"
+              animate={
+                reduceMotion
+                  ? {}
+                  : {
+                      x: [0, 2, 0],
+                    }
+              }
+              transition={{
+                duration: 1.8,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            >
+              <ArrowRight
+                weight="bold"
+                size={16}
+                className="transition-transform duration-300 group-hover:translate-x-1"
+              />
+            </motion.span>
+          )}
+        </span>
+      </motion.button>
+    );
+  }
+);
+
+CTAPrimary.displayName = "CTAPrimary";
+
+/* -------------------------------------------------------------------------- */
+/* GHOST CTA */
+/* -------------------------------------------------------------------------- */
+
+export const CTAGhost = forwardRef(
+  (
+    {
+      children,
+      className = "",
+      iconRight = false,
+      disabled = false,
+      size = "md",
+      ...rest
+    },
+    ref
+  ) => {
+    const reduceMotion = useReducedMotion();
+
+    const sizes = {
+      sm: "h-11 px-5 text-[11px]",
+      md: "h-14 px-7 text-sm",
+      lg: "h-16 px-9 text-base",
+    };
+
+    return (
+      <motion.button
+        ref={ref}
+        type="button"
+        disabled={disabled}
+        whileHover={
+          reduceMotion
+            ? {}
+            : {
+                y: -2,
+              }
+        }
+        whileTap={
+          reduceMotion
+            ? {}
+            : {
+                scale: 0.98,
+              }
+        }
+        transition={SPRING}
+        className={cn(
+          "group relative inline-flex items-center justify-center gap-3",
+          "overflow-hidden rounded-full",
+          "transform-gpu will-change-transform",
+          "border border-white/10",
+          "bg-white/[0.04]",
+          "backdrop-blur-xl",
+          "text-foreground",
+          "font-bold uppercase tracking-[0.18em]",
+          "transition-all duration-300",
+          "hover:border-white/20",
+          "hover:bg-white/[0.07]",
+          "hover:shadow-[0_10px_40px_rgba(255,255,255,0.04)]",
+          "focus:outline-none",
+          "focus-visible:ring-2",
+          "focus-visible:ring-white/30",
+          "focus-visible:ring-offset-2",
+          "focus-visible:ring-offset-background",
+          "disabled:pointer-events-none disabled:opacity-50",
+          sizes[size],
+          className
+        )}
+        {...rest}
+      >
+        <span className="relative z-10 flex items-center gap-3">
+          <span>{children}</span>
+
+          {iconRight && (
+            <ArrowRight
+              weight="bold"
+              size={16}
+              className="transition-transform duration-300 group-hover:translate-x-1"
+            />
+          )}
+        </span>
+      </motion.button>
+    );
+  }
+);
+
+CTAGhost.displayName = "CTAGhost";
+
+/* -------------------------------------------------------------------------- */
+/* EYEBROW */
+/* -------------------------------------------------------------------------- */
+
+export const Eyebrow = memo(function Eyebrow({
+  children,
+  className = "",
+}) {
+  const reduceMotion = useReducedMotion();
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-100px" }}
-      transition={{ duration: 0.6, ease: EASE }}
-      className={`text-xs font-bold uppercase tracking-[0.25em] text-accent flex items-center gap-2 ${className}`}
+      initial={
+        reduceMotion
+          ? false
+          : {
+              opacity: 0,
+              y: 10,
+            }
+      }
+      whileInView={{
+        opacity: 1,
+        y: 0,
+      }}
+      viewport={{
+        once: true,
+        amount: 0.3,
+      }}
+      transition={{
+        duration: 0.7,
+        ease: EASE,
+      }}
+      className={cn(
+        "inline-flex items-center gap-3",
+        "text-[11px] font-bold uppercase tracking-[0.28em]",
+        "text-accent",
+        className
+      )}
     >
-      <span className="w-8 h-px bg-accent/60" />
-      {children}
+      <span className="h-px w-10 bg-gradient-to-r from-accent to-transparent" />
+
+      <span className="text-glow-accent">
+        {children}
+      </span>
     </motion.div>
   );
-}
+});
 
-/** Animated reveal — wraps children, fades up on scroll into view */
-export function Reveal({ children, delay = 0, y = 30, className = "", as: Tag = "div" }) {
-  const MotionTag = motion[Tag] || motion.div;
+/* -------------------------------------------------------------------------- */
+/* REVEAL */
+/* -------------------------------------------------------------------------- */
+
+export function Reveal({
+  children,
+  delay = 0,
+  y = 30,
+  className = "",
+  as = "div",
+}) {
+  const reduceMotion = useReducedMotion();
+
+  const MotionTag = motion[as] || motion.div;
+
   return (
     <MotionTag
-      initial={{ opacity: 0, y }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-80px" }}
-      transition={{ duration: 0.8, ease: EASE, delay }}
-      className={className}
+      custom={y}
+      variants={fadeUp}
+      initial={reduceMotion ? false : "hidden"}
+      whileInView="visible"
+      viewport={{
+        once: true,
+        amount: 0.15,
+      }}
+      transition={{
+        duration: 0.9,
+        ease: EASE,
+        delay,
+      }}
+      className={cn(
+        "transform-gpu will-change-transform",
+        className
+      )}
     >
       {children}
     </MotionTag>

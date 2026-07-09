@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import ScrollToTop from "@/components/ScrollToTop";
 import Layout from "@/components/Layout";
 import Home from "@/pages/Home";
 import About from "@/pages/About";
@@ -18,6 +19,9 @@ import Register from "@/pages/Register";
 import StudentDashboard from "@/pages/StudentDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
 import Examiner from "@/pages/Examiner";
+import Privacy from "@/pages/Privacy";
+
+// --- ERP Console Infrastructure Imports ---
 import ErpLayout from "@/pages/erp/ErpLayout";
 import ErpDashboard from "@/pages/erp/ErpDashboard";
 import ErpStudents from "@/pages/erp/ErpStudents";
@@ -28,6 +32,8 @@ import ErpLeads from "@/pages/erp/ErpLeads";
 import ErpStaff from "@/pages/erp/ErpStaff";
 import ErpBranches from "@/pages/erp/ErpBranches";
 import ErpAudit from "@/pages/erp/ErpAudit";
+import ErpIdCards from "@/pages/erp/ErpIdCards";       // Added ID card generation module
+import ErpAttendance from "@/pages/erp/ErpAttendance";   
 
 function Protected({ children, role }) {
   const { user, loading } = useAuth();
@@ -41,10 +47,14 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <ScrollToTop />
         <Toaster position="top-right" richColors />
         <Routes>
           <Route path="/examiner" element={<Examiner />} />
-          {/* ERP — separate console for staff (super_admin/manager/accountant/counsellor) */}
+          
+          {/* ============================================================================
+              ERP CONSOLE SUB-ROUTES (STAFF / COMPLIANCE ENVIRONMENT LOGIC)
+              ============================================================================ */}
           <Route path="/erp" element={<ErpLayout />}>
             <Route index element={<ErpDashboard />} />
             <Route path="students" element={<ErpStudents />} />
@@ -55,7 +65,15 @@ export default function App() {
             <Route path="staff" element={<ErpStaff />} />
             <Route path="branches" element={<ErpBranches />} />
             <Route path="audit" element={<ErpAudit />} />
+            
+            {/* New Automation & Credential Features Fixed Elements Mapping */}
+            <Route path="erpidcards" element={<ErpIdCards />} />
+            <Route path="erpattendance" element={<ErpAttendance />} />
           </Route>
+
+          {/* ============================================================================
+              PUBLIC MARKETING APP & STUDENT LIFE PORTAL TRACKS
+              ============================================================================ */}
           <Route element={<Layout />}>
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<About />} />
@@ -70,8 +88,13 @@ export default function App() {
             <Route path="/contact" element={<Contact />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/privacy" element={<Privacy />} />
+            
+            {/* Authenticated Student/Admin Profile Nodes */}
             <Route path="/dashboard" element={<Protected><StudentDashboard /></Protected>} />
             <Route path="/admin" element={<Protected role="admin"><AdminDashboard /></Protected>} />
+            
+            {/* Universal Fallback Direct Catch */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

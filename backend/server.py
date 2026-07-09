@@ -37,8 +37,6 @@ MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 # ---------- Setup ----------
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
-# Prefer the default database embedded in the connection URI (Atlas deployments inject one);
-# fall back to DB_NAME for local/dev environments where the URI has no default database.
 try:
     db = client.get_default_database()
     if db is None:
@@ -88,6 +86,11 @@ async def get_current_user(request: Request) -> dict:
         ah = request.headers.get("Authorization", "")
         if ah.startswith("Bearer "):
             token = ah[7:]
+    
+    # EventSource query token fallback channel
+    if not token:
+        token = request.query_params.get("token")
+
     if not token:
         raise HTTPException(401, "Not authenticated")
     try:
@@ -156,17 +159,17 @@ class ScholarshipApplicationIn(BaseModel):
     standard: str
     target_exam: str
     city: str
-    scholarship_id: str  # REQUIRED — must reference an admin-uploaded campaign
-    venue: Optional[str] = None  # picked by student from campaign.available_venues
+    scholarship_id: str
+    venue: Optional[str] = None
 
 class ScholarshipResultIn(BaseModel):
     marks_obtained: float
     total_marks: float = 100
     rank: Optional[int] = None
     percentile: Optional[float] = None
-    scholarship_percentage: int  # 0-100
+    scholarship_percentage: int
     remarks: Optional[str] = None
-    publish: bool = False  # set true to make result publicly viewable
+    publish: bool = False
 
 class ScholarshipLookupIn(BaseModel):
     phone: str
@@ -191,7 +194,7 @@ class JobIn(BaseModel):
     title: str
     department: str
     location: str
-    type: str  # Full-time, Part-time
+    type: str
     description: str
     requirements: List[str] = []
     active: bool = True
@@ -207,7 +210,7 @@ class JobApplicationIn(BaseModel):
     subject_expertise: Optional[str] = None
     preferred_location: str
     cover_letter: Optional[str] = None
-    resume_url: Optional[str] = None  # link or note
+    resume_url: Optional[str] = None
 
 class NoticeIn(BaseModel):
     title: str
@@ -246,7 +249,6 @@ class TestimonialIn(BaseModel):
     role: str
     quote: str
 
-# ---------- Helpers ----------
 def now_iso():
     return datetime.now(timezone.utc).isoformat()
 
@@ -312,11 +314,10 @@ async def stats():
         "enrollments": enrollments,
     }
 
-# ---------- Featured highlight (single across notices/jobs/scholarships) ----------
+# ---------- Featured highlight ----------
 FEATURED_COLLECTIONS = ["notices", "jobs", "scholarships"]
 
 async def _clear_featured_except(keep_coll: str | None, keep_id: str | None):
-    """Set is_featured=False on every doc in the three collections except (keep_coll, keep_id)."""
     for coll in FEATURED_COLLECTIONS:
         q = {"is_featured": True}
         if coll == keep_coll and keep_id:
@@ -334,7 +335,6 @@ async def get_featured():
 
 @api.post("/admin/feature")
 async def set_featured(kind: str = Query(...), id: str = Query(...), _admin = Depends(require_admin)):
-    """Mark exactly one item as featured across notices/jobs/scholarships. Pass kind=clear to unfeature all."""
     if kind == "clear":
         await _clear_featured_except(None, None)
         return {"ok": True, "featured": None}
@@ -432,7 +432,7 @@ async def apply_scholarship(payload: ScholarshipApplicationIn, background: Backg
         raise HTTPException(400, "Scholarship campaign is closed")
     avail = campaign.get("available_venues") or []
     if avail and payload.venue and payload.venue not in avail:
-        raise HTTPException(400, f"Selected venue is not available for this campaign")
+        raise HTTPException(400, "Selected venue is not available for this campaign")
     doc = payload.model_dump()
     doc["id"] = new_id()
     doc["application_no"] = "NEW-SCH-" + str(uuid.uuid4().int)[:8]
@@ -443,7 +443,6 @@ async def apply_scholarship(payload: ScholarshipApplicationIn, background: Backg
     doc["created_at"] = now_iso()
     await db.scholarship_applications.insert_one(doc)
     doc.pop("_id", None)
-    # Surface campaign WA url to client so they can show join modal
     doc["whatsapp_community_url"] = campaign.get("whatsapp_community_url")
     background.add_task(email_scholarship_received, payload.email, payload.name, doc["application_no"], payload.target_exam)
     background.add_task(email_admin_notification, f"New scholarship application: {payload.name}",
@@ -481,7 +480,6 @@ async def set_scholarship_result(aid: str, payload: ScholarshipResultIn, backgro
     if payload.publish:
         update["result_published_at"] = now_iso()
     await db.scholarship_applications.update_one({"id": aid}, {"$set": update})
-    # Fire result email only on transition unpublished -> published
     if payload.publish and not was_published and app_doc.get("email"):
         front = os.environ.get("FRONTEND_URL", "").rstrip("/")
         result_url = (f"{front}/api/scholarship-applications/{app_doc['application_no']}/result-card"
@@ -502,7 +500,6 @@ async def lookup_scholarship(payload: ScholarshipLookupIn):
     )
     if not app_doc:
         raise HTTPException(404, "No application found with this number and phone")
-    # Hide result fields if not published
     if not app_doc.get("result_published"):
         for k in ("result_marks_obtained", "result_total_marks", "result_rank", "result_percentile", "result_scholarship_percentage", "result_remarks"):
             app_doc.pop(k, None)
@@ -510,7 +507,6 @@ async def lookup_scholarship(payload: ScholarshipLookupIn):
 
 @api.get("/scholarship-applications/mine")
 async def my_scholarship_applications(user: dict = Depends(get_current_user)):
-    """Logged-in students see scholarship apps tied to their email or phone."""
     q = {"$or": [{"email": user.get("email")}]}
     if user.get("phone"):
         q["$or"].append({"phone": user["phone"]})
@@ -546,7 +542,6 @@ async def attendance_applications(token: str = Query(...), venue: Optional[str] 
     q = {"scholarship_id": camp["id"]}
     if venue: q["venue"] = venue
     apps = await db.scholarship_applications.find(q, {"_id": 0}).sort("name", 1).to_list(2000)
-    # join with attendance
     appno_set = [a["application_no"] for a in apps]
     att_rows = await db.attendance.find({"scholarship_id": camp["id"], "application_no": {"$in": appno_set}}, {"_id": 0}).to_list(2000)
     att_by = {a["application_no"]: a for a in att_rows}
@@ -627,7 +622,6 @@ async def results_template(sid: str, _admin = Depends(require_admin)):
             a.get("school", ""), a.get("standard", ""),
             "", total_marks_default, "", "", "", "", "no",
         ])
-    # Make header bold
     for cell in ws[1]:
         cell.font = openpyxl.styles.Font(bold=True)
     buf = io.BytesIO(); wb.save(buf); buf.seek(0)
@@ -713,7 +707,6 @@ async def bulk_results(sid: str, background: BackgroundTasks,
         except Exception as e:
             errors.append({"row": row_no, "app": app_no if 'app_no' in locals() else "", "error": str(e)})
     return {"processed": processed, "published": published_count, "errors": errors}
-
 
 # ---------- Enrollments ----------
 @api.post("/enrollments")
@@ -912,7 +905,7 @@ async def admin_summary(_admin = Depends(require_admin)):
         "total_jobs": await db.jobs.count_documents({}),
     }
 
-# ---------- File Upload (Emergent Object Storage) ----------
+# ---------- File Upload ----------
 @api.post("/upload")
 async def upload(file: UploadFile = File(...)):
     ctype = file.content_type or "application/octet-stream"
@@ -954,6 +947,7 @@ async def download_file(file_id: str):
         raise HTTPException(500, f"Storage error: {e}")
     return Response(content=data, media_type=rec.get("content_type") or ctype,
                     headers={"Content-Disposition": f'inline; filename="{rec["original_filename"]}"'})
+
 # ---------- Scholarship admit card PDF ----------
 @api.get("/scholarship-applications/{application_no}/admit-card")
 async def admit_card(application_no: str):
@@ -982,7 +976,6 @@ async def admit_card(application_no: str):
 # ---------- Scholarship result card PDF ----------
 @api.get("/scholarship-applications/{application_no}/result-card")
 async def result_card(application_no: str, phone: Optional[str] = None):
-    """Public download — needs phone match unless admin auth is in cookie."""
     app_doc = await db.scholarship_applications.find_one({"application_no": application_no}, {"_id": 0})
     if not app_doc:
         raise HTTPException(404, "Application not found")
@@ -1009,7 +1002,6 @@ async def result_card(application_no: str, phone: Optional[str] = None):
     )
     return Response(content=pdf_bytes, media_type="application/pdf",
                     headers={"Content-Disposition": f'attachment; filename="result-{application_no}.pdf"'})
-
 
 def export_excel(rows: list, sheet_name: str, filename: str):
     wb = openpyxl.Workbook()
@@ -1045,7 +1037,6 @@ async def export(kind: str, _admin = Depends(require_admin)):
 
 # ---------- Seed ----------
 async def seed():
-    # admin: always upserted so you can never lock yourself out (env-driven recovery)
     admin_email = os.environ.get("ADMIN_EMAIL").lower()
     admin_pwd = os.environ.get("ADMIN_PASSWORD")
     existing = await db.users.find_one({"email": admin_email})
@@ -1060,11 +1051,8 @@ async def seed():
         await db.users.update_one({"email": admin_email},
             {"$set": {"password_hash": hash_password(admin_pwd), "role": "admin"}})
 
-    # First-deploy-only content seeding. Once the marker is set, admin deletes are permanent.
     seed_marker = await db.system_meta.find_one({"key": "initial_seed"})
     if seed_marker is None:
-        # Existing deployments: if any content already exists, just record the marker
-        # without re-inserting anything (so we don't resurrect items the admin already deleted).
         has_existing_data = (
             (await db.centers.count_documents({}) > 0)
             or (await db.courses.count_documents({}) > 0)
@@ -1083,14 +1071,9 @@ async def seed():
                 "key": "initial_seed", "completed_at": now_iso(), "method": "fresh-install",
             })
 
-    # Always-safe backfills below — these only patch existing rows, they never create new ones
-    # so they cannot resurrect deleted content.
-
-    # Backfill examiner_token for any scholarship that pre-dates this field
     async for sc in db.scholarships.find({"examiner_token": {"$exists": False}}, {"_id": 0, "id": 1}):
         await db.scholarships.update_one({"id": sc["id"]}, {"$set": {"examiner_token": uuid.uuid4().hex}})
 
-    # Backfill features/syllabus/faculty arrays for legacy course rows that pre-date these fields
     legacy_course_patches = {
         "Class 11–12 NEET": {
             "syllabus": ["Physics", "Chemistry", "Botany", "Zoology", "NCERT Mastery", "Weekly Mock Tests"],
@@ -1110,14 +1093,10 @@ async def seed():
             if patch:
                 await db.courses.update_one({"id": existing_course["id"]}, {"$set": patch})
 
-    # indexes
     await db.users.create_index("email", unique=True)
     await db.users.create_index("id", unique=True)
 
-
 async def _run_initial_seed():
-    """Insert the default starter content. Runs ONLY on a fresh, empty database."""
-    # centers
     kashmir_centers = [
         {"id": new_id(), "name": "Northend Srinagar", "city": "Srinagar", "address": "Lal Chowk, Srinagar, J&K 190001", "phone": "+91-9876500001", "timing": "8:00 AM – 8:00 PM", "lat": 34.0837, "lng": 74.7973},
         {"id": new_id(), "name": "Northend Anantnag", "city": "Anantnag", "address": "KP Road, Anantnag, J&K 192101", "phone": "+91-9876500002", "timing": "8:00 AM – 8:00 PM", "lat": 33.7311, "lng": 75.1487},
@@ -1128,7 +1107,6 @@ async def _run_initial_seed():
     ]
     await db.centers.insert_many(kashmir_centers)
 
-    # courses
     courses_data = [
         ("Class 11–12 NEET", "NEET", "24 months", 95000, "Comprehensive 2-year NEET preparation with Unacademy curriculum.", True, "https://images.unsplash.com/photo-1571260899304-425eee4c7efc?w=800",
          ["Physics", "Chemistry", "Botany", "Zoology", "NCERT Mastery", "Weekly Mock Tests"],
@@ -1151,14 +1129,13 @@ async def _run_initial_seed():
          ["Local Faculty Panel"],
          ["JKBOSE-pattern test series", "One-on-one revision plans", "Affordable monthly fee plans"]),
     ]
-    for t, cat, dur, fee, desc, feat, img, syl, fac, feats in courses_data:
+    for t, cat, dur, fee, desc, feat, img, syl, fac, features in courses_data:
         await db.courses.insert_one({
             "id": new_id(), "title": t, "category": cat, "duration": dur, "fee": fee,
-            "description": desc, "syllabus": syl, "faculty": fac, "features": feats,
+            "description": desc, "syllabus": syl, "faculty": fac, "features": features,
             "scholarship_available": True, "featured": feat, "image_url": img, "created_at": now_iso(),
         })
 
-    # notices
     notices = [
         ("New 2026 NEET Batch Launch", "Admissions open for the new NEET 2026 batch starting March 1.", "Admissions", True),
         ("Scholarship Test 2026", "Northend Scholarship Test on Feb 28 — up to 100% fee waiver.", "Scholarship", True),
@@ -1167,7 +1144,6 @@ async def _run_initial_seed():
     for t, c, cat, p in notices:
         await db.notices.insert_one({"id": new_id(), "title": t, "content": c, "category": cat, "pinned": p, "created_at": now_iso()})
 
-    # results
     results_data = [
         ("Aamir Hussain", "NEET 2025", "AIR 412", 2025, "NEET", "Cracked NEET in first attempt with Northend's guidance."),
         ("Zoya Bhat", "JEE Advanced 2025", "AIR 1108", 2025, "IIT-JEE", "From Anantnag to IIT Delhi — mentors made the difference."),
@@ -1182,7 +1158,6 @@ async def _run_initial_seed():
             "photo_url": None, "quote": q, "created_at": now_iso()
         })
 
-    # testimonials
     ts = [
         ("Insha Rather", "Parent", "Northend transformed my daughter's preparation. The faculty truly cares."),
         ("Rayaan Khan", "NEET Aspirant", "Best decision was joining Northend in Srinagar. Mock tests were spot on."),
@@ -1191,7 +1166,6 @@ async def _run_initial_seed():
     for n, role, q in ts:
         await db.testimonials.insert_one({"id": new_id(), "name": n, "role": role, "quote": q, "created_at": now_iso()})
 
-    # jobs
     jobs = [
         ("Physics Faculty (NEET/JEE)", "Academics", "Srinagar", "Full-time", "Senior physics educator for NEET/JEE batches.", ["M.Sc/Ph.D Physics", "3+ years coaching experience"], True),
         ("Counselor", "Admissions", "Anantnag", "Full-time", "Student counseling and parent interactions.", ["Graduate", "Excellent communication"], True),
@@ -1202,7 +1176,6 @@ async def _run_initial_seed():
     for t, d, l, ty, desc, req, a in jobs:
         await db.jobs.insert_one({"id": new_id(), "title": t, "department": d, "location": l, "type": ty, "description": desc, "requirements": req, "active": a, "created_at": now_iso()})
 
-    # scholarship campaign
     await db.scholarships.insert_one({
         "id": new_id(), "title": "Northend Scholarship Test 2026 (NST)",
         "description": "Win up to 100% scholarship on tuition fees. Open for Class 8–12 students across Kashmir.",
@@ -1215,14 +1188,12 @@ async def _run_initial_seed():
     })
 
 # ---------- App wiring ----------
-# Mount ERP module under /api/erp/*
 from erp_routes import build_erp_router, erp_seed  # noqa: E402
+# CRITICAL HARMONIZATION: Prefixing explicitly captures /api/erp boundaries matching front-end axios default routing behaviors
 erp_router = build_erp_router(db, get_current_user, hash_password, verify_password, require_admin)
 api.include_router(erp_router)
 app.include_router(api)
 
-# CORS: allow preview, production custom domain, and any extra comma-separated origins via env.
-# Wildcard "*" with credentials is rejected by browsers — we use an explicit list + regex.
 _default_allowed = [
     "http://localhost:3000",
     "https://nexed-neet.preview.emergentagent.com",
@@ -1240,7 +1211,6 @@ if _frontend_url and _frontend_url not in _default_allowed:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=list(set(_default_allowed)),
-    # Allow any *.preview.emergentagent.com and *.emergent.host preview/staging hosts
     allow_origin_regex=r"https://([a-z0-9-]+\.)?(preview\.emergentagent\.com|emergent\.host|northendedu\.com)$",
     allow_credentials=True,
     allow_methods=["*"],

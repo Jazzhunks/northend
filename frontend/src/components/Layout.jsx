@@ -3,10 +3,9 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import SmoothScroll from "@/components/SmoothScroll";
-import { CTAPrimary } from "@/components/Cinematic";
 import {
   List, X, Phone, MapPinSimple, EnvelopeSimple, WhatsappLogo,
-  ArrowUpRight, GraduationCap
+  ArrowUpRight, FacebookLogo, InstagramLogo, YoutubeLogo
 } from "@phosphor-icons/react";
 
 const NAV = [
@@ -50,12 +49,8 @@ function Navbar() {
       }`}>
         <div className="flex items-center justify-between px-4 lg:px-6 h-16">
           <Link to="/" className="flex items-center gap-3 group" data-testid="logo-link">
-            <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/60 grid place-items-center overflow-hidden">
-              <GraduationCap weight="fill" size={20} className="text-accent relative z-10" />
-              <div className="absolute inset-0 bg-accent/20 blur-xl" />
-            </div>
             <div className="leading-tight">
-              <div className="font-display font-medium text-base tracking-tight">Northend</div>
+              <div className="font-display font-medium text-base tracking-tight text-foreground">Northend</div>
               <div className="text-[9px] tracking-[0.28em] uppercase text-muted-foreground">Educational World</div>
             </div>
           </Link>
@@ -93,9 +88,9 @@ function Navbar() {
             {user ? (
               <>
                 {user.role === "admin" ? (
-                  <Link to="/admin" data-testid="admin-btn" className="text-xs font-bold uppercase tracking-[0.18em] px-4 py-2 rounded-full border border-white/15 hover:border-white/30 transition">Admin</Link>
+                  <Link to="/admin" data-testid="admin-btn" className="text-xs font-bold uppercase tracking-[0.18em] px-4 py-2 rounded-full border border-white/15 hover:border-white/30 transition text-foreground">Admin</Link>
                 ) : (
-                  <Link to="/dashboard" data-testid="dashboard-btn" className="text-xs font-bold uppercase tracking-[0.18em] px-4 py-2 rounded-full border border-white/15 hover:border-white/30 transition">Dashboard</Link>
+                  <Link to="/dashboard" data-testid="dashboard-btn" className="text-xs font-bold uppercase tracking-[0.18em] px-4 py-2 rounded-full border border-white/15 hover:border-white/30 transition text-foreground">Dashboard</Link>
                 )}
                 <button onClick={logout} data-testid="logout-btn" className="text-xs font-bold uppercase tracking-[0.18em] px-4 py-2 text-muted-foreground hover:text-foreground transition">Logout</button>
               </>
@@ -116,7 +111,7 @@ function Navbar() {
             )}
           </div>
 
-          <button className="lg:hidden p-2" onClick={() => setOpen(!open)} aria-label="menu" data-testid="mobile-menu-toggle">
+          <button className="lg:hidden p-2 text-foreground" onClick={() => setOpen(!open)} aria-label="menu" data-testid="mobile-menu-toggle">
             {open ? <X size={22} /> : <List size={22} />}
           </button>
         </div>
@@ -138,12 +133,12 @@ function Navbar() {
               <div className="flex gap-2 pt-3 mt-2 border-t border-white/10">
                 {user ? (
                   <>
-                    <Link className="flex-1" to={user.role === "admin" ? "/admin" : "/dashboard"}><div className="w-full text-center px-4 py-3 rounded-xl border border-white/15 text-sm font-bold">{user.role === "admin" ? "Admin" : "Dashboard"}</div></Link>
-                    <button onClick={logout} className="flex-1 px-4 py-3 rounded-xl border border-white/15 text-sm font-bold">Logout</button>
+                    <Link className="flex-1" to={user.role === "admin" ? "/admin" : "/dashboard"}><div className="w-full text-center px-4 py-3 rounded-xl border border-white/15 text-sm font-bold text-foreground">{user.role === "admin" ? "Admin" : "Dashboard"}</div></Link>
+                    <button onClick={logout} className="flex-1 px-4 py-3 rounded-xl border border-white/15 text-sm font-bold text-muted-foreground">Logout</button>
                   </>
                 ) : (
                   <>
-                    <Link className="flex-1" to="/login"><div className="w-full text-center px-4 py-3 rounded-xl border border-white/15 text-sm font-bold">Login</div></Link>
+                    <Link className="flex-1" to="/login"><div className="w-full text-center px-4 py-3 rounded-xl border border-white/15 text-sm font-bold text-foreground">Login</div></Link>
                     <Link className="flex-1" to="/enroll"><div className="w-full text-center px-4 py-3 rounded-xl bg-accent text-accent-foreground text-sm font-bold">Enroll</div></Link>
                   </>
                 )}
@@ -162,7 +157,7 @@ function Footer() {
       <div className="ambient-orb ambient-orb--primary" style={{ width: 600, height: 600, top: "-200px", left: "-100px" }} />
       <div className="relative max-w-7xl mx-auto px-4 lg:px-8 py-20 grid grid-cols-1 md:grid-cols-12 gap-10">
         <div className="md:col-span-5">
-          <div className="font-display text-3xl lg:text-4xl font-light tracking-tight leading-tight">
+          <div className="font-display text-3xl lg:text-4xl font-light tracking-tight leading-tight text-foreground">
             The future of <span className="text-accent">Kashmir's classrooms</span> is being engineered here.
           </div>
           <p className="text-sm text-muted-foreground mt-6 max-w-md leading-relaxed">
@@ -181,19 +176,34 @@ function Footer() {
             <li><Link to="/about" className="text-muted-foreground hover:text-foreground">About</Link></li>
             <li><Link to="/contact" className="text-muted-foreground hover:text-foreground">Contact</Link></li>
             <li><Link to="/jobs" className="text-muted-foreground hover:text-foreground">Careers</Link></li>
+            <li><Link to="/privacy" className="text-muted-foreground hover:text-foreground">Privacy</Link></li>
           </ul>
         </div>
         <div className="md:col-span-3">
           <div className="text-[10px] uppercase tracking-[0.28em] text-accent mb-5">Reach us</div>
-          <ul className="space-y-3 text-xs text-muted-foreground">
+          <ul className="space-y-3 text-xs text-muted-foreground mb-6">
             <li className="flex items-start gap-2"><MapPinSimple weight="duotone" size={16}/> I G Road, Parray Pora, Srinagar, J&K 190005</li>
             <li className="flex items-center gap-2"><Phone weight="duotone" size={16}/> +91-8766238623</li>
             <li className="flex items-center gap-2"><EnvelopeSimple weight="duotone" size={16}/> info@northendedu.com</li>
           </ul>
+          
+          <div className="flex items-center gap-4">
+            <a href="https://www.facebook.com/unacademykashmiroffline" target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-accent transition-colors" aria-label="Facebook">
+              <FacebookLogo weight="fill" size={24} />
+            </a>
+            <a href="https://www.instagram.com/unacademykashmir" target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-accent transition-colors" aria-label="Instagram">
+              <InstagramLogo weight="fill" size={24} />
+            </a>
+            <a href="https://www.youtube.com/@Unacademyoflinekashmir" target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-accent transition-colors" aria-label="YouTube">
+              <YoutubeLogo weight="fill" size={24} />
+            </a>
+          </div>
         </div>
       </div>
-      <div className="border-t border-white/[0.06] py-6 text-center text-[11px] text-muted-foreground tracking-wider">
-        © {new Date().getFullYear()} Northend Educational World · Authorised Unacademy Franchise · Kashmir
+      <div className="border-t border-white/[0.06] py-6 px-4 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="text-[11px] text-muted-foreground tracking-wider">
+          © {new Date().getFullYear()} Northend Educational World · Authorised Unacademy Franchise · Kashmir
+        </div>
       </div>
     </footer>
   );
@@ -217,6 +227,20 @@ function WhatsAppFab() {
 }
 
 export default function Layout() {
+  const loc = useLocation();
+  
+  // --- REFACTORED CONDITION: DETECTS IF USER IS WITHIN THE ADMIN WORKSPACE ENVIRONMENT ---
+  const isAdminPath = loc.pathname.startsWith("/admin");
+
+  if (isAdminPath) {
+    return (
+      <div className="min-h-screen bg-background text-foreground overflow-hidden">
+        <Outlet />
+      </div>
+    );
+  }
+
+  // Fallback layout wraps public website views safely
   return (
     <SmoothScroll>
       <div className="min-h-screen flex flex-col">

@@ -1,90 +1,126 @@
 <!doctype html>
-<html lang="en">
-    <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="#000000" />
-        <meta name="description" content="Empowering the next generation of educators and students. Northend Education provides expert-led coaching for competitive exams and connects top teaching talent with leading ed-tech platforms." />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@600&display=swap" rel="stylesheet" />
-        <title>Northend Educational World</title>
-        <script>window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);</script>
-        
-    </head>
-    <body>
-        <noscript>You need to enable JavaScript to run this app.</noscript>
-        <div id="root"></div>
-        <script>
-            !(function (t, e) {
-                var o, n, p, r;
-                e.__SV ||
-                    ((window.posthog = e),
-                    (e._i = []),
-                    (e.init = function (i, s, a) {
-                        function g(t, e) {
-                            var o = e.split(".");
-                            2 == o.length && ((t = t[o[0]]), (e = o[1])),
-                                (t[e] = function () {
-                                    t.push(
-                                        [e].concat(
-                                            Array.prototype.slice.call(
-                                                arguments,
-                                                0,
-                                            ),
-                                        ),
-                                    );
-                                });
-                        }
-                        ((p = t.createElement("script")).type =
-                            "text/javascript"),
-                            (p.crossOrigin = "anonymous"),
-                            (p.async = !0),
-                            (p.src =
-                                s.api_host.replace(
-                                    ".i.posthog.com",
-                                    "-assets.i.posthog.com",
-                                ) + "/static/array.js"),
-                            (r =
-                                t.getElementsByTagName(
-                                    "script",
-                                )[0]).parentNode.insertBefore(p, r);
-                        var u = e;
-                        for (
-                            void 0 !== a ? (u = e[a] = []) : (a = "posthog"),
-                                u.people = u.people || [],
-                                u.toString = function (t) {
-                                    var e = "posthog";
-                                    return (
-                                        "posthog" !== a && (e += "." + a),
-                                        t || (e += " (stub)"),
-                                        e
-                                    );
-                                },
-                                u.people.toString = function () {
-                                    return u.toString(1) + ".people (stub)";
-                                },
-                                o =
-                                    "init me ws ys ps bs capture je Di ks register register_once register_for_session unregister unregister_for_session Ps getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSurveysLoaded onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey canRenderSurveyAsync identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty Es $s createPersonProfile Is opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing Ss debug xs getPageViewId captureTraceFeedback captureTraceMetric".split(
-                                        " ",
-                                    ),
-                                n = 0;
-                            n < o.length;
-                            n++
-                        )
-                            g(u, o[n]);
-                        e._i.push([i, s, a]);
-                    }),
-                    (e.__SV = 1));
-            })(document, window.posthog || []);
-            posthog.init("phc_xAvL2Iq4tFmANRE7kzbKwaSqp1HJjN7x48s3vr0CMjs", {
-                api_host: "https://us.i.posthog.com",
-                person_profiles: "identified_only", // or 'always' to create profiles for anonymous users as well,
-                session_recording: {
-                    recordCrossOriginIframes: true,
-                    capturePerformance: false,
-                },
-            });
-        </script>
-    </body>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#020617" />
+    <meta name="description" content="Northend Educational World provides premium coaching for NEET, JEE, Foundation, CUET, and competitive exams across Kashmir with expert educators, modern learning systems, and career-focused academic programs." />
+    <meta name="keywords" content="Northend Educational World, NEET coaching Kashmir, JEE coaching Srinagar, CUET preparation, Foundation classes, Unacademy Kashmir, coaching institute Kashmir" />
+    <meta name="author" content="Northend Educational World" />
+    <meta name="robots" content="index, follow" />
+
+    <meta property="og:title" content="Northend Educational World" />
+    <meta property="og:description" content="Premium academic coaching and competitive exam preparation platform for students across Kashmir." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/og-image.jpg" />
+    <meta property="og:url" content="https://northendedu.com" />
+    <meta property="og:site_name" content="Northend Educational World" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Northend Educational World" />
+    <meta name="twitter:description" content="Premium academic coaching and competitive exam preparation platform for students across Kashmir." />
+    <meta name="twitter:image" content="/og-image.jpg" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/logo192.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <title>Northend Educational World | Premium Coaching Institute</title>
+
+    <script>
+      window.addEventListener("error", function (e) {
+        if (
+          e.error instanceof DOMException &&
+          e.error.name === "DataCloneError" &&
+          e.message &&
+          e.message.includes("PerformanceServerTiming")
+        ) {
+          e.stopImmediatePropagation();
+          e.preventDefault();
+        }
+      }, true);
+    </script>
+
+    <script>
+      (() => {
+        const savedTheme = localStorage.getItem("theme");
+        if (savedTheme === "light" || (!savedTheme && window.matchMedia("(prefers-color-scheme: light)").matches)) {
+          document.documentElement.classList.remove("dark");
+          document.documentElement.classList.add("light");
+        } else {
+          document.documentElement.classList.remove("light");
+          document.documentElement.classList.add("dark");
+        }
+      })();
+    </script>
+  </head>
+
+  <body>
+    <noscript>
+      <div style="font-family: system-ui, sans-serif; padding: 2rem; max-width: 800px; margin: 0 auto; text-align: center;">
+        <h1>Northend Educational World</h1>
+        <p><strong>Premium academic coaching and competitive exam preparation across Kashmir.</strong></p>
+        <p>We provide next-generation learning ecosystems for NEET, IIT-JEE, CBSE, JKBOSE, Cambridge, and Foundation courses, taught by India's finest educators.</p>
+        <p><em>Note: For the full cinematic and interactive experience of our platform, please enable JavaScript in your browser settings.</em></p>
+        <hr style="margin: 2rem 0; border: 1px solid #eee;" />
+        <h2>Contact Us</h2>
+        <p>If you are trying to reach us to enroll or ask about scholarships:</p>
+        <ul style="list-style-type: none; padding: 0;">
+          <li><strong>Email:</strong> info@northendedu.com</li>
+          <li><strong>Network:</strong> 4 Premium Centers across the Kashmir Valley</li>
+        </ul>
+      </div>
+    </noscript>
+    
+    <div id="root"></div>
+
+    <script>
+      !(function (t, e) {
+        var o, n, p, r;
+        e.__SV || ((window.posthog = e), (e._i = []), (e.init = function (i, s, a) {
+          function g(t, e) {
+            var o = e.split(".");
+            2 == o.length && ((t = t[o[0]]), (e = o[1]));
+            t[e] = function () { t.push([e].concat(Array.prototype.slice.call(arguments, 0))); };
+          }
+          ((p = t.createElement("script")).type = "text/javascript"),
+          (p.crossOrigin = "anonymous"), (p.async = !0),
+          (p.src = s.api_host.replace(".i.posthog.com", "-assets.i.posthog.com") + "/static/array.js"),
+          (r = t.getElementsByTagName("script")[0]).parentNode.insertBefore(p, r);
+          var u = e;
+          for (
+            void 0 !== a ? (u = e[a] = []) : (a = "posthog"),
+            u.people = u.people || [],
+            u.toString = function (t) {
+              var e = "posthog";
+              return "posthog" !== a && (e += "." + a), t || (e += " (stub)"), e;
+            },
+            u.people.toString = function () { return u.toString(1) + ".people (stub)"; },
+            o = "init capture identify alias people.set people.set_once reset unregister opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing".split(" "),
+            n = 0; n < o.length; n++
+          ) { g(u, o[n]); }
+          e._i.push([i, s, a]);
+        }), (e.__SV = 1));
+      })(document, window.posthog || []);
+
+      posthog.init("phc_xAvL2Iq4tFmANRE7kzbKwaSqp1HJjN7x48s3vr0CMjs", {
+        api_host: "https://us.i.posthog.com",
+        person_profiles: "identified_only",
+        capture_pageview: true,
+        capture_pageleave: true,
+        session_recording: {
+          maskAllInputs: true,
+          maskInputOptions: { password: true },
+          recordCrossOriginIframes: false,
+          capturePerformance: false,
+        },
+      });
+    </script>
+  </body>
 </html>

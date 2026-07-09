@@ -108,26 +108,28 @@ export default function Examiner() {
   useEffect(() => () => { stopScanner(); /* cleanup on unmount */ /* eslint-disable-next-line */ }, []);
 
   if (!token) {
-    return <div className="max-w-xl mx-auto p-12 text-center"><h1 className="font-display text-2xl font-black">Examiner link missing</h1><p className="text-muted-foreground mt-2">Open the link your administrator shared.</p></div>;
+    return <div className="max-w-xl mx-auto p-12 text-center"><h1 className="font-display text-2xl font-medium">Examiner link missing</h1><p className="text-muted-foreground mt-2">Open the link your administrator shared.</p></div>;
   }
   if (!campaign) {
     return <div className="p-12 text-muted-foreground">Loading…</div>;
   }
 
   return (
-    <div className="light bg-background min-h-screen" data-theme="light">
-    <div className="max-w-7xl mx-auto px-4 lg:px-8 py-10" data-testid="examiner-page">
+    <div className="bg-background min-h-screen relative overflow-hidden">
+    <div className="ambient-orb ambient-orb--primary drift pointer-events-none" style={{ width: 400, height: 400, top: "-100px", left: "10%" }} />
+    <div className="absolute inset-0 bg-grid opacity-20 pointer-events-none" />
+    <div className="max-w-7xl mx-auto px-4 lg:px-8 py-10 relative" data-testid="examiner-page">
       <div className="text-xs uppercase tracking-[0.2em] font-bold text-primary mb-2">Examiner Console</div>
-      <h1 className="font-display text-3xl lg:text-4xl font-black tracking-tighter">{campaign.title}</h1>
+      <h1 className="font-display text-3xl lg:text-4xl font-light tracking-[-0.04em]">{campaign.title}</h1>
       <div className="text-sm text-muted-foreground mt-1">Exam {campaign.exam_date} · {campaign.exam_time || "10:00 AM"}</div>
 
       <div className="mt-8 grid lg:grid-cols-12 gap-8">
         {/* Scanner column */}
         <div className="lg:col-span-5 space-y-4">
-          <div className="border border-border p-5 rounded-md bg-background">
+          <div className="glass-elevated p-5 rounded-2xl bg-background">
             <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-2 block">Venue</label>
             {(campaign.available_venues || []).length ? (
-              <select className="w-full border border-border rounded-md px-3 py-2 bg-background" value={venue} onChange={e => setVenue(e.target.value)} data-testid="ex-venue">
+              <select className="w-full glass rounded-xl px-3 py-2 bg-background" value={venue} onChange={e => setVenue(e.target.value)} data-testid="ex-venue">
                 {campaign.available_venues.map(v => <option key={v} value={v}>{v}</option>)}
               </select>
             ) : (
@@ -135,7 +137,7 @@ export default function Examiner() {
             )}
           </div>
 
-          <div className="border border-border p-5 rounded-md bg-background">
+          <div className="glass-elevated p-5 rounded-2xl bg-background">
             <div className="flex items-center justify-between mb-3">
               <div className="font-display font-bold flex items-center gap-2"><ScanLine size={18}/>Scan Admit Card</div>
               {scanning ? (
@@ -147,7 +149,7 @@ export default function Examiner() {
             <div id="qr-reader" className="rounded-md overflow-hidden bg-black/90 min-h-[240px]"/>
           </div>
 
-          <form onSubmit={onManualSubmit} className="border border-border p-5 rounded-md bg-background">
+          <form onSubmit={onManualSubmit} className="glass-elevated p-5 rounded-2xl bg-background">
             <div className="font-display font-bold mb-3">Manual Entry</div>
             <div className="flex gap-2">
               <Input placeholder="NEW-SCH-XXXXXXXX" value={manualNo} onChange={e => setManualNo(e.target.value)} data-testid="ex-manual-input"/>
@@ -156,7 +158,7 @@ export default function Examiner() {
           </form>
 
           {recent.length > 0 && (
-            <div className="border border-border p-5 rounded-md bg-background">
+            <div className="glass-elevated p-5 rounded-2xl bg-background">
               <div className="font-display font-bold mb-3">Recently Marked</div>
               <ul className="space-y-2 text-sm">
                 {recent.map((r) => (
@@ -176,7 +178,7 @@ export default function Examiner() {
               <Button size="sm" variant="outline" onClick={loadApps} data-testid="ex-refresh"><RefreshCw size={14}/>Refresh</Button>
             </div>
           </div>
-          <div className="border border-border rounded-md overflow-x-auto">
+          <div className="glass rounded-xl overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-secondary text-xs uppercase">
                 <tr>
@@ -191,7 +193,7 @@ export default function Examiner() {
               <tbody>
                 {data.items.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No applicants for this venue yet.</td></tr>}
                 {data.items.map(a => (
-                  <tr key={a.application_no} className={`border-t border-border ${a.attendance_status === "present" ? "bg-green-50/40" : ""}`} data-testid={`row-${a.application_no}`}>
+                  <tr key={a.application_no} className={`border-t border-white/[0.06] ${a.attendance_status === "present" ? "bg-green-50/40" : ""}`} data-testid={`row-${a.application_no}`}>
                     <td className="p-3 font-mono text-xs">{a.application_no}</td>
                     <td className="p-3 font-bold">{a.name}</td>
                     <td className="p-3 hidden md:table-cell text-muted-foreground">{a.school}</td>

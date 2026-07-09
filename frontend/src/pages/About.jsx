@@ -15,7 +15,7 @@ export default function About() {
         eyebrow="About Northend"
         title="A franchise born from one promise —"
         accent="bring India's best teachers to Kashmir."
-        subtitle="Northend Educational World is the authorised Unacademy partner for the Kashmir region. We operate six centres across the valley and equip thousands of students every year to compete on the national stage."
+        subtitle="Northend Educational World is the authorised Unacademy partner for the Kashmir region. We operate Four centres across the valley and equip thousands of students every year to compete on the national stage."
       />
 
       {/* Mission / Vision / Philosophy */}
@@ -54,7 +54,7 @@ export default function About() {
               { y: "2022", t: "Founded in Srinagar", d: "A tiny classroom. A big idea. Northend opens its first centre at Lal Chowk with 12 students." },
               { y: "2023", t: "Unacademy partnership", d: "Became an authorised Unacademy franchise — bringing national-grade curriculum and educators." },
               { y: "2025", t: "Expanded to 3 centres", d: "Anantnag and Sopore centres launched. Pass rate hits 86% for NEET aspirants." },
-              { y: "2026", t: "Six centres, one valley", d: "Soura, Zakura and Parraypora join the network. ERP platform launches for transparent fee + attendance tracking." },
+              { y: "2026", t: "Four centres, one valley", d: "Soura, Zakura and Parraypora join the network. ERP platform launches for transparent fee + attendance tracking." },
             ].map((s, i) => (
               <Reveal key={s.y} delay={i * 0.1}>
                 <div className={`relative grid md:grid-cols-2 gap-8 mb-16 ${i % 2 ? "" : "md:[&>*:first-child]:order-2"}`}>
