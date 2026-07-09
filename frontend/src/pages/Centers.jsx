@@ -13,7 +13,7 @@ export default function Centers() {
     <div data-testid="centers-page">
       <PageHero
         eyebrow="Network"
-        title="Four centres,"
+        title="Five centres,"
         accent="one valley."
         subtitle="Walk into any Northend centre across Kashmir — same curriculum, same Unacademy access, same outcome focus."
       />

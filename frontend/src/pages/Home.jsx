@@ -214,7 +214,7 @@ export default function Home() {
                     <div className="flex items-center gap-6 text-[11px] uppercase tracking-[0.22em] text-muted-foreground font-bold">
                       <span>Free entry</span>
                       <span className="hidden sm:inline">·</span>
-                      <span className="hidden sm:inline">6 centres</span>
+                      <span className="hidden sm:inline">5 centres</span>
                       <span className="hidden sm:inline">·</span>
                       <span className="hidden sm:inline">Class 7–12 · Droppers</span>
                     </div>
@@ -450,7 +450,7 @@ export default function Home() {
                 <Eyebrow>Network</Eyebrow>
                 <Reveal>
                   <h2 className="font-display text-4xl lg:text-6xl font-light tracking-tight mt-4">
-                    Four centres.<br/>
+                    Five centres.<br/>
                     <span className="font-medium italic text-accent">One valley.</span>
                   </h2>
                 </Reveal>

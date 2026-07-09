@@ -435,7 +435,16 @@ async def apply_scholarship(payload: ScholarshipApplicationIn, background: Backg
         raise HTTPException(400, "Selected venue is not available for this campaign")
     doc = payload.model_dump()
     doc["id"] = new_id()
-    doc["application_no"] = "NEW-SCH-" + str(uuid.uuid4().int)[:8]
+    # Generate an 8-digit numeric application number, ensuring uniqueness
+    import random
+    for _ in range(10):
+        candidate = str(random.randint(10000000, 99999999))
+        if not await db.scholarship_applications.find_one({"application_no": candidate}):
+            doc["application_no"] = candidate
+            break
+    else:
+        # extremely unlikely — fall back to timestamp-derived numeric
+        doc["application_no"] = str(int(datetime.now(timezone.utc).timestamp() * 1000))[-8:]
     doc["status"] = "pending"
     doc["scholarship_title"] = campaign.get("title", "")
     if not doc.get("venue"):

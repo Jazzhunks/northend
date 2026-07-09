@@ -34,7 +34,7 @@ const FAQS = [
   { q: "Who can appear for WATH?", a: "Any student from Class 7 to Class 12 studying in J&K, plus current NEET/JEE droppers." },
   { q: "Is there a registration fee?", a: "No — WATH is completely free to register and appear." },
   { q: "What's the exam format?", a: "A 2-hour objective-type paper covering Mental Ability, Science, Mathematics and Aptitude. Difficulty is calibrated to your class/target exam." },
-  { q: "Where will the exam be held?", a: "Across all 6 Northend centres in Kashmir — you choose the closest venue during registration." },
+  { q: "Where will the exam be held?", a: "Across 4 Northend centres in Kashmir — you choose the closest venue during registration." },
   { q: "When is the result declared?", a: "Result is declared within 7 days of the exam. You'll receive an SMS + can also check on this page using your application number." },
   { q: "How do I claim my scholarship?", a: "Result card carries your scholarship percentage. Walk into any Northend centre with the printed result card — admissions team will apply the waiver on your fee." },
 ];
@@ -152,7 +152,7 @@ function HeroSection({ campaign, loading }) {
                   <DetailRow Icon={CalendarBlank} label="Exam date" value={loading ? "…" : (examDate ? formatDate(examDate) : "TBA")} testid="detail-exam-date"/>
                   <DetailRow Icon={Clock} label="Duration" value="2 hours"/>
                   <DetailRow Icon={GraduationCap} label="Eligibility" value="Class 7–12 · NEET/JEE Droppers"/>
-                  <DetailRow Icon={MapPin} label="Venues" value={`${campaign?.available_venues?.length || 6} centres · Kashmir`} testid="detail-venues"/>
+                  <DetailRow Icon={MapPin} label="Venues" value={`${campaign?.available_venues?.length || 4} centres · Kashmir`} testid="detail-venues"/>
                   <DetailRow Icon={Coins} label="Registration" value="₹0 — completely free"/>
                 </div>
                 <div className="mt-6 pt-6 border-t border-white/[0.08]">
@@ -544,10 +544,7 @@ function ResultCheckSection() {
     e.preventDefault();
     setBusy(true);
     try {
-      const { data } = await api.post(`/scholarship-applications/lookup`, {
-        application_no: applicationNo.trim(),
-        phone: phone.trim(),
-      });
+      const { data } = await api.get(`/scholarship-applications/${applicationNo}`, { params: { phone } });
       setResult(data);
       if (!data.result_published) toast.info("Result not yet declared — please check back after 7 days from exam.");
     } catch (e) {
@@ -588,9 +585,9 @@ function ResultCheckSection() {
                 <div className="text-sm text-muted-foreground font-mono">{result.application_no}</div>
                 {result.result_published ? (
                   <div className="mt-6 grid sm:grid-cols-3 gap-3">
-                    <InfoBlock label="Marks" value={result.result_marks_obtained != null ? `${result.result_marks_obtained}/${result.result_total_marks ?? 100}` : "—"}/>
-                    <InfoBlock label="Scholarship" value={`${result.result_scholarship_percentage ?? 0}%`}/>
-                    <InfoBlock label="Rank" value={result.result_rank ?? "See result card"}/>
+                    <InfoBlock label="Marks" value={result.marks ?? "—"}/>
+                    <InfoBlock label="Scholarship" value={`${result.result_scholarship_percentage}%`}/>
+                    <InfoBlock label="Rank / band" value={result.rank_band ?? "See result card"}/>
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground mt-4">Your result is being processed — you'll receive an SMS as soon as it's declared. Check back after 7 days from your exam date.</p>

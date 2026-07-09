@@ -15,7 +15,7 @@ export default function About() {
         eyebrow="About Northend"
         title="A franchise born from one promise —"
         accent="bring India's best teachers to Kashmir."
-        subtitle="Northend Educational World is the authorised Unacademy partner for the Kashmir region. We operate Four centres across the valley and equip thousands of students every year to compete on the national stage."
+        subtitle="Northend Educational World is the authorised Unacademy partner for the Kashmir region. We operate Five centres across the valley and equip thousands of students every year to compete on the national stage."
       />
 
       {/* Mission / Vision / Philosophy */}
