@@ -167,6 +167,65 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ============================== WATH FEATURED BANNER ============================== */}
+      <section className="relative section" data-testid="home-wath-banner">
+        <div className="max-w-7xl mx-auto px-4 lg:px-8">
+          <Reveal>
+            <Link to="/wath" className="block group">
+              <GlassPanel elevated className="relative overflow-hidden p-8 lg:p-14">
+                <div className="ambient-orb ambient-orb--accent" style={{ width: 520, height: 520, top: "-120px", right: "-120px" }} />
+                <div className="ambient-orb ambient-orb--primary" style={{ width: 420, height: 420, bottom: "-160px", left: "-80px", opacity: 0.5 }} />
+                <div className="absolute inset-0 bg-grid opacity-20 pointer-events-none" />
+
+                {/* Orbiting trophy */}
+                <div className="absolute right-[6%] top-1/2 -translate-y-1/2 hidden lg:block pointer-events-none opacity-90">
+                  <div className="relative w-[280px] h-[280px]">
+                    <div className="absolute inset-0 rounded-full border border-accent/25 animate-[spin_60s_linear_infinite]" />
+                    <div className="absolute inset-6 rounded-full border border-primary/30 animate-[spin_45s_linear_infinite_reverse]" />
+                    <div className="absolute inset-14 rounded-full border border-accent/15 animate-[spin_30s_linear_infinite]" />
+                    <div className="absolute inset-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-accent/20 blur-2xl" />
+                    <div className="absolute inset-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-accent glow-accent grid place-items-center">
+                      <Trophy weight="fill" size={20} className="text-accent-foreground" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="relative max-w-3xl">
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 glass rounded-full text-[10px] font-bold uppercase tracking-[0.22em] mb-6">
+                    <Sparkle weight="fill" size={12} className="text-accent" />
+                    Kashmir's flagship talent hunt · 2026
+                  </div>
+
+                  <h2 className="font-display text-5xl lg:text-7xl font-light tracking-[-0.03em] leading-[0.95]">
+                    <span className="bg-gradient-to-br from-accent via-amber-300 to-accent bg-clip-text text-transparent text-glow-accent font-medium">WATH</span>
+                    <span className="block text-xl lg:text-2xl text-foreground/70 mt-3 font-light">
+                      <span className="text-accent italic font-medium">Wisdom</span> · <span className="text-accent italic font-medium">Aptitude</span> · <span className="text-accent italic font-medium">Talent</span> · <span className="text-accent italic font-medium">Hunt</span>
+                    </span>
+                  </h2>
+
+                  <p className="mt-6 text-base lg:text-lg text-muted-foreground max-w-xl leading-relaxed">
+                    A 2-hour valley-wide scholarship exam. Unlock up to <b className="text-accent">100% fee waiver</b> and <b className="text-foreground">cash prizes</b> across NEET, JEE and Foundation programmes. Free to register.
+                  </p>
+
+                  <div className="mt-8 flex items-center gap-4 flex-wrap">
+                    <span className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-accent text-accent-foreground text-xs font-bold uppercase tracking-[0.18em] glow-accent group-hover:translate-y-[-2px] transition-transform">
+                      Explore WATH <ArrowUpRight weight="bold" size={14}/>
+                    </span>
+                    <div className="flex items-center gap-6 text-[11px] uppercase tracking-[0.22em] text-muted-foreground font-bold">
+                      <span>Free entry</span>
+                      <span className="hidden sm:inline">·</span>
+                      <span className="hidden sm:inline">6 centres</span>
+                      <span className="hidden sm:inline">·</span>
+                      <span className="hidden sm:inline">Class 7–12 · Droppers</span>
+                    </div>
+                  </div>
+                </div>
+              </GlassPanel>
+            </Link>
+          </Reveal>
+        </div>
+      </section>
+
       {/* ============================== FEATURED COURSES ============================== */}
       <section className="relative section">
         <div className="ambient-orb ambient-orb--primary drift" style={{ width: 600, height: 600, top: "10%", right: "-200px" }} />

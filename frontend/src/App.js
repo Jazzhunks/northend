@@ -8,6 +8,7 @@ import About from "@/pages/About";
 import Courses from "@/pages/Courses";
 import CourseDetail from "@/pages/CourseDetail";
 import Scholarship from "@/pages/Scholarship";
+import WATH from "@/pages/WATH";
 import Enroll from "@/pages/Enroll";
 import Jobs from "@/pages/Jobs";
 import Centers from "@/pages/Centers";
@@ -80,6 +81,7 @@ export default function App() {
             <Route path="/courses" element={<Courses />} />
             <Route path="/courses/:id" element={<CourseDetail />} />
             <Route path="/scholarship" element={<Scholarship />} />
+            <Route path="/wath" element={<WATH />} />
             <Route path="/enroll" element={<Enroll />} />
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/centers" element={<Centers />} />

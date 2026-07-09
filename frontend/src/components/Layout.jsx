@@ -11,6 +11,7 @@ import {
 const NAV = [
   { to: "/", label: "Home" },
   { to: "/courses", label: "Courses" },
+  { to: "/wath", label: "WATH", highlight: true },
   { to: "/scholarship", label: "Scholarship" },
   { to: "/centers", label: "Centers" },
   { to: "/results", label: "Results" },
@@ -63,13 +64,20 @@ function Navbar() {
                 data-testid={`nav-${n.label.toLowerCase()}`}
                 className={({ isActive }) =>
                   `relative px-3 py-2 text-[13px] font-medium rounded-full transition-colors ${
-                    isActive ? "text-accent" : "text-foreground/70 hover:text-foreground"
+                    isActive ? "text-accent" : n.highlight ? "text-accent/90 hover:text-accent" : "text-foreground/70 hover:text-foreground"
                   }`
                 }
               >
                 {({ isActive }) => (
                   <>
-                    {n.label}
+                    <span className="inline-flex items-center gap-1.5">
+                      {n.label}
+                      {n.highlight && (
+                        <span className="text-[8px] font-bold uppercase tracking-[0.18em] px-1.5 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/25">
+                          2026
+                        </span>
+                      )}
+                    </span>
                     {isActive && (
                       <motion.span
                         layoutId="nav-active"
@@ -126,8 +134,13 @@ function Navbar() {
             <div className="p-3 flex flex-col gap-1">
               {NAV.map((n) => (
                 <NavLink key={n.to} to={n.to} data-testid={`mobile-nav-${n.label.toLowerCase()}`}
-                  className={({isActive}) => `px-4 py-2.5 rounded-xl text-sm font-medium transition ${isActive ? "bg-white/10 text-accent" : "text-foreground/80"}`}>
-                  {n.label}
+                  className={({isActive}) => `px-4 py-2.5 rounded-xl text-sm font-medium transition flex items-center justify-between ${isActive ? "bg-white/10 text-accent" : n.highlight ? "text-accent/90" : "text-foreground/80"}`}>
+                  <span>{n.label}</span>
+                  {n.highlight && (
+                    <span className="text-[8px] font-bold uppercase tracking-[0.18em] px-1.5 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/25">
+                      2026
+                    </span>
+                  )}
                 </NavLink>
               ))}
               <div className="flex gap-2 pt-3 mt-2 border-t border-white/10">
