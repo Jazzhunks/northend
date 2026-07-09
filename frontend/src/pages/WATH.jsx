@@ -104,7 +104,7 @@ function HeroSection({ campaign, loading }) {
             className="inline-flex items-center gap-2 px-3.5 py-1.5 glass rounded-full text-[10px] font-bold uppercase tracking-[0.22em] mb-8"
           >
             <Sparkle weight="fill" size={12} className="text-accent" />
-            Unacademy Kashmir · Powered by Northend
+            Unacademy Kashmir
           </motion.div>
 
           <motion.div
@@ -152,7 +152,7 @@ function HeroSection({ campaign, loading }) {
                   <DetailRow Icon={CalendarBlank} label="Exam date" value={loading ? "…" : (examDate ? formatDate(examDate) : "TBA")} testid="detail-exam-date"/>
                   <DetailRow Icon={Clock} label="Duration" value="2 hours"/>
                   <DetailRow Icon={GraduationCap} label="Eligibility" value="Class 7–12 · NEET/JEE Droppers"/>
-                  <DetailRow Icon={MapPin} label="Venues" value={`${campaign?.available_venues?.length ?? 6} centres · Kashmir`} testid="detail-venues"/>
+                  <DetailRow Icon={MapPin} label="Venues" value={`${campaign?.available_venues?.length || 6} centres · Kashmir`} testid="detail-venues"/>
                   <DetailRow Icon={Coins} label="Registration" value="₹0 — completely free"/>
                 </div>
                 <div className="mt-6 pt-6 border-t border-white/[0.08]">
@@ -416,15 +416,18 @@ function RegisterSection({ campaign }) {
     if (!campaign) { toast.error("Registration is not open yet — please check back soon."); return; }
     setBusy(true);
     try {
+      const [d1, d2] = form.class_or_course.includes("(") ? form.class_or_course.split("(") : [form.class_or_course, ""];
+      const targetExam = d2.includes("NEET") ? "NEET" : d2.includes("JEE") ? "JEE" : form.class_or_course.includes("11") || form.class_or_course.includes("12") ? "NEET/JEE" : "Foundation";
       const { data } = await api.post("/scholarship-applications", {
         scholarship_id: campaign.id,
         name: form.name,
         email: form.email,
         phone: form.phone,
-        class_or_course: form.class_or_course,
-        school_name: form.school_name,
-        venue: form.venue,
-        target_exam: form.class_or_course.includes("NEET") ? "NEET" : form.class_or_course.includes("JEE") ? "JEE" : "Foundation",
+        school: form.school_name,
+        standard: form.class_or_course,
+        target_exam: targetExam,
+        city: (form.venue || "Srinagar").replace(/^Northend\s+/i, "") || "Srinagar",
+        venue: form.venue || undefined,
       });
       setSubmitted(data);
       toast.success("Registered — download your admit card below.");
@@ -669,6 +672,27 @@ function FinalCTA() {
 }
 
 function formatDate(iso) {
-  try { return new Date(iso).toLocaleDateString("en-IN", { weekday: "short", day: "2-digit", month: "short", year: "numeric" }); }
-  catch { return iso; }
+  if (!iso) return "TBA";
+  const d = parseFlexibleDate(iso);
+  if (!d || isNaN(d.getTime())) return String(iso);
+  try {
+    return d.toLocaleDateString("en-IN", { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
+  } catch { return String(iso); }
+}
+
+function parseFlexibleDate(v) {
+  if (!v) return null;
+  if (v instanceof Date) return v;
+  const s = String(v).trim();
+  // ISO / YYYY-MM-DD -> native parse works
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return new Date(s);
+  // DD-MM-YYYY or DD/MM/YYYY
+  const m = s.match(/^(\d{1,2})[\-\/](\d{1,2})[\-\/](\d{4})$/);
+  if (m) {
+    const [, dd, mm, yyyy] = m;
+    return new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+  }
+  // Fallback
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
 }
