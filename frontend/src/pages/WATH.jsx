@@ -544,7 +544,10 @@ function ResultCheckSection() {
     e.preventDefault();
     setBusy(true);
     try {
-      const { data } = await api.get(`/scholarship-applications/${applicationNo}`, { params: { phone } });
+      const { data } = await api.post(`/scholarship-applications/lookup`, {
+        application_no: applicationNo.trim(),
+        phone: phone.trim(),
+      });
       setResult(data);
       if (!data.result_published) toast.info("Result not yet declared — please check back after 7 days from exam.");
     } catch (e) {
@@ -585,9 +588,9 @@ function ResultCheckSection() {
                 <div className="text-sm text-muted-foreground font-mono">{result.application_no}</div>
                 {result.result_published ? (
                   <div className="mt-6 grid sm:grid-cols-3 gap-3">
-                    <InfoBlock label="Marks" value={result.marks ?? "—"}/>
-                    <InfoBlock label="Scholarship" value={`${result.result_scholarship_percentage}%`}/>
-                    <InfoBlock label="Rank / band" value={result.rank_band ?? "See result card"}/>
+                    <InfoBlock label="Marks" value={result.result_marks_obtained != null ? `${result.result_marks_obtained}/${result.result_total_marks ?? 100}` : "—"}/>
+                    <InfoBlock label="Scholarship" value={`${result.result_scholarship_percentage ?? 0}%`}/>
+                    <InfoBlock label="Rank" value={result.result_rank ?? "See result card"}/>
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground mt-4">Your result is being processed — you'll receive an SMS as soon as it's declared. Check back after 7 days from your exam date.</p>
