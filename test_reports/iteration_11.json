@@ -1,0 +1,38 @@
+{
+  "summary": "Iteration 11 — WhatsApp Inbox end-to-end verification. Wrote 17 pytest cases covering (1) verify handshake success/failure, (2) HMAC-SHA256 X-Hub-Signature-256 validation on POST /webhooks/whatsapp, (3) inbound message persistence + auto-link to WATH applicant (phone 9999900000 → application_no 12477667), (4) idempotency of duplicate wa_message_id, (5) admin GET /threads + /messages + PATCH /read, (6) POST send hitting the REAL Meta Graph API (now returns 200 with a real wamid), (7) RBAC (unauth 401/403 + student 403). Found and fixed a critical body-parsing bug: SendMessageIn Pydantic model was declared inside build_whatsapp_router() closure — FastAPI resolves annotations via module globals and could not find the class, so it silently degraded `req: SendMessageIn` to `Query(...)` and every POST returned 422 'Field required: query req'. Moved the class to module scope; POST /whatsapp/threads/{id}/messages now returns 200. UI verified: WhatsApp Inbox tab loads, thread list renders, WATH-linked App No 12477667 chip shows, ChatPane opens on click, wa-text-input+wa-send-btn triggers a successful POST (post-fix).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration11_whatsapp.py",
+    "/app/test_reports/pytest/iteration11.xml"
+  ],
+  "action_items": [
+    "None — critical bug already fixed and re-verified. Instruct the user to now register the webhook URL in Meta App dashboard (Callback URL = https://nexed-neet.preview.emergentagent.com/api/webhooks/whatsapp, Verify Token = Z1w53bdGJc0cIlAz0eGN6F_Wwgp9nyS-jCxC5o8cavI) and subscribe to the 'messages' field on the WABA — real inbound messages will start flowing to the inbox.",
+    "(Nit) whatsapp_inbox.py send_message could log the Meta error code (result.error.code) explicitly so admin sees e.g. 131047 vs generic 'Send failed'."
+  ],
+  "critical_code_review_comments": [
+    "FIXED — CRITICAL: SendMessageIn Pydantic model was defined inside build_whatsapp_router() function. FastAPI+Pydantic v2 resolves annotations via typing.get_type_hints using MODULE globals; a class in a factory-function's local scope becomes an unresolved ForwardRef and FastAPI silently downgrades the parameter from Body → Query. Result: every POST /api/whatsapp/threads/{id}/messages returned 422 'Field required: query req' regardless of request body. Fix applied: moved SendMessageIn to module scope in whatsapp_inbox.py. Post-fix verified: send now returns 200 with a real Meta wamid.",
+    "whatsapp_inbox.py::_verify_signature raises 500 when APP_SECRET not configured but the POST /webhooks/whatsapp handler only enforces signature *if* APP_SECRET is configured — the 500 path inside _verify_signature is unreachable in practice, but keep it as defence-in-depth.",
+    "whatsapp_inbox.py::send_message logs `resp.status_code + err` on failure but re-raises HTTPException with only err.error.message — admin doesn't see the Meta error code (e.g. 131030). Consider surfacing `err.error.code` in the detail for better UX.",
+    "whatsapp_inbox.py::_persist_inbound auto-links contact to the FIRST scholarship_application with matching phone. If multiple apps share the same phone (parents applying for siblings) only one gets linked. Low priority — acceptable for MVP.",
+    "SendMessageIn.template_components has mutable default `[]` — Pydantic v2 handles this correctly (deep-copies defaults), so no shared-state bug, but style-wise `default_factory=list` is preferred."
+  ],
+  "updated_files": [
+    "/app/backend/whatsapp_inbox.py",
+    "/app/backend/tests/test_iteration11_whatsapp.py"
+  ],
+  "success_rate": {"backend": "100% (17/17)", "frontend": "100% (list + open + send flow verified)"},
+  "test_credentials": "admin@northend.edu / Admin@2025 (from /app/memory/test_credentials.md). student@test.com / Student@2025 for negative RBAC.",
+  "seed_data_creation": "Inbound webhook test injects a WhatsApp message from wa_id=9999900000 (WATH applicant phone). Creates wa_contacts + wa_threads + wa_messages rows. Idempotency test creates 1 additional message. Not cleaned up — persists in DB for UI visibility. WATH campaign id = 1ed94009-d949-4504-b291-68e3571a5a44.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "WhatsApp Inbox is fully working end-to-end. Backend routes at /api/webhooks/whatsapp (GET verify + POST inbound) and /api/whatsapp/threads[/{id}/messages|/read] all validated. Real Meta Graph API POST returns 200 now against the test recipient 9999900000 (business number seems to accept it in dev). Only remaining user action is completing Meta webhook subscription in the Meta App dashboard — no code work needed.",
+  "rca of the issue": "ORIGINAL user-reported symptom: 'WhatsApp Inbox not working — no conversations appear'. RCA: (a) inbox itself is fine — user simply hasn't subscribed the webhook in Meta yet, so no inbound events reach the server (threads array legitimately empty). (b) SEPARATELY discovered a CRITICAL latent bug in send_message: Pydantic model SendMessageIn was declared inside build_whatsapp_router() function scope. FastAPI's Body vs Query auto-detection relies on typing.get_type_hints(handler_fn) which searches the handler's module globals (not the enclosing factory function's locals). Since SendMessageIn wasn't in module globals, get_type_hints returned an unresolved ForwardRef; FastAPI then treated `req: SendMessageIn` as a Query dependency and every send request returned 422 {'loc':['query','req'],'msg':'Field required'}. Fix (verified): moved `class SendMessageIn(BaseModel)` out of build_whatsapp_router() to module scope in /app/backend/whatsapp_inbox.py. Reproduction confirmed both via TestClient with the actual module (422 before fix, 200 after) and via live cURL against the running preview URL (200 with a real Meta wamid returned). Reproduction script was `pytest backend/tests/test_iteration11_whatsapp.py::TestAdminThreadsAPI::test_send_message_hits_meta_gracefully -v`."
+}

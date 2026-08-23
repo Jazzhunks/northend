@@ -1,0 +1,37 @@
+{
+  "summary": "Iteration 9: Verified stray 'pnpm run build' text removal, 8-digit numeric application_no (create + list), Scholarship Registrations Dashboard (route, protection, UI, refresh), stats endpoint auth+shape, and WATH date rendering. 5/5 pytest tests pass. Frontend admin dashboard flow verified end-to-end. Admit card PDF endpoint verified via curl (200 application/pdf).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/admin/scholarships/{id}/dashboard - Venue Registrations table", "issues": ["Table shows 3 legacy/typo venue entries alongside the 4 official venues: '90 ft', 'Anantnag', 'Srinagar' (each with count 1). These look like historical free-text venue values from older records. Consider normalising venue values to the 4 canonical venues or filtering out non-canonical values in the stats aggregation."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration9.py",
+    "/app/test_reports/pytest/iteration9.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: normalise/clean legacy venue values in scholarship_applications so Venue Registrations table only shows the 4 canonical venues (Northend 90 FT / Anantnag / Zakura / Parraypora). Currently 3 legacy entries ('90 ft','Anantnag','Srinagar') with count 1 each appear in the dashboard table."
+  ],
+  "critical_code_review_comments": [
+    "GET /api/scholarships/{sid}/stats correctly enforces admin auth (returns 401/403 unauthenticated) and returns the full documented payload shape.",
+    "application_no generation + migration confirmed: every existing record and freshly created record matches ^[0-9]{8}$.",
+    "ScholarshipDashboard page renders with all required data-testids and refresh works without crash.",
+    "index.html no longer contains the stray 'pnpm run build' literal on any tested route."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration9.py"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100% (critical flows)"},
+  "test_credentials": "admin@northend.edu / Admin@2025",
+  "seed_data_creation": "One TEST_ scholarship application created via POST /api/scholarship-applications during test (not cleaned up).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "WATH campaign id = 1ed94009-d949-4504-b291-68e3571a5a44. Sample existing app_no 25360865 (admit card confirmed 200 application/pdf, 17KB). Stats endpoint currently reports total=11 with top venue 'Northend 90 FT'. Legacy venue values ('90 ft','Anantnag','Srinagar') present in aggregation — main agent may want to clean these up. WATH page form UI submit was not driven to completion in Playwright due to complex multi-field form and imperfect auto-fill, but the underlying POST /api/scholarship-applications was directly verified to return 8-digit numeric application_no, and the WATH page renders exam date '24-07-2026' correctly (no 'Invalid Date').",
+  "rca of the issue": "N/A — no functional issues found in this iteration."
+}

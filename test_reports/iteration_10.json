@@ -1,0 +1,33 @@
+{
+  "summary": "Iteration 10: Verified bulk scholarship registration fix (empty-row skip, duplicate detection, missing-field handling) and template download for WATH campaign. All 5 backend pytest tests pass; UI flow verified end-to-end (Reg Template downloads correct filename; uploading a 2-row XLSX shows Registered=2, Skipped=0 in modal).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Admin > Campaigns > WATH card action row", "issues": ["Buttons 'Reg Template' and 'Bulk Register & Admit Cards' lack data-testid attributes — testability improvement, not a bug."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration10.py",
+    "/app/test_reports/pytest/iteration10.xml"
+  ],
+  "action_items": [
+    "(Optional) Add data-testid to 'Reg Template', 'Bulk Register & Admit Cards' buttons and their hidden file input to make future UI tests more robust."
+  ],
+  "critical_code_review_comments": [
+    "server.py _register_one_bulk_row: duplicate check uses $or on email+phone — if phone column is missing but email is present, empty-string phone could match another empty-string phone doc. Currently guarded by 'missing_required' check requiring both, so safe.",
+    "AdminDashboard.jsx bulkRegisterScholarship: modal shows 'Admit Cards Sent' = data.registered, which conflates queued vs actually sent (email/whatsapp are background tasks that may fail silently). Acceptable for UX but worth logging.",
+    "bulk-register endpoint caps errors at 50 — good defensive practice; frontend does not currently display the errors list, only counts. Consider surfacing errors[] in the modal for admin visibility."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration10.py"
+  ],
+  "success_rate": {"backend": "100% (5/5)", "frontend": "100% (2/2 flows)"},
+  "test_credentials": "admin@northend.edu / Admin@2025 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "Each backend test creates unique TEST_ scholarship_applications rows with timestamp-based email/phone; not cleaned up (approved applications remain in DB for WATH). UI test also added 2 real approved applications.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend bulk-register endpoint is fully verified for empty-row / duplicate / missing_required flows. WATH campaign id = 1ed94009-d949-4504-b291-68e3571a5a44. Test file /app/backend/tests/test_iteration10.py can be re-run anytime; it self-generates unique data per run.",
+  "rca of the issue": "Original 'skipped duplicate 999' bug root cause: openpyxl's ws.iter_rows returns trailing rows (with None cells) up to ws.max_row, which reflects any cell ever touched by Excel. The prior implementation counted every None-only row as a failed row and reported it as skipped. Fix (verified working): server now `continue`s on any row where every cell is None/blank, decrements total_rows accordingly, and reports registered/skipped/total_rows/errors accurately. Confirmed by test_bulk_register_valid_rows_with_trailing_empty (2 valid + 500 empty trailing rows → registered=2, skipped=0, total_rows=2, errors=[])."
+}

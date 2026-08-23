@@ -1,5 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import { HelmetProvider } from "react-helmet-async"; // Exposes thread-safe header mutations
 import "@/index.css";
 import App from "@/App";
 
@@ -10,7 +11,9 @@ if (rootElement.hasChildNodes()) {
   ReactDOM.hydrateRoot(
     rootElement,
     <React.StrictMode>
-      <App />
+      <HelmetProvider> {/* Wraps production build target injection paths */}
+        <App />
+      </HelmetProvider>
     </React.StrictMode>
   );
 } else {
@@ -18,7 +21,9 @@ if (rootElement.hasChildNodes()) {
   const root = ReactDOM.createRoot(rootElement);
   root.render(
     <React.StrictMode>
-      <App />
+      <HelmetProvider> {/* Wraps isolated local development runtime instances */}
+        <App />
+      </HelmetProvider>
     </React.StrictMode>
   );
 }

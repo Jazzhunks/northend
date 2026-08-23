@@ -1,24 +1,30 @@
+# 1. LOAD ENVIRONMENT VARIABLES FIRST
 from dotenv import load_dotenv
 from pathlib import Path
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
+# 2. STANDARD LIBRARY IMPORTS
 import os
 import io
 import uuid
+import random
 import logging
+import asyncio
+from datetime import datetime, timezone, timedelta
+from typing import List, Optional, Literal, Dict, Any
+
+# 3. EXTERNAL DEPENDENCIES
 import bcrypt
 import jwt
-from datetime import datetime, timezone, timedelta
-from typing import List, Optional, Literal
-
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, Query, UploadFile, File, BackgroundTasks
+import openpyxl
+from fastapi import FastAPI, APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Depends, Request, Response, Query
 from fastapi.responses import StreamingResponse
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, EmailStr
-import openpyxl
 
+# 4. INTERNAL CLIENTS (Loaded after environment is populated)
 from storage_client import init_storage, put_object, get_object, aclose as storage_aclose, APP_NAME
 from email_client import (
     email_enrollment_received, email_scholarship_received,
@@ -26,13 +32,56 @@ from email_client import (
     email_scholarship_result_published,
 )
 from pdf_client import admit_card_pdf, result_card_pdf
+from whatsapp_client import send_whatsapp_admit_card
+from whatsapp_notifier import broadcast_scholarship_details
 
+# ---------- Constants & Helpers ----------
 ALLOWED_UPLOAD_TYPES = {
     "application/pdf": "pdf",
     "image/jpeg": "jpg", "image/jpg": "jpg",
     "image/png": "png", "image/webp": "webp",
 }
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+
+ALLOWED_VENUES = {"Anantnag", "Sopore", "Zakura", "Parraypora", "90 ft", "90 FT"}
+
+def _sanitize_venue(venue: Optional[str]) -> str:
+    """Ensure venue is strictly one of the allowed locations."""
+    if venue and venue.strip().title() in ALLOWED_VENUES:
+        return venue.strip().title()
+    if venue:
+        for allowed in ALLOWED_VENUES:
+            if allowed.lower() in venue.strip().lower():
+                return allowed
+    return "Srinagar"
+
+async def _safe_send_whatsapp_admit_card(*args, **kwargs) -> None:
+    """Wrapper to safely log and handle exceptions from background WhatsApp dispatches."""
+    try:
+        await send_whatsapp_admit_card(*args, **kwargs)
+    except Exception as e:
+        logging.error(f"Background WhatsApp task failed: {e}")
+
+def export_excel(rows: list, sheet_name: str, filename: str):
+    """Helper utility for generating Excel downloads."""
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = sheet_name
+    if rows:
+        headers = list(rows[0].keys())
+        ws.append(headers)
+        for r in rows:
+            ws.append([str(r.get(h, "")) for h in headers])
+    else:
+        ws.append(["No data"])
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
 
 # ---------- Setup ----------
 mongo_url = os.environ['MONGO_URL']
@@ -44,7 +93,7 @@ try:
 except Exception:
     db = client[os.environ['DB_NAME']]
 
-app = FastAPI(title="Northend Educational World API")
+app = FastAPI(title="Unacademy Offline Centre API")
 api = APIRouter(prefix="/api")
 
 JWT_ALGORITHM = "HS256"
@@ -87,7 +136,6 @@ async def get_current_user(request: Request) -> dict:
         if ah.startswith("Bearer "):
             token = ah[7:]
     
-    # EventSource query token fallback channel
     if not token:
         token = request.query_params.get("token")
 
@@ -109,6 +157,13 @@ async def get_current_user(request: Request) -> dict:
 async def require_admin(user: dict = Depends(get_current_user)) -> dict:
     if user.get("role") != "admin":
         raise HTTPException(403, "Admin access required")
+    return user
+
+async def require_super_admin(user: dict = Depends(get_current_user)) -> dict:
+    # Super admin = the main "admin" role in this app.
+    # (ERP has additional "super_admin" role; accept both.)
+    if user.get("role") not in ("admin", "super_admin"):
+        raise HTTPException(403, "Super admin access required")
     return user
 
 # ---------- Models ----------
@@ -258,7 +313,10 @@ def new_id():
 # ---------- Auth Routes ----------
 @api.post("/auth/register")
 async def register(payload: RegisterIn, response: Response):
-    email = payload.email.lower()
+    email = payload.email.lower().strip()
+    if len(email) > 254 or len(payload.password) > 128:
+        raise HTTPException(400, "Invalid payload length")
+
     if await db.users.find_one({"email": email}):
         raise HTTPException(400, "Email already registered")
     user_id = new_id()
@@ -272,25 +330,35 @@ async def register(payload: RegisterIn, response: Response):
     access = create_access_token(user_id, email, "student")
     refresh = create_refresh_token(user_id)
     set_auth_cookies(response, access, refresh)
-    doc.pop("password_hash"); doc.pop("_id", None)
+    doc.pop("password_hash")
+    doc.pop("_id", None)
     return {"user": doc, "access_token": access}
 
 @api.post("/auth/login")
 async def login(payload: LoginIn, response: Response):
-    email = payload.email.lower()
-    user = await db.users.find_one({"email": email})
-    if not user or not verify_password(payload.password, user["password_hash"]):
+    email = payload.email.lower().strip()
+    if len(email) > 254 or len(payload.password) > 128:
         raise HTTPException(401, "Invalid email or password")
+
+    user = await db.users.find_one({"email": email})
+    dummy_hash = "$2b$12$UnV2ZWRuZWVkTG9naW5IYXJkZW5lZFNlY3VyaXR5R29vZA=="
+    target_hash = user["password_hash"] if user else dummy_hash
+    password_correct = verify_password(payload.password, target_hash)
+
+    if not user or not password_correct:
+        raise HTTPException(401, "Invalid email or password")
+        
     access = create_access_token(user["id"], email, user["role"])
     refresh = create_refresh_token(user["id"])
     set_auth_cookies(response, access, refresh)
-    user.pop("password_hash"); user.pop("_id", None)
+    user.pop("password_hash")
+    user.pop("_id", None)
     return {"user": user, "access_token": access}
 
 @api.post("/auth/logout")
 async def logout(response: Response):
-    response.delete_cookie("access_token", path="/")
-    response.delete_cookie("refresh_token", path="/")
+    response.set_cookie("access_token", "", httponly=True, secure=True, samesite="none", max_age=0, path="/")
+    response.set_cookie("refresh_token", "", httponly=True, secure=True, samesite="none", max_age=0, path="/")
     return {"ok": True}
 
 @api.get("/auth/me")
@@ -334,7 +402,7 @@ async def get_featured():
     return None
 
 @api.post("/admin/feature")
-async def set_featured(kind: str = Query(...), id: str = Query(...), _admin = Depends(require_admin)):
+async def set_featured(kind: str = Query(...), item_id: str = Query(...), _admin = Depends(require_admin)):
     if kind == "clear":
         await _clear_featured_except(None, None)
         return {"ok": True, "featured": None}
@@ -342,12 +410,12 @@ async def set_featured(kind: str = Query(...), id: str = Query(...), _admin = De
     coll = coll_map.get(kind)
     if not coll:
         raise HTTPException(400, "kind must be notice|job|scholarship|clear")
-    target = await db[coll].find_one({"id": id})
+    target = await db[coll].find_one({"id": item_id})
     if not target:
         raise HTTPException(404, f"{kind} not found")
-    await _clear_featured_except(coll, id)
-    await db[coll].update_one({"id": id}, {"$set": {"is_featured": True}})
-    return {"ok": True, "kind": kind, "id": id}
+    await _clear_featured_except(coll, item_id)
+    await db[coll].update_one({"id": item_id}, {"$set": {"is_featured": True}})
+    return {"ok": True, "kind": kind, "id": item_id}
 
 # ---------- Courses ----------
 @api.get("/courses")
@@ -396,16 +464,23 @@ async def list_scholarships_admin(_admin = Depends(require_admin)):
 
 @api.post("/scholarships")
 async def create_scholarship(payload: ScholarshipIn, _admin = Depends(require_admin)):
-    doc = payload.model_dump(); doc["id"] = new_id(); doc["created_at"] = now_iso()
+    doc = payload.model_dump()
+    doc["id"] = new_id()
+    doc["created_at"] = now_iso()
     doc["examiner_token"] = uuid.uuid4().hex
+    if doc.get("available_venues"):
+        doc["available_venues"] = [_sanitize_venue(v) for v in doc["available_venues"]]
     await db.scholarships.insert_one(doc)
     if doc.get("is_featured"):
         await _clear_featured_except("scholarships", doc["id"])
-    doc.pop("_id", None); return doc
+    doc.pop("_id", None)
+    return doc
 
 @api.put("/scholarships/{sid}")
 async def update_scholarship(sid: str, payload: ScholarshipIn, _admin = Depends(require_admin)):
     data = payload.model_dump()
+    if data.get("available_venues"):
+        data["available_venues"] = [_sanitize_venue(v) for v in data["available_venues"]]
     await db.scholarships.update_one({"id": sid}, {"$set": data})
     if data.get("is_featured"):
         await _clear_featured_except("scholarships", sid)
@@ -421,7 +496,8 @@ async def regenerate_examiner_token(sid: str, _admin = Depends(require_admin)):
 
 @api.delete("/scholarships/{sid}")
 async def delete_scholarship(sid: str, _admin = Depends(require_admin)):
-    await db.scholarships.delete_one({"id": sid}); return {"ok": True}
+    await db.scholarships.delete_one({"id": sid})
+    return {"ok": True}
 
 @api.post("/scholarship-applications")
 async def apply_scholarship(payload: ScholarshipApplicationIn, background: BackgroundTasks):
@@ -430,37 +506,204 @@ async def apply_scholarship(payload: ScholarshipApplicationIn, background: Backg
         raise HTTPException(404, "Scholarship campaign not found")
     if not campaign.get("active"):
         raise HTTPException(400, "Scholarship campaign is closed")
+
+    # Prevent Duplicate Registrations
+    clean_email = payload.email.lower().strip()
+    clean_phone = payload.phone.strip()
+
+    existing_app = await db.scholarship_applications.find_one({
+        "scholarship_id": payload.scholarship_id,
+        "$or": [{"email": clean_email}, {"phone": clean_phone}]
+    })
+
+    if existing_app:
+        msg = f"An application already exists with this data (App No: {existing_app.get('application_no')})."
+        raise HTTPException(status_code=400, detail=msg)
+
+    selected_venue = _sanitize_venue(payload.venue)
     avail = campaign.get("available_venues") or []
-    if avail and payload.venue and payload.venue not in avail:
+    if avail and selected_venue not in [_sanitize_venue(v) for v in avail]:
         raise HTTPException(400, "Selected venue is not available for this campaign")
+
     doc = payload.model_dump()
     doc["id"] = new_id()
-    # Generate an 8-digit numeric application number, ensuring uniqueness
-    import random
+    doc["email"] = clean_email
+    doc["phone"] = clean_phone
+
     for _ in range(10):
         candidate = str(random.randint(10000000, 99999999))
         if not await db.scholarship_applications.find_one({"application_no": candidate}):
             doc["application_no"] = candidate
             break
     else:
-        # extremely unlikely — fall back to timestamp-derived numeric
         doc["application_no"] = str(int(datetime.now(timezone.utc).timestamp() * 1000))[-8:]
+
     doc["status"] = "pending"
     doc["scholarship_title"] = campaign.get("title", "")
-    if not doc.get("venue"):
-        doc["venue"] = (avail[0] if avail else campaign.get("venue") or f"Northend {payload.city}")
+    doc["venue"] = selected_venue
     doc["created_at"] = now_iso()
+
     await db.scholarship_applications.insert_one(doc)
     doc.pop("_id", None)
     doc["whatsapp_community_url"] = campaign.get("whatsapp_community_url")
-    background.add_task(email_scholarship_received, payload.email, payload.name, doc["application_no"], payload.target_exam)
-    background.add_task(email_admin_notification, f"New scholarship application: {payload.name}",
-                       f"<p><b>{payload.name}</b> from {payload.school} ({payload.standard}) applied for <b>{campaign.get('title','')}</b> at <b>{doc['venue']}</b>.<br/>App No: {doc['application_no']}</p>")
+
+    # Generate Admit Card PDF safely
+    admit_pdf_bytes = None
+    try:
+        admit_pdf_bytes = admit_card_pdf(
+            application_no=doc["application_no"],
+            name=payload.name, phone=payload.phone, school=payload.school,
+            standard=payload.standard, target_exam=payload.target_exam,
+            exam_date=campaign.get("exam_date", "TBA"), venue=selected_venue,
+            exam_time=campaign.get("exam_time", "10:00 AM"),
+            scholarship_title=campaign.get("title", "Scholarship Test")
+        )
+    except Exception as e:
+        logging.error(f"Failed to generate Admit Card PDF: {e}")
+
+    # Enqueue Email Tasks
+    background.add_task(
+        email_scholarship_received, payload.email, payload.name, doc["application_no"], payload.target_exam, admit_pdf_bytes
+    )
+    background.add_task(
+        email_admin_notification, f"New scholarship application: {payload.name}",
+        f"<p><b>{payload.name}</b> from {payload.school} ({payload.standard}) applied for <b>{campaign.get('title','')}</b> at <b>{doc['venue']}</b>.<br/>App No: {doc['application_no']}<br/>Phone: {payload.phone}</p>"
+    )
+
+    # Enqueue WhatsApp Task
+    if admit_pdf_bytes:
+        background.add_task(
+            _safe_send_whatsapp_admit_card,
+            phone=payload.phone, name=payload.name, application_no=doc["application_no"],
+            scholarship_title=campaign.get("title", payload.target_exam),
+            exam_date=campaign.get("exam_date", "TBA"), venue=selected_venue,
+            pdf_bytes=admit_pdf_bytes
+        )
+
     return doc
 
 @api.get("/scholarship-applications")
 async def list_scholarship_apps(_admin = Depends(require_admin)):
     return await db.scholarship_applications.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+
+@api.post("/admin/scholarships/{scholarship_id}/notify-applicants")
+async def notify_scholarship_applicants(
+    scholarship_id: str, background: BackgroundTasks, _admin = Depends(require_admin)
+):
+    """Admin endpoint to trigger the WhatsApp notification broadcast."""
+    campaign = await db.scholarships.find_one({"id": scholarship_id}, {"_id": 0})
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Scholarship campaign not found")
+
+    total_applicants = await db.scholarship_applications.count_documents({"scholarship_id": scholarship_id})
+    if total_applicants == 0:
+        raise HTTPException(status_code=400, detail="No applicants found for this scholarship")
+
+    background.add_task(broadcast_scholarship_details, scholarship_id)
+
+    return {
+        "status": "success",
+        "message": f"Notification broadcast started for {total_applicants} applicants.",
+        "scholarship_id": scholarship_id,
+    }
+
+# ---------- Per-campaign Registrations Dashboard ----------
+@api.get("/scholarships/{sid}/stats")
+async def scholarship_stats(sid: str, _admin = Depends(require_admin)):
+    """Aggregated registration stats for a single scholarship campaign."""
+    camp = await db.scholarships.find_one({"id": sid}, {"_id": 0})
+    if not camp:
+        raise HTTPException(404, "Campaign not found")
+
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_start = today_start - timedelta(days=7)
+    prev_week_start = today_start - timedelta(days=14)
+
+    apps = await db.scholarship_applications.find(
+        {"scholarship_id": sid}, {"_id": 0, "venue": 1, "created_at": 1}
+    ).to_list(50000)
+
+    def _parse(ts):
+        if not ts:
+            return None
+        try:
+            return datetime.fromisoformat(ts.replace("Z", "+00:00")) if isinstance(ts, str) else ts
+        except Exception:
+            return None
+
+    venues_seed = list(camp.get("available_venues") or [])
+    venues = {v: {"venue": v, "total": 0, "today": 0, "last_7_days": 0} for v in venues_seed}
+
+    total = 0
+    this_week = 0
+    prev_week = 0
+    for a in apps:
+        total += 1
+        v = a.get("venue") or "—"
+        if v not in venues:
+            venues[v] = {"venue": v, "total": 0, "today": 0, "last_7_days": 0}
+        venues[v]["total"] += 1
+        ts = _parse(a.get("created_at"))
+        if ts:
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=timezone.utc)
+            if ts >= today_start:
+                venues[v]["today"] += 1
+            if ts >= week_start:
+                venues[v]["last_7_days"] += 1
+                this_week += 1
+            elif ts >= prev_week_start:
+                prev_week += 1
+
+    by_venue = sorted(venues.values(), key=lambda x: (-x["total"], x["venue"]))
+    top_venue = by_venue[0]["venue"] if by_venue and by_venue[0]["total"] > 0 else None
+
+    if prev_week > 0:
+        wow_growth_pct = round(((this_week - prev_week) / prev_week) * 100, 2)
+    else:
+        wow_growth_pct = 100.0 if this_week > 0 else 0.0
+
+    return {
+        "campaign": {"id": camp["id"], "title": camp.get("title"), "exam_date": camp.get("exam_date")},
+        "total_registrations": total,
+        "wow_growth_pct": wow_growth_pct,
+        "this_week": this_week,
+        "prev_week": prev_week,
+        "by_venue": by_venue,
+        "top_venue": top_venue,
+        "as_of": now.isoformat(),
+    }
+
+
+@api.get("/scholarship-applications/mine")
+async def my_scholarship_applications(user: dict = Depends(get_current_user)):
+    q = {"$or": [{"email": user.get("email")}]}
+    if user.get("phone"):
+        q["$or"].append({"phone": user["phone"]})
+    apps = await db.scholarship_applications.find(q, {"_id": 0}).sort("created_at", -1).to_list(50)
+    for a in apps:
+        if not a.get("result_published"):
+            for k in ("result_marks_obtained", "result_total_marks", "result_rank", "result_percentile", "result_scholarship_percentage", "result_remarks"):
+                a.pop(k, None)
+    return apps
+
+
+@api.get("/scholarship-applications/{application_no}")
+async def get_scholarship_app_by_no(application_no: str, phone: Optional[str] = Query(None)):
+    # Require phone verification for public lookup — prevents PII enumeration by app_no.
+    if not phone:
+        raise HTTPException(400, "Phone number is required to view this application")
+    app_doc = await db.scholarship_applications.find_one(
+        {"application_no": application_no.strip(), "phone": phone.strip()},
+        {"_id": 0}
+    )
+    if not app_doc:
+        raise HTTPException(404, "No application found with this number and phone")
+    if not app_doc.get("result_published"):
+        for k in ("result_marks_obtained", "result_total_marks", "result_rank", "result_percentile", "result_scholarship_percentage", "result_remarks"):
+            app_doc.pop(k, None)
+    return app_doc
 
 @api.put("/scholarship-applications/{aid}/status")
 async def update_scholarship_status(aid: str, status: str = Query(...), _admin = Depends(require_admin)):
@@ -514,18 +757,6 @@ async def lookup_scholarship(payload: ScholarshipLookupIn):
             app_doc.pop(k, None)
     return app_doc
 
-@api.get("/scholarship-applications/mine")
-async def my_scholarship_applications(user: dict = Depends(get_current_user)):
-    q = {"$or": [{"email": user.get("email")}]}
-    if user.get("phone"):
-        q["$or"].append({"phone": user["phone"]})
-    apps = await db.scholarship_applications.find(q, {"_id": 0}).sort("created_at", -1).to_list(50)
-    for a in apps:
-        if not a.get("result_published"):
-            for k in ("result_marks_obtained", "result_total_marks", "result_rank", "result_percentile", "result_scholarship_percentage", "result_remarks"):
-                a.pop(k, None)
-    return apps
-
 # ---------- Attendance (token-based, no login) ----------
 async def _campaign_by_token(token: str):
     if not token:
@@ -549,7 +780,7 @@ async def attendance_campaign(token: str = Query(...)):
 async def attendance_applications(token: str = Query(...), venue: Optional[str] = None):
     camp = await _campaign_by_token(token)
     q = {"scholarship_id": camp["id"]}
-    if venue: q["venue"] = venue
+    if venue: q["venue"] = _sanitize_venue(venue)
     apps = await db.scholarship_applications.find(q, {"_id": 0}).sort("name", 1).to_list(2000)
     appno_set = [a["application_no"] for a in apps]
     att_rows = await db.attendance.find({"scholarship_id": camp["id"], "application_no": {"$in": appno_set}}, {"_id": 0}).to_list(2000)
@@ -560,7 +791,7 @@ async def attendance_applications(token: str = Query(...), venue: Optional[str] 
         out.append({
             "application_no": a["application_no"], "name": a["name"], "phone": a["phone"],
             "school": a.get("school"), "standard": a.get("standard"),
-            "venue": a.get("venue"),
+            "venue": _sanitize_venue(a.get("venue")),
             "attendance_status": (rec or {}).get("status"),
             "marked_at": (rec or {}).get("marked_at"),
         })
@@ -579,7 +810,7 @@ async def attendance_mark(payload: AttendanceMarkIn):
     rec = {
         "application_no": app_no,
         "scholarship_id": camp["id"],
-        "venue": payload.venue,
+        "venue": _sanitize_venue(payload.venue),
         "status": payload.status,
         "marked_at": now_iso(),
     }
@@ -605,7 +836,7 @@ async def attendance_export(sid: str, _admin = Depends(require_admin)):
             "phone": a.get("phone"),
             "school": a.get("school"),
             "standard": a.get("standard"),
-            "venue": a.get("venue"),
+            "venue": _sanitize_venue(a.get("venue")),
             "status": rec.get("status") or "absent",
             "marked_at": rec.get("marked_at") or "",
         })
@@ -717,6 +948,202 @@ async def bulk_results(sid: str, background: BackgroundTasks,
             errors.append({"row": row_no, "app": app_no if 'app_no' in locals() else "", "error": str(e)})
     return {"processed": processed, "published": published_count, "errors": errors}
 
+# ---------- Bulk Scholarship Registration Endpoint ----------
+
+BULK_SCHOLARSHIP_HEADERS = [
+    "full_name", "email", "phone", "class", "school_institute", "venue"
+]
+
+@api.get("/admin/scholarships/{sid}/bulk-register-template")
+async def bulk_register_template(sid: str, _admin = Depends(require_admin)):
+    """Download an Excel template pre-filled with correct headers + a sample row."""
+    camp = await db.scholarships.find_one({"id": sid}, {"_id": 0})
+    if not camp:
+        raise HTTPException(404, "Campaign not found")
+    wb = openpyxl.Workbook(); ws = wb.active; ws.title = "Bulk Registrations"
+    ws.append(BULK_SCHOLARSHIP_HEADERS)
+    sample_venue = (camp.get("available_venues") or ["90 FT"])[0]
+    ws.append([
+        "Aarav Sharma", "aarav@example.com", "9999900000",
+        "Class 10", "DPS Srinagar", sample_venue,
+    ])
+    for cell in ws[1]:
+        cell.font = openpyxl.styles.Font(bold=True)
+    for col in ws.columns:
+        max_len = max(len(str(c.value or "")) for c in col)
+        ws.column_dimensions[col[0].column_letter].width = min(max(max_len + 2, 14), 40)
+    buf = io.BytesIO(); wb.save(buf); buf.seek(0)
+    filename = f"bulk-register-template-{sid}.xlsx"
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+async def _register_one_bulk_row(
+    sid: str,
+    campaign: Dict[str, Any],
+    row: tuple,
+    header_map: Dict[str, int],
+    background: BackgroundTasks,
+) -> Dict[str, Any]:
+    """Insert a single bulk row + enqueue email/whatsapp. Returns per-row outcome."""
+    def _cell(key: str, default: str = "") -> str:
+        idx = header_map.get(key)
+        if idx is None or idx >= len(row) or row[idx] is None:
+            return default
+        return str(row[idx]).strip()
+
+    name = _cell("name")
+    email = _cell("email").lower()
+    phone = _cell("phone")
+    standard = _cell("standard", "General")
+    school = _cell("school", "N/A")
+    raw_venue = _cell("venue") or None
+    venue = _sanitize_venue(raw_venue)
+
+    if not name or not email or not phone:
+        return {"ok": False, "reason": "missing_required", "name": name, "email": email}
+
+    existing = await db.scholarship_applications.find_one({
+        "scholarship_id": sid,
+        "$or": [{"email": email}, {"phone": phone}],
+    })
+    if existing:
+        return {"ok": False, "reason": "duplicate", "name": name, "email": email,
+                "application_no": existing.get("application_no")}
+
+    # Unique 8-digit numeric application_no
+    app_no = None
+    for _ in range(10):
+        candidate = str(random.randint(10000000, 99999999))
+        if not await db.scholarship_applications.find_one({"application_no": candidate}):
+            app_no = candidate
+            break
+    if not app_no:
+        app_no = str(int(datetime.now(timezone.utc).timestamp() * 1000))[-8:]
+
+    doc = {
+        "id": new_id(),
+        "application_no": app_no,
+        "scholarship_id": sid,
+        "scholarship_title": campaign.get("title", "Scholarship Test"),
+        "name": name, "email": email, "phone": phone,
+        "standard": standard, "school": school,
+        "target_exam": standard, "city": venue, "venue": venue,
+        "status": "approved",
+        "created_at": now_iso(),
+    }
+    await db.scholarship_applications.insert_one(doc)
+
+    # PDF (sync — needed for email/whatsapp attachments)
+    admit_pdf_bytes = None
+    try:
+        admit_pdf_bytes = admit_card_pdf(
+            application_no=app_no, name=name, phone=phone, school=school,
+            standard=standard, target_exam=standard,
+            exam_date=campaign.get("exam_date", "TBA"), venue=venue,
+            exam_time=campaign.get("exam_time", "10:00 AM"),
+            scholarship_title=campaign.get("title", "Scholarship Test"),
+        )
+    except Exception as e:
+        logging.error(f"PDF gen failed for {app_no}: {e}")
+
+    # Email + WhatsApp — background so we don't block the whole request
+    background.add_task(
+        email_scholarship_received, email, name, app_no, standard, admit_pdf_bytes,
+    )
+    if admit_pdf_bytes:
+        background.add_task(
+            _safe_send_whatsapp_admit_card,
+            phone=phone, name=name, application_no=app_no,
+            scholarship_title=campaign.get("title", standard),
+            exam_date=campaign.get("exam_date", "TBA"), venue=venue,
+            pdf_bytes=admit_pdf_bytes,
+        )
+
+    return {"ok": True, "application_no": app_no, "name": name, "email": email}
+
+
+@api.post("/admin/scholarships/{sid}/bulk-register")
+async def bulk_register_scholarship(
+    sid: str,
+    background: BackgroundTasks,
+    file: UploadFile = File(...),
+    _admin = Depends(require_admin),
+):
+    """Synchronously registers each row + generates PDF, enqueues email/WhatsApp.
+    Returns exact counts so the admin UI can display them."""
+    campaign = await db.scholarships.find_one({"id": sid}, {"_id": 0})
+    if not campaign:
+        raise HTTPException(404, "Scholarship campaign not found")
+    if not campaign.get("active"):
+        raise HTTPException(400, "Scholarship campaign is inactive")
+
+    data = await file.read()
+    if not data:
+        raise HTTPException(400, "Empty file provided")
+
+    try:
+        wb = openpyxl.load_workbook(io.BytesIO(data), read_only=True, data_only=True)
+        ws = wb.active
+    except Exception as e:
+        raise HTTPException(400, f"Could not read Excel: {e}")
+
+    rows = list(ws.iter_rows(values_only=True))
+    if not rows or len(rows) < 2:
+        raise HTTPException(400, "Sheet is empty or has no data rows")
+
+    raw_headers = [str(h or "").strip().lower().replace(" ", "_").replace("/", "_") for h in rows[0]]
+    header_map: Dict[str, int] = {}
+    for idx, h in enumerate(raw_headers):
+        if "name" in h and "school" not in h and "institute" not in h:
+            header_map["name"] = idx
+        elif "email" in h:
+            header_map["email"] = idx
+        elif "phone" in h or "mobile" in h or "contact" in h:
+            header_map["phone"] = idx
+        elif "class" in h or "standard" in h or "grade" in h:
+            header_map["standard"] = idx
+        elif "school" in h or "institute" in h:
+            header_map["school"] = idx
+        elif "venue" in h or "location" in h or "center" in h:
+            header_map["venue"] = idx
+
+    for req in ("name", "email", "phone"):
+        if req not in header_map:
+            raise HTTPException(400, f"Missing required column: {req}")
+
+    registered = 0
+    skipped = 0
+    empty_rows = 0
+    errors: List[Dict[str, Any]] = []
+    for row_no, row in enumerate(rows[1:], start=2):
+        # Skip completely empty / blank rows (openpyxl often reports trailing empties)
+        if not any((c is not None and str(c).strip() != "") for c in row):
+            empty_rows += 1
+            continue
+        try:
+            result = await _register_one_bulk_row(sid, campaign, row, header_map, background)
+            if result.get("ok"):
+                registered += 1
+            else:
+                skipped += 1
+                errors.append({"row": row_no, **{k: v for k, v in result.items() if k != "ok"}})
+        except Exception as e:
+            logging.error(f"bulk-register row {row_no} crashed: {e}")
+            skipped += 1
+            errors.append({"row": row_no, "error": str(e)})
+
+    return {
+        "status": "success",
+        "registered": registered,
+        "skipped": skipped,
+        "total_rows": (len(rows) - 1) - empty_rows,
+        "errors": errors[:50],  # cap so payload stays small
+    }
+
 # ---------- Enrollments ----------
 @api.post("/enrollments")
 async def create_enrollment(payload: EnrollmentIn, request: Request, background: BackgroundTasks):
@@ -726,7 +1153,7 @@ async def create_enrollment(payload: EnrollmentIn, request: Request, background:
     doc = payload.model_dump()
     doc["id"] = new_id()
     doc["status"] = "pending"
-    doc["receipt_no"] = "NEW-ENR-" + str(uuid.uuid4().int)[:8]
+    doc["receipt_no"] = "UAC-ENR-" + str(uuid.uuid4().int)[:8]
     doc["created_at"] = now_iso()
     try:
         user = await get_current_user(request)
@@ -766,11 +1193,14 @@ async def list_all_jobs(_admin = Depends(require_admin)):
 
 @api.post("/jobs")
 async def create_job(payload: JobIn, _admin = Depends(require_admin)):
-    doc = payload.model_dump(); doc["id"] = new_id(); doc["created_at"] = now_iso()
+    doc = payload.model_dump()
+    doc["id"] = new_id()
+    doc["created_at"] = now_iso()
     await db.jobs.insert_one(doc)
     if doc.get("is_featured"):
         await _clear_featured_except("jobs", doc["id"])
-    doc.pop("_id", None); return doc
+    doc.pop("_id", None)
+    return doc
 
 @api.put("/jobs/{jid}")
 async def update_job(jid: str, payload: JobIn, _admin = Depends(require_admin)):
@@ -782,7 +1212,8 @@ async def update_job(jid: str, payload: JobIn, _admin = Depends(require_admin)):
 
 @api.delete("/jobs/{jid}")
 async def delete_job(jid: str, _admin = Depends(require_admin)):
-    await db.jobs.delete_one({"id": jid}); return {"ok": True}
+    await db.jobs.delete_one({"id": jid})
+    return {"ok": True}
 
 @api.post("/job-applications")
 async def apply_job(payload: JobApplicationIn, background: BackgroundTasks):
@@ -790,8 +1221,11 @@ async def apply_job(payload: JobApplicationIn, background: BackgroundTasks):
     if not job:
         raise HTTPException(404, "Job not found")
     doc = payload.model_dump()
-    doc["id"] = new_id(); doc["status"] = "received"; doc["created_at"] = now_iso()
-    await db.job_applications.insert_one(doc); doc.pop("_id", None)
+    doc["id"] = new_id()
+    doc["status"] = "received"
+    doc["created_at"] = now_iso()
+    await db.job_applications.insert_one(doc)
+    doc.pop("_id", None)
     background.add_task(email_job_app_received, payload.email, payload.name, job["title"])
     background.add_task(email_admin_notification, f"New job application: {payload.name}",
                        f"<p><b>{payload.name}</b> ({payload.email}, {payload.phone}) applied for <b>{job['title']}</b>.<br/>Qualification: {payload.qualification}<br/>Experience: {payload.experience}<br/>Resume: {payload.resume_url or '—'}</p>")
@@ -815,11 +1249,14 @@ async def list_notices():
 
 @api.post("/notices")
 async def create_notice(payload: NoticeIn, _admin = Depends(require_admin)):
-    doc = payload.model_dump(); doc["id"] = new_id(); doc["created_at"] = now_iso()
+    doc = payload.model_dump()
+    doc["id"] = new_id()
+    doc["created_at"] = now_iso()
     await db.notices.insert_one(doc)
     if doc.get("is_featured"):
         await _clear_featured_except("notices", doc["id"])
-    doc.pop("_id", None); return doc
+    doc.pop("_id", None)
+    return doc
 
 @api.put("/notices/{nid}")
 async def update_notice(nid: str, payload: NoticeIn, _admin = Depends(require_admin)):
@@ -831,7 +1268,8 @@ async def update_notice(nid: str, payload: NoticeIn, _admin = Depends(require_ad
 
 @api.delete("/notices/{nid}")
 async def delete_notice(nid: str, _admin = Depends(require_admin)):
-    await db.notices.delete_one({"id": nid}); return {"ok": True}
+    await db.notices.delete_one({"id": nid})
+    return {"ok": True}
 
 # ---------- Centers ----------
 @api.get("/centers")
@@ -840,8 +1278,12 @@ async def list_centers():
 
 @api.post("/centers")
 async def create_center(payload: CenterIn, _admin = Depends(require_admin)):
-    doc = payload.model_dump(); doc["id"] = new_id(); doc["created_at"] = now_iso()
-    await db.centers.insert_one(doc); doc.pop("_id", None); return doc
+    doc = payload.model_dump()
+    doc["id"] = new_id()
+    doc["created_at"] = now_iso()
+    await db.centers.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
 
 @api.put("/centers/{cid}")
 async def update_center(cid: str, payload: CenterIn, _admin = Depends(require_admin)):
@@ -850,7 +1292,8 @@ async def update_center(cid: str, payload: CenterIn, _admin = Depends(require_ad
 
 @api.delete("/centers/{cid}")
 async def delete_center(cid: str, _admin = Depends(require_admin)):
-    await db.centers.delete_one({"id": cid}); return {"ok": True}
+    await db.centers.delete_one({"id": cid})
+    return {"ok": True}
 
 # ---------- Results ----------
 @api.get("/results")
@@ -859,8 +1302,12 @@ async def list_results():
 
 @api.post("/results")
 async def create_result(payload: ResultIn, _admin = Depends(require_admin)):
-    doc = payload.model_dump(); doc["id"] = new_id(); doc["created_at"] = now_iso()
-    await db.results.insert_one(doc); doc.pop("_id", None); return doc
+    doc = payload.model_dump()
+    doc["id"] = new_id()
+    doc["created_at"] = now_iso()
+    await db.results.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
 
 @api.put("/results/{rid}")
 async def update_result(rid: str, payload: ResultIn, _admin = Depends(require_admin)):
@@ -869,7 +1316,8 @@ async def update_result(rid: str, payload: ResultIn, _admin = Depends(require_ad
 
 @api.delete("/results/{rid}")
 async def delete_result(rid: str, _admin = Depends(require_admin)):
-    await db.results.delete_one({"id": rid}); return {"ok": True}
+    await db.results.delete_one({"id": rid})
+    return {"ok": True}
 
 # ---------- Testimonials ----------
 @api.get("/testimonials")
@@ -878,8 +1326,12 @@ async def list_testimonials():
 
 @api.post("/testimonials")
 async def create_testimonial(payload: TestimonialIn, _admin = Depends(require_admin)):
-    doc = payload.model_dump(); doc["id"] = new_id(); doc["created_at"] = now_iso()
-    await db.testimonials.insert_one(doc); doc.pop("_id", None); return doc
+    doc = payload.model_dump()
+    doc["id"] = new_id()
+    doc["created_at"] = now_iso()
+    await db.testimonials.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
 
 @api.put("/testimonials/{tid}")
 async def update_testimonial(tid: str, payload: TestimonialIn, _admin = Depends(require_admin)):
@@ -888,13 +1340,19 @@ async def update_testimonial(tid: str, payload: TestimonialIn, _admin = Depends(
 
 @api.delete("/testimonials/{tid}")
 async def delete_testimonial(tid: str, _admin = Depends(require_admin)):
-    await db.testimonials.delete_one({"id": tid}); return {"ok": True}
+    await db.testimonials.delete_one({"id": tid})
+    return {"ok": True}
 
 # ---------- Contact ----------
 @api.post("/contact")
 async def contact(payload: ContactIn):
-    doc = payload.model_dump(); doc["id"] = new_id(); doc["created_at"] = now_iso(); doc["status"] = "new"
-    await db.inquiries.insert_one(doc); doc.pop("_id", None); return doc
+    doc = payload.model_dump()
+    doc["id"] = new_id()
+    doc["created_at"] = now_iso()
+    doc["status"] = "new"
+    await db.inquiries.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
 
 @api.get("/inquiries")
 async def list_inquiries(_admin = Depends(require_admin)):
@@ -941,7 +1399,8 @@ async def upload(file: UploadFile = File(...)):
         "is_deleted": False,
         "created_at": now_iso(),
     }
-    await db.files.insert_one(record); record.pop("_id", None)
+    await db.files.insert_one(record)
+    record.pop("_id", None)
     record["url"] = f"/api/files/{file_id}"
     return record
 
@@ -959,8 +1418,22 @@ async def download_file(file_id: str):
 
 # ---------- Scholarship admit card PDF ----------
 @api.get("/scholarship-applications/{application_no}/admit-card")
-async def admit_card(application_no: str):
-    app_doc = await db.scholarship_applications.find_one({"application_no": application_no}, {"_id": 0})
+async def admit_card(application_no: str, phone: Optional[str] = Query(None), request: Request = None):
+    # Access allowed if: (a) admin token, OR (b) matching phone number provided.
+    is_admin = False
+    try:
+        user = await get_current_user(request) if request else None
+        is_admin = bool(user and user.get("role") == "admin")
+    except HTTPException:
+        is_admin = False
+
+    query = {"application_no": application_no}
+    if not is_admin:
+        if not phone:
+            raise HTTPException(400, "Phone number required to download admit card")
+        query["phone"] = phone.strip()
+
+    app_doc = await db.scholarship_applications.find_one(query, {"_id": 0})
     if not app_doc:
         raise HTTPException(404, "Application not found")
     campaign = None
@@ -968,14 +1441,18 @@ async def admit_card(application_no: str):
         campaign = await db.scholarships.find_one({"id": app_doc["scholarship_id"]}, {"_id": 0})
     if not campaign:
         campaign = await db.scholarships.find_one({"active": True}, {"_id": 0}, sort=[("created_at", -1)])
+    
+    venue_name = _sanitize_venue(app_doc.get("venue") or (campaign or {}).get("venue") or app_doc.get("city"))
+
     pdf_bytes = admit_card_pdf(
         application_no=application_no,
         name=app_doc.get("name", ""),
+        phone=app_doc.get("phone", ""),
         school=app_doc.get("school", ""),
         standard=app_doc.get("standard", ""),
         target_exam=app_doc.get("target_exam", ""),
         exam_date=(campaign or {}).get("exam_date", "TBA"),
-        venue=(campaign or {}).get("venue") or f"Northend {app_doc.get('city', 'Srinagar')}",
+        venue=venue_name,
         exam_time=(campaign or {}).get("exam_time", "10:00 AM"),
         scholarship_title=(campaign or {}).get("title") or app_doc.get("scholarship_title", "Scholarship Test"),
     )
@@ -1012,22 +1489,6 @@ async def result_card(application_no: str, phone: Optional[str] = None):
     return Response(content=pdf_bytes, media_type="application/pdf",
                     headers={"Content-Disposition": f'attachment; filename="result-{application_no}.pdf"'})
 
-def export_excel(rows: list, sheet_name: str, filename: str):
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = sheet_name
-    if rows:
-        headers = list(rows[0].keys())
-        ws.append(headers)
-        for r in rows:
-            ws.append([str(r.get(h, "")) for h in headers])
-    else:
-        ws.append(["No data"])
-    buf = io.BytesIO(); wb.save(buf); buf.seek(0)
-    return StreamingResponse(buf,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'})
-
 @api.get("/admin/export/{kind}")
 async def export(kind: str, _admin = Depends(require_admin)):
     mapping = {
@@ -1046,12 +1507,16 @@ async def export(kind: str, _admin = Depends(require_admin)):
 
 # ---------- Seed ----------
 async def seed():
-    admin_email = os.environ.get("ADMIN_EMAIL").lower()
+    admin_email_raw = os.environ.get("ADMIN_EMAIL")
     admin_pwd = os.environ.get("ADMIN_PASSWORD")
+    if not admin_email_raw or not admin_pwd:
+        logging.warning("ADMIN_EMAIL / ADMIN_PASSWORD not set — skipping admin seed")
+        return
+    admin_email = admin_email_raw.lower().strip()
     existing = await db.users.find_one({"email": admin_email})
     if not existing:
         await db.users.insert_one({
-            "id": new_id(), "name": "Northend Admin", "email": admin_email,
+            "id": new_id(), "name": "Unacademy Admin", "email": admin_email,
             "phone": "+91-9999999999", "role": "admin",
             "password_hash": hash_password(admin_pwd),
             "created_at": now_iso(),
@@ -1083,6 +1548,14 @@ async def seed():
     async for sc in db.scholarships.find({"examiner_token": {"$exists": False}}, {"_id": 0, "id": 1}):
         await db.scholarships.update_one({"id": sc["id"]}, {"$set": {"examiner_token": uuid.uuid4().hex}})
 
+    # Create Mongo indexes for quick application lookups and unique constraint enforcing
+    await db.scholarship_applications.create_index(
+        [("scholarship_id", 1), ("email", 1)]
+    )
+    await db.scholarship_applications.create_index(
+        [("scholarship_id", 1), ("phone", 1)]
+    )
+
     legacy_course_patches = {
         "Class 11–12 NEET": {
             "syllabus": ["Physics", "Chemistry", "Botany", "Zoology", "NCERT Mastery", "Weekly Mock Tests"],
@@ -1107,12 +1580,12 @@ async def seed():
 
 async def _run_initial_seed():
     kashmir_centers = [
-        {"id": new_id(), "name": "Northend 90 FT", "city": "Srinagar", "address": "Lal Chowk, Srinagar, J&K 190001", "phone": "+91-9876500001", "timing": "8:00 AM – 8:00 PM", "lat": 34.0837, "lng": 74.7973},
-        {"id": new_id(), "name": "Northend Anantnag", "city": "Anantnag", "address": "KP Road, Anantnag, J&K 192101", "phone": "+91-9876500002", "timing": "8:00 AM – 8:00 PM", "lat": 33.7311, "lng": 75.1487},
-        {"id": new_id(), "name": "Northend Sopore", "city": "Sopore", "address": "Main Chowk, Sopore, J&K 193201", "phone": "+91-9876500003", "timing": "8:00 AM – 8:00 PM", "lat": 34.2871, "lng": 74.4663},
-        {"id": new_id(), "name": "Northend Soura", "city": "Soura", "address": "Soura, Srinagar, J&K 190011", "phone": "+91-9876500004", "timing": "8:00 AM – 8:00 PM", "lat": 34.1396, "lng": 74.8005},
-        {"id": new_id(), "name": "Northend Zakura", "city": "Zakura", "address": "Zakura, Srinagar, J&K 190006", "phone": "+91-9876500005", "timing": "8:00 AM – 8:00 PM", "lat": 34.1373, "lng": 74.8584},
-        {"id": new_id(), "name": "Northend Parraypora", "city": "Parraypora", "address": "Parraypora, Srinagar, J&K 190015", "phone": "+91-9876500006", "timing": "8:00 AM – 8:00 PM", "lat": 34.0500, "lng": 74.7833},
+        {"id": new_id(), "name": "Unacademy Offline Centre Srinagar", "city": "Srinagar", "address": "Lal Chowk, Srinagar, J&K 190001", "phone": "+91-9876500001", "timing": "8:00 AM – 8:00 PM", "lat": 34.0837, "lng": 74.7973},
+        {"id": new_id(), "name": "Unacademy Offline Centre Anantnag", "city": "Anantnag", "address": "KP Road, Anantnag, J&K 192101", "phone": "+91-9876500002", "timing": "8:00 AM – 8:00 PM", "lat": 33.7311, "lng": 75.1487},
+        {"id": new_id(), "name": "Unacademy Offline Centre Sopore", "city": "Sopore", "address": "Main Chowk, Sopore, J&K 193201", "phone": "+91-9876500003", "timing": "8:00 AM – 8:00 PM", "lat": 34.2871, "lng": 74.4663},
+        {"id": new_id(), "name": "Unacademy Offline Centre Soura", "city": "Soura", "address": "Soura, Srinagar, J&K 190011", "phone": "+91-9876500004", "timing": "8:00 AM – 8:00 PM", "lat": 34.1396, "lng": 74.8005},
+        {"id": new_id(), "name": "Unacademy Offline Centre Zakura", "city": "Zakura", "address": "Zakura, Srinagar, J&K 190006", "phone": "+91-9876500005", "timing": "8:00 AM – 8:00 PM", "lat": 34.1373, "lng": 74.8584},
+        {"id": new_id(), "name": "Unacademy Offline Centre Parraypora", "city": "Parraypora", "address": "Parraypora, Srinagar, J&K 190015", "phone": "+91-9876500006", "timing": "8:00 AM – 8:00 PM", "lat": 34.0500, "lng": 74.7833},
     ]
     await db.centers.insert_many(kashmir_centers)
 
@@ -1127,8 +1600,7 @@ async def _run_initial_seed():
          ["Small batches of 30", "Olympiad-grade problem sets", "All-India test ranking", "Doubt sessions 6 days a week"]),
         ("Foundation 8th–10th", "Foundation", "12 months", 35000, "Strong academic foundation with Olympiad training.", False, "https://images.pexels.com/photos/6147219/pexels-photo-6147219.jpeg?w=800",
          ["Maths Foundation", "Science Foundation", "English", "Mental Ability", "Olympiad Prep"],
-         ["Ms. M. Khan", "Mr. T. Rather"],
-         ["NTSE & NSO support", "Concept-first teaching", "Weekly parent reports"]),
+         ["Ms. M. Khan", "Mr. T. Rather"]),
         ("CBSE Class 11–12 Sciences", "CBSE", "24 months", 40000, "CBSE-aligned programme for PCM / PCB streams with Boards-grade rigor.", True, "https://images.unsplash.com/photo-1555967522-37949fc21dcb?w=800",
          ["NCERT Mastery", "Sample Paper Drills", "Practical Lab Notes", "Pre-Board Tests"],
          ["Mr. F. Lone", "Dr. A. Wani", "Ms. S. Kaur"],
@@ -1147,19 +1619,19 @@ async def _run_initial_seed():
 
     notices = [
         ("New 2026 NEET Batch Launch", "Admissions open for the new NEET 2026 batch starting March 1.", "Admissions", True),
-        ("Scholarship Test 2026", "Northend Scholarship Test on Feb 28 — up to 100% fee waiver.", "Scholarship", True),
+        ("Scholarship Test 2026", "Unacademy Offline Scholarship Test on Feb 28 — up to 100% fee waiver.", "Scholarship", True),
         ("Foundation Olympiad Workshop", "Free 3-day Olympiad workshop for Class 8–10 students.", "Workshop", False),
     ]
     for t, c, cat, p in notices:
         await db.notices.insert_one({"id": new_id(), "title": t, "content": c, "category": cat, "pinned": p, "created_at": now_iso()})
 
     results_data = [
-        ("Aamir Hussain", "NEET 2025", "AIR 412", 2025, "NEET", "Cracked NEET in first attempt with Northend's guidance."),
+        ("Aamir Hussain", "NEET 2025", "AIR 412", 2025, "NEET", "Cracked NEET in first attempt with guidance."),
         ("Zoya Bhat", "JEE Advanced 2025", "AIR 1108", 2025, "IIT-JEE", "From Anantnag to IIT Delhi — mentors made the difference."),
         ("Hamid Wani", "NEET 2024", "AIR 587", 2024, "NEET", "Dedicated faculty + structured tests = AIIMS dream realised."),
         ("Sahla Mir", "CUET 2024", "99.4 percentile", 2024, "CUET", "Got admission into Delhi University Hindu College."),
         ("Bilal Ahmad", "JEE Main 2025", "99.1 percentile", 2025, "IIT-JEE", "Best teaching ecosystem in Kashmir, hands down."),
-        ("Iqra Jan", "NEET 2025", "AIR 1903", 2025, "NEET", "Northend made the impossible feel routine."),
+        ("Iqra Jan", "NEET 2025", "AIR 1903", 2025, "NEET", "Made the impossible feel routine."),
     ]
     for n, e, r, y, c, q in results_data:
         await db.results.insert_one({
@@ -1168,9 +1640,9 @@ async def _run_initial_seed():
         })
 
     ts = [
-        ("Insha Rather", "Parent", "Northend transformed my daughter's preparation. The faculty truly cares."),
-        ("Rayaan Khan", "NEET Aspirant", "Best decision was joining Northend in Srinagar. Mock tests were spot on."),
-        ("Mehak Lone", "JEE Aspirant", "Doubt clearing happens in real time — feels like a national coaching."),
+        ("Insha Rather", "Parent", "Transformed my daughter's preparation. The faculty truly cares."),
+        ("Rayaan Khan", "NEET Aspirant", "Best decision was joining in Srinagar. Mock tests were spot on."),
+        ("Mehak Lone", "JEE Aspirant", "Doubt clearing happens in real time — feels like national coaching."),
     ]
     for n, role, q in ts:
         await db.testimonials.insert_one({"id": new_id(), "name": n, "role": role, "quote": q, "created_at": now_iso()})
@@ -1186,21 +1658,23 @@ async def _run_initial_seed():
         await db.jobs.insert_one({"id": new_id(), "title": t, "department": d, "location": l, "type": ty, "description": desc, "requirements": req, "active": a, "created_at": now_iso()})
 
     await db.scholarships.insert_one({
-        "id": new_id(), "title": "Northend Scholarship Test 2026 (NST)",
+        "id": new_id(), "title": "Unacademy Offline Centre Scholarship Test 2026",
         "description": "Win up to 100% scholarship on tuition fees. Open for Class 8–12 students across Kashmir.",
         "exam_date": "2026-02-28", "deadline": "2026-02-25",
         "eligibility": "Students of Class 8 to 12 from any school in J&K.",
         "active": True,
         "examiner_token": uuid.uuid4().hex,
-        "available_venues": [],
+        "available_venues": ["90 FT", "Anantnag", "Sopore", "Zakura", "Parraypora"],
         "created_at": now_iso(),
     })
 
 # ---------- App wiring ----------
 from erp_routes import build_erp_router, erp_seed  # noqa: E402
-# CRITICAL HARMONIZATION: Prefixing explicitly captures /api/erp boundaries matching front-end axios default routing behaviors
 erp_router = build_erp_router(db, get_current_user, hash_password, verify_password, require_admin)
 api.include_router(erp_router)
+# WhatsApp Inbox (Super Admin only)
+from whatsapp_inbox import build_whatsapp_router  # noqa: E402
+api.include_router(build_whatsapp_router(db, require_super_admin))
 app.include_router(api)
 
 _default_allowed = [
@@ -1228,12 +1702,37 @@ app.add_middleware(
 
 logging.basicConfig(level=logging.INFO)
 
+# Health check endpoints — MUST be mounted directly on `app` (not the /api router)
+# so the k8s readiness probe at "GET /health" passes immediately, without waiting
+# for seed / storage init to complete.
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+@app.get("/")
+async def root():
+    return {"status": "ok", "service": "Unacademy Offline Centre API"}
+
+async def _run_boot_tasks():
+    """Non-blocking startup: seed DB + init storage without holding readiness."""
+    try:
+        await seed()
+    except Exception as e:
+        logging.error(f"seed() failed: {e}")
+    try:
+        await erp_seed(db, hash_password)
+    except Exception as e:
+        logging.error(f"erp_seed() failed: {e}")
+    try:
+        await init_storage()
+    except Exception as e:
+        logging.error(f"init_storage() failed: {e}")
+    logging.info("Unacademy Offline Centre backend ready.")
+
 @app.on_event("startup")
 async def on_start():
-    await seed()
-    await erp_seed(db, hash_password)
-    await init_storage()
-    logging.info("Northend backend ready.")
+    # Fire boot tasks in the background so uvicorn reports READY immediately.
+    asyncio.create_task(_run_boot_tasks())
 
 @app.on_event("shutdown")
 async def on_stop():

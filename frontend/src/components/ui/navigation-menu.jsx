@@ -1,104 +1,113 @@
-import * as React from "react"
-import * as NavigationMenuPrimitive from "@radix-ui/react-navigation-menu"
-import { cva } from "class-variance-authority"
-import { ChevronDown } from "lucide-react"
+import React, { useState } from "react";
+import { Outlet, Link, useLocation } from "react-router-dom";
+import { 
+  List, X, ChartBar, Users, GraduationCap, 
+  Briefcase, FileText, Settings, SignOut 
+} from "@phosphor-icons/react";
+import { useAuth } from "@/contexts/AuthContext";
 
-import { cn } from "@/lib/utils"
+export default function AdminLayout() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { logout } = useAuth();
+  const location = useLocation();
 
-const NavigationMenu = React.forwardRef(({ className, children, ...props }, ref) => (
-  <NavigationMenuPrimitive.Root
-    ref={ref}
-    className={cn(
-      "relative z-10 flex max-w-max flex-1 items-center justify-center",
-      className
-    )}
-    {...props}>
-    {children}
-    <NavigationMenuViewport />
-  </NavigationMenuPrimitive.Root>
-))
-NavigationMenu.displayName = NavigationMenuPrimitive.Root.displayName
+  const navItems = [
+    { label: "Analytics", path: "/admin", icon: ChartBar },
+    { label: "Scholarships", path: "/admin/scholarships", icon: GraduationCap },
+    { label: "Applicants", path: "/admin/applicants", icon: Users },
+    { label: "Careers", path: "/admin/jobs", icon: Briefcase },
+    { label: "Notices", path: "/admin/notices", icon: FileText },
+    { label: "Settings", path: "/admin/settings", icon: Settings },
+  ];
 
-const NavigationMenuList = React.forwardRef(({ className, ...props }, ref) => (
-  <NavigationMenuPrimitive.List
-    ref={ref}
-    className={cn(
-      "group flex flex-1 list-none items-center justify-center space-x-1",
-      className
-    )}
-    {...props} />
-))
-NavigationMenuList.displayName = NavigationMenuPrimitive.List.displayName
-
-const NavigationMenuItem = NavigationMenuPrimitive.Item
-
-const navigationMenuTriggerStyle = cva(
-  "group inline-flex h-9 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=open]:text-accent-foreground data-[state=open]:bg-accent/50 data-[state=open]:hover:bg-accent data-[state=open]:focus:bg-accent"
-)
-
-const NavigationMenuTrigger = React.forwardRef(({ className, children, ...props }, ref) => (
-  <NavigationMenuPrimitive.Trigger
-    ref={ref}
-    className={cn(navigationMenuTriggerStyle(), "group", className)}
-    {...props}>
-    {children}{" "}
-    <ChevronDown
-      className="relative top-[1px] ml-1 h-3 w-3 transition duration-300 group-data-[state=open]:rotate-180"
-      aria-hidden="true" />
-  </NavigationMenuPrimitive.Trigger>
-))
-NavigationMenuTrigger.displayName = NavigationMenuPrimitive.Trigger.displayName
-
-const NavigationMenuContent = React.forwardRef(({ className, ...props }, ref) => (
-  <NavigationMenuPrimitive.Content
-    ref={ref}
-    className={cn(
-      "left-0 top-0 w-full data-[motion^=from-]:animate-in data-[motion^=to-]:animate-out data-[motion^=from-]:fade-in data-[motion^=to-]:fade-out data-[motion=from-end]:slide-in-from-right-52 data-[motion=from-start]:slide-in-from-left-52 data-[motion=to-end]:slide-out-to-right-52 data-[motion=to-start]:slide-out-to-left-52 md:absolute md:w-auto ",
-      className
-    )}
-    {...props} />
-))
-NavigationMenuContent.displayName = NavigationMenuPrimitive.Content.displayName
-
-const NavigationMenuLink = NavigationMenuPrimitive.Link
-
-const NavigationMenuViewport = React.forwardRef(({ className, ...props }, ref) => (
-  <div className={cn("absolute left-0 top-full flex justify-center")}>
-    <NavigationMenuPrimitive.Viewport
-      className={cn(
-        "origin-top-center relative mt-1.5 h-[var(--radix-navigation-menu-viewport-height)] w-full overflow-hidden rounded-md border bg-popover text-popover-foreground shadow data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-90 md:w-[var(--radix-navigation-menu-viewport-width)]",
-        className
+  return (
+    <div className="relative flex min-h-screen w-full bg-background text-foreground overflow-x-hidden">
+      
+      {/* 1. Mobile Backdrop */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
       )}
-      ref={ref}
-      {...props} />
-  </div>
-))
-NavigationMenuViewport.displayName =
-  NavigationMenuPrimitive.Viewport.displayName
 
-const NavigationMenuIndicator = React.forwardRef(({ className, ...props }, ref) => (
-  <NavigationMenuPrimitive.Indicator
-    ref={ref}
-    className={cn(
-      "top-full z-[1] flex h-1.5 items-end justify-center overflow-hidden data-[state=visible]:animate-in data-[state=hidden]:animate-out data-[state=hidden]:fade-out data-[state=visible]:fade-in",
-      className
-    )}
-    {...props}>
-    <div
-      className="relative top-[60%] h-2 w-2 rotate-45 rounded-tl-sm bg-border shadow-md" />
-  </NavigationMenuPrimitive.Indicator>
-))
-NavigationMenuIndicator.displayName =
-  NavigationMenuPrimitive.Indicator.displayName
+      {/* 2. Responsive Sidebar (Hidden Off-screen on Mobile, Drawer-style) */}
+      <aside 
+        className={`
+          fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border p-4 flex flex-col justify-between
+          transition-transform duration-300 ease-in-out
+          md:static md:translate-x-0 md:flex-shrink-0
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+        `}
+      >
+        <div>
+          <div className="flex items-center justify-between px-2 py-4 mb-6 border-b border-border">
+            <div>
+              <h2 className="font-display text-lg font-bold">Northend</h2>
+              <p className="text-[10px] tracking-widest text-muted-foreground uppercase">Admin Portal</p>
+            </div>
+            <button 
+              className="md:hidden p-1 text-muted-foreground hover:text-foreground"
+              onClick={() => setSidebarOpen(false)}
+            >
+              <X size={20} />
+            </button>
+          </div>
 
-export {
-  navigationMenuTriggerStyle,
-  NavigationMenu,
-  NavigationMenuList,
-  NavigationMenuItem,
-  NavigationMenuContent,
-  NavigationMenuTrigger,
-  NavigationMenuLink,
-  NavigationMenuIndicator,
-  NavigationMenuViewport,
+          <nav className="space-y-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                    isActive 
+                      ? "bg-accent/15 text-accent border border-accent/20" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                  }`}
+                >
+                  <Icon size={18} />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+
+        <button 
+          onClick={logout}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
+        >
+          <SignOut size={18} />
+          <span>Logout</span>
+        </button>
+      </aside>
+
+      {/* 3. Main Body Container (Claims 100% width on Mobile) */}
+      <div className="flex flex-1 flex-col min-w-0 w-full overflow-y-auto">
+        
+        {/* Mobile Header Bar */}
+        <header className="flex h-16 items-center justify-between border-b border-border px-4 md:hidden bg-card/50 backdrop-blur-md">
+          <button 
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 rounded-lg border border-border text-foreground hover:bg-white/5"
+            aria-label="Open sidebar"
+          >
+            <List size={20} />
+          </button>
+          <span className="font-display text-sm font-semibold">Admin Panel</span>
+          <div className="w-8" />
+        </header>
+
+        {/* Dashboard Content Container */}
+        <main className="flex-1 p-4 md:p-8 w-full max-w-full overflow-x-hidden">
+          <Outlet />
+        </main>
+      </div>
+
+    </div>
+  );
 }

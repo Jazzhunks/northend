@@ -1,8 +1,3 @@
-"""
-Northend ERP module — branch-isolated multi-role operations.
-Roles: super_admin (full), center_manager (own branch), accountant (own branch fees+expenses),
-       counsellor (own branch leads + assigned students)
-"""
 from __future__ import annotations
 import io
 import os
@@ -148,7 +143,8 @@ class AttendanceOverrideRequest(BaseModel):
 # ====== FACTORY MODULE INFRASTRUCTURE ======
 def build_erp_router(db, get_current_user, hash_password, verify_password, require_admin):
 
-    erp = APIRouter(prefix="/erp", tags=["erp"])
+    # Hard isolation: Dropping implicit parent route dependencies prevents public endpoint pollution
+    erp = APIRouter(prefix="/erp", tags=["erp"], dependencies=[])
 
     # ---- Role guards
     async def require_erp(user: dict = Depends(get_current_user)) -> dict:
@@ -157,17 +153,17 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
             user["role"] = "super_admin"
             role = "super_admin"
         if role not in ROLES_ALL:
-            raise HTTPException(403, "ERP access required")
+            raise HTTPException(403, "Access Denied: ERP authorization permissions required.")
         return user
 
     async def require_super(user: dict = Depends(require_erp)) -> dict:
         if user["role"] != "super_admin":
-            raise HTTPException(403, "Super admin access required")
+            raise HTTPException(403, "Access Denied: Super admin clearance required.")
         return user
 
     async def require_manager_plus(user: dict = Depends(require_erp)) -> dict:
         if user["role"] not in {"super_admin", "center_manager"}:
-            raise HTTPException(403, "Manager access required")
+            raise HTTPException(403, "Access Denied: Manager or executive clearance required.")
         return user
 
     def can_view_branch(user: dict, branch_id: str) -> bool:
@@ -179,9 +175,9 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
         if user["role"] == "super_admin":
             return {"branch_id": branch_id_param} if branch_id_param else {}
         if not user.get("branch_id"):
-            raise HTTPException(403, "User has no branch assigned")
+            raise HTTPException(403, "Context Error: User profile has no active branch assignment node.")
         if branch_id_param and branch_id_param != user["branch_id"]:
-            raise HTTPException(403, "Cross-branch access denied")
+            raise HTTPException(403, "Access Denied: Cross-branch query parameter operations rejected.")
         return {"branch_id": user["branch_id"]}
 
     # ---- Audit logger
@@ -244,7 +240,7 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
 
     # ===== ME =====
     @erp.get("/me")
-    async def me(user: dict = Depends(require_erp)):
+    async def erp_me(user: dict = Depends(require_erp)):
         branch = None
         if user.get("branch_id"):
             branch = await db.centers.find_one({"id": user["branch_id"]}, {"_id": 0})

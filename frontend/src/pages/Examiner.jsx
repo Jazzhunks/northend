@@ -46,7 +46,34 @@ export default function Examiner() {
   };
   useEffect(() => { loadApps(); /* eslint-disable-next-line */ }, [campaign?.id, venue]);
 
-  const mark = async (app_no, status = "present") => {
+  // Helper to extract application_no from URL, piped strings, or plain input
+  const parseAppNo = (rawText) => {
+    if (!rawText) return "";
+    const text = rawText.trim();
+    
+    // Check if it's a URL with query params
+    if (text.includes("?")) {
+      try {
+        const urlObj = new URL(text.startsWith("http") ? text : `https://${text}`);
+        const appNoParam = urlObj.searchParams.get("app_no") || urlObj.searchParams.get("application_no");
+        if (appNoParam) return appNoParam.trim();
+      } catch (e) {
+        console.warn("Could not parse as URL:", e);
+      }
+    }
+
+    // Check if piped string (e.g. UAC|73459760|Name or NEW|73459760|Name)
+    if (text.includes("|")) {
+      const parts = text.split("|");
+      return (parts[1] || parts[0]).trim();
+    }
+
+    return text;
+  };
+
+  const mark = async (rawInput, status = "present") => {
+    const app_no = parseAppNo(rawInput);
+    if (!app_no) { toast.error("Invalid Application Number"); return; }
     if (!venue) { toast.error("Select a venue first"); return; }
     try {
       const { data } = await api.post("/attendance/mark", { token, application_no: app_no, venue, status });
@@ -61,7 +88,7 @@ export default function Examiner() {
   const onManualSubmit = (e) => {
     e.preventDefault();
     if (!manualNo) return;
-    mark(manualNo.trim().toUpperCase());
+    mark(manualNo);
     setManualNo("");
   };
 
@@ -76,10 +103,10 @@ export default function Examiner() {
         { facingMode: "environment" },
         { fps: 10, qrbox: { width: 240, height: 240 }, formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE] },
         (decodedText) => {
-          // Expected payload: NEW|<application_no>|<name>
-          const parts = decodedText.split("|");
-          const app_no = (parts[1] || decodedText).trim();
+          // Parse application number from scanned text (URL or Piped or Plain App No)
+          const app_no = parseAppNo(decodedText);
           mark(app_no);
+          
           // brief pause + restart camera
           html5Qr.pause(true);
           setTimeout(() => {
@@ -152,7 +179,7 @@ export default function Examiner() {
           <form onSubmit={onManualSubmit} className="glass-elevated p-5 rounded-2xl bg-background">
             <div className="font-display font-bold mb-3">Manual Entry</div>
             <div className="flex gap-2">
-              <Input placeholder="NEW-SCH-XXXXXXXX" value={manualNo} onChange={e => setManualNo(e.target.value)} data-testid="ex-manual-input"/>
+              <Input placeholder="Application No" value={manualNo} onChange={e => setManualNo(e.target.value)} data-testid="ex-manual-input"/>
               <Button type="submit" className="bg-primary text-primary-foreground" data-testid="ex-manual-submit"><CheckCircle2 size={14}/>Mark</Button>
             </div>
           </form>

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { api } from "../lib/api";
+import { api, formatError } from "../lib/api"; // Import the formatter here!
 
 const AuthCtx = createContext(null);
 
@@ -12,6 +12,7 @@ export function AuthProvider({ children }) {
   // ============================================================================
   const refresh = useCallback(async () => {
     const token = localStorage.getItem("nw_token");
+    // Supporting dual-mode parsing until backend switches fully to cookie sessions
     if (!token) {
       setUser(null);
       setLoading(false);
@@ -19,7 +20,6 @@ export function AuthProvider({ children }) {
     }
 
     try {
-      // Dynamic interceptors in api.js automatically catch this token from localStorage
       const { data } = await api.get("/auth/me");
       setUser(data);
     } catch (err) {
@@ -49,10 +49,12 @@ export function AuthProvider({ children }) {
   // ============================================================================
   // AUTHENTICATION INTERACTION MUTATORS
   // ============================================================================
-  const login = async (email, password) => {
+  const login = async (email, password, options = {}) => {
     setLoading(true);
     try {
-      const { data } = await api.post("/auth/login", { email, password });
+      const { data } = await api.post("/auth/login", { email, password }, {
+        signal: options.signal // Wire upstream controller cancellation signals
+      });
       
       if (data?.access_token) {
         localStorage.setItem("nw_token", data.access_token);
@@ -101,7 +103,8 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthCtx.Provider value={{ user, loading, login, register, logout, refresh }}>
+    // Provided formatError securely to Context value object mapping
+    <AuthCtx.Provider value={{ user, loading, login, register, logout, refresh, formatError }}>
       {children}
     </AuthCtx.Provider>
   );

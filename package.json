@@ -1,5 +1,14 @@
 {
+  "name": "app-root",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "concurrently -k -n \"BACKEND,FRONTEND,WAHA\" -c \"blue,green,magenta\" \"npm run start:backend\" \"npm run start:frontend\" \"npm run start:waha\"",
+    "start:backend": "cd backend && npm run dev",
+    "start:frontend": "cd frontend && npm start",
+    "start:waha": "cd waha && yarn start"
+  },
   "devDependencies": {
+    "concurrently": "^8.2.2",
     "react-snap": "^1.23.0"
   }
 }

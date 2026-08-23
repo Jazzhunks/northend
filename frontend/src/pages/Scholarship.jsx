@@ -120,7 +120,7 @@ export default function Scholarship() {
                   <div className="font-mono text-2xl mt-4 p-4 bg-background border border-border rounded-md">{submitted.application_no}</div>
                   <p className="text-sm text-muted-foreground mt-4">Save this number along with your phone <b className="font-mono">{submitted.phone}</b> — you'll need both to view your result later.</p>
                   <div className="flex flex-wrap gap-2 mt-4">
-                    <a href={`${BACKEND}/scholarship-applications/${submitted.application_no}/admit-card`} target="_blank" rel="noreferrer">
+                    <a href={`${BACKEND}/scholarship-applications/${submitted.application_no}/admit-card?phone=${encodeURIComponent(submitted.phone || '')}`} target="_blank" rel="noreferrer">
                       <Button className="bg-primary text-primary-foreground" data-testid="download-admit-card"><Download size={14}/>Download Admit Card</Button>
                     </a>
                     <Button onClick={() => setSubmitted(null)} variant="outline" data-testid="another-app-btn">Submit another</Button>
@@ -230,7 +230,7 @@ export default function Scholarship() {
                     <a href={`${BACKEND}/scholarship-applications/${resultData.application_no}/result-card?phone=${encodeURIComponent(resultData.phone)}`} target="_blank" rel="noreferrer">
                       <Button className="bg-primary text-primary-foreground" data-testid="download-result-card"><FileText size={14}/>Download Result Card (PDF)</Button>
                     </a>
-                    <a href={`${BACKEND}/scholarship-applications/${resultData.application_no}/admit-card`} target="_blank" rel="noreferrer">
+                    <a href={`${BACKEND}/scholarship-applications/${resultData.application_no}/admit-card?phone=${encodeURIComponent(resultData.phone || '')}`} target="_blank" rel="noreferrer">
                       <Button variant="outline"><Download size={14}/>Admit Card</Button>
                     </a>
                   </div>

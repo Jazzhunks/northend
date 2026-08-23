@@ -36,12 +36,7 @@ export const erp = {
    */
   getAttendanceStreamUrl: (branchId) => {
     const token = localStorage.getItem("nw_token");
-    
-    // Fallback directly to the absolute target URL string if internal configs use relative paths
-    const baseEndpoint = api.defaults.baseURL?.startsWith("http") 
-      ? api.defaults.baseURL 
-      : "https://nexed-neet.preview.emergentagent.com/api";
-
+    const baseEndpoint = api.defaults.baseURL;
     return `${baseEndpoint}/erp/erpattendance/stream/${encodeURIComponent(branchId)}?token=${encodeURIComponent(token)}`;
   },
 

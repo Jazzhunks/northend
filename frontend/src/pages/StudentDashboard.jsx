@@ -167,7 +167,7 @@ export default function StudentDashboard() {
                       ) : (
                         <span className="text-xs text-muted-foreground">Result pending</span>
                       )}
-                      <a href={`${API_BASE}/scholarship-applications/${a.application_no}/admit-card`} target="_blank" rel="noreferrer" className="text-muted-foreground text-xs hover:text-foreground hover:underline flex items-center gap-1">
+                          <a href={`${API_BASE}/scholarship-applications/${a.application_no}/admit-card?phone=${encodeURIComponent(a.phone || '')}`} target="_blank" rel="noreferrer" className="text-muted-foreground text-xs hover:text-foreground hover:underline flex items-center gap-1">
                         <ArrowUpRight weight="bold" size={12}/>Admit card
                       </a>
                     </div>
