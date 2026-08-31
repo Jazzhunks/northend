@@ -241,21 +241,24 @@ function WhatsAppFab() {
 
 export default function Layout() {
   const loc = useLocation();
+  
+  // --- REFACTORED CONDITION: DETECTS IF USER IS WITHIN THE ADMIN WORKSPACE ENVIRONMENT ---
   const isAdminPath = loc.pathname.startsWith("/admin");
 
   if (isAdminPath) {
     return (
-      <div className="min-h-screen w-full bg-background text-foreground overflow-x-hidden flex flex-col md:flex-row">
+      <div className="min-h-screen bg-background text-foreground overflow-hidden">
         <Outlet />
       </div>
     );
   }
 
+  // Fallback layout wraps public website views safely
   return (
     <SmoothScroll>
-      <div className="min-h-screen w-full flex flex-col overflow-x-hidden">
+      <div className="min-h-screen flex flex-col">
         <Navbar />
-        <main className="flex-1 pt-16 w-full max-w-full overflow-x-hidden">
+        <main className="flex-1 pt-16">
           <Outlet />
         </main>
         <Footer />

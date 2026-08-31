@@ -1,0 +1,159 @@
+import { getCookieHeaderKeys } from "./get-cookie-header-keys.js";
+import { resolveResponseBodyHandler } from "../../response-block/helpers/resolve-response-body-handler.js";
+import { resolveResponseContentType, resolveResponseMimeType } from "../../response-block/helpers/resolve-response-content-type.js";
+import { decodeBuffer } from "./decode-buffer.js";
+import { ERRORS, normalizeError } from "@scalar/helpers/errors/normalize-error";
+import { isElectron } from "@scalar/helpers/general/is-electron";
+import { buildSafeBodyRequest } from "@scalar/helpers/http/can-method-have-body";
+import { httpStatusCodes } from "@scalar/helpers/http/http-status-codes";
+import { normalizeHeaders } from "@scalar/helpers/http/normalize-headers";
+import { X_SCALAR_SET_COOKIE } from "@scalar/helpers/http/scalar-headers";
+import { serializeCookie } from "@scalar/helpers/http/serialize-cookie";
+import { parseSetCookie } from "set-cookie-parser";
+//#region src/v2/blocks/operation-block/helpers/send-request.ts
+/** HTTP status codes that should not include a response body */
+var NO_BODY_STATUS_CODES = [
+	204,
+	205,
+	304
+];
+/**
+* Execute the built fetch request and return a structured response.
+*
+* This function handles the complete request lifecycle including plugin hooks,
+* response processing, streaming detection, and error handling. It supports both
+* standard responses and server-sent event streams.
+*
+* @param request - The request built by the buildRequest helper
+* @param operation - The OpenAPI operation being executed
+* @param plugins - Array of client plugins to execute hooks
+* @param isUsingProxy - Whether the request is being proxied for header handling
+* @returns A tuple with either an error or the response data
+*/
+var sendRequest = async ({ isUsingProxy, requestPayload, request, plugins = [], customFetch = fetch }) => {
+	try {
+		const startTime = performance.now();
+		const response = isElectron() ? await customFetch(...requestPayload) : await customFetch(request ?? buildSafeBodyRequest(...requestPayload));
+		const endTime = performance.now();
+		const timestamp = Date.now();
+		const duration = endTime - startTime;
+		const contentType = response.headers.get("content-type");
+		const responseHeaders = normalizeHeaders(response.headers, isUsingProxy);
+		const responseUrl = new URL(response.url);
+		const fullPath = responseUrl.pathname + responseUrl.search;
+		const statusText = response.statusText || httpStatusCodes[response.status]?.name || "";
+		const method = requestPayload[1].method ?? "GET";
+		const shouldSkipBody = NO_BODY_STATUS_CODES.includes(response.status);
+		/**
+		* Handle server-sent event streams separately.
+		* These responses need a reader instead of buffered data.
+		* We check this early to avoid unnecessary body reading.
+		*/
+		if (contentType?.startsWith("text/event-stream") && response.body) return buildStreamingResponse({
+			response,
+			requestPayload,
+			timestamp,
+			duration,
+			responseHeaders,
+			statusText,
+			method,
+			fullPath
+		});
+		return buildStandardResponse({
+			response,
+			requestPayload,
+			timestamp,
+			duration,
+			responseHeaders,
+			statusText,
+			method,
+			fullPath,
+			contentType,
+			shouldSkipBody,
+			plugins
+		});
+	} catch (error) {
+		return [normalizeError(error, ERRORS.REQUEST_FAILED), null];
+	}
+};
+/**
+* Extracts and serializes custom cookies from the response using the custom cookie header.
+*
+* This function parses the custom cookie header (if present), serializes each cookie using our
+* in-repo `serializeCookie` helper, and then deletes the custom cookie header from the response.
+* Returns an array of serialized cookie strings, or null if no cookies were found.
+*/
+var getCustomCookie = (response) => {
+	const result = parseSetCookie(response.headers.get(X_SCALAR_SET_COOKIE) ?? "").map((c) => serializeCookie(c.name, c.value, {
+		...c,
+		sameSite: c.sameSite
+	}));
+	if (result.length) return result;
+	return null;
+};
+/**
+* Build a streaming response for server-sent events.
+* Streaming responses use a reader instead of buffering the entire body.
+*/
+var buildStreamingResponse = ({ response, requestPayload, timestamp, duration, responseHeaders, statusText, method, fullPath }) => {
+	const normalizedResponse = new Response(null, {
+		status: response.status,
+		statusText,
+		headers: response.headers
+	});
+	const cookieHeaderKeys = getCustomCookie(normalizedResponse) ?? getCookieHeaderKeys(normalizedResponse.headers);
+	return [null, {
+		timestamp,
+		requestPayload,
+		response: {
+			...normalizedResponse,
+			headers: responseHeaders,
+			cookieHeaderKeys,
+			reader: response.body.getReader(),
+			duration,
+			method,
+			path: fullPath
+		},
+		originalResponse: normalizedResponse.clone()
+	}];
+};
+/**
+* Build a standard response with buffered body data.
+* This handles all non-streaming responses including JSON, text, and binary data.
+*/
+var buildStandardResponse = async ({ response, requestPayload, timestamp, duration, responseHeaders, statusText, method, fullPath, contentType, shouldSkipBody, plugins }) => {
+	const arrayBuffer = await response.clone().arrayBuffer();
+	const responseType = resolveResponseContentType(contentType);
+	const mimeEssence = resolveResponseMimeType(contentType).essence;
+	const responseData = await decodeBuffer(arrayBuffer, responseType, resolveResponseBodyHandler(mimeEssence, plugins));
+	/**
+	* Create a new Response using the arrayBuffer we already read.
+	* ArrayBuffers can be reused to create new Response objects without additional memory.
+	*/
+	const normalizedResponse = new Response(shouldSkipBody ? null : arrayBuffer, {
+		status: response.status,
+		statusText,
+		headers: response.headers
+	});
+	const cookieHeaderKeys = getCustomCookie(normalizedResponse) ?? getCookieHeaderKeys(normalizedResponse.headers);
+	return [null, {
+		timestamp,
+		requestPayload,
+		response: {
+			...normalizedResponse,
+			headers: responseHeaders,
+			cookieHeaderKeys,
+			data: responseData,
+			size: arrayBuffer.byteLength,
+			duration,
+			method,
+			status: response.status,
+			path: fullPath
+		},
+		originalResponse: response.clone()
+	}];
+};
+//#endregion
+export { sendRequest };
+
+//# sourceMappingURL=send-request.js.map

@@ -1,0 +1,24 @@
+/**
+ * Scalar card header component
+ *
+ * Will automatically be used as the aria-labelledby for the parent ScalarCard component
+ *
+ * @example
+ * <ScalarCard>
+ *   <ScalarCardHeader>Header</ScalarCardHeader>
+ *   ...
+ * </ScalarCard>
+ */
+declare const _default: typeof __VLS_export;
+export default _default;
+declare const __VLS_export: __VLS_WithSlots<import("vue").DefineComponent<{}, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").PublicProps, Readonly<{}> & Readonly<{}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, true, {}, any>, {
+    default?: (props: {}) => any;
+} & {
+    actions?: (props: {}) => any;
+}>;
+type __VLS_WithSlots<T, S> = T & {
+    new (): {
+        $slots: S;
+    };
+};
+//# sourceMappingURL=ScalarCardHeader.vue.d.ts.map

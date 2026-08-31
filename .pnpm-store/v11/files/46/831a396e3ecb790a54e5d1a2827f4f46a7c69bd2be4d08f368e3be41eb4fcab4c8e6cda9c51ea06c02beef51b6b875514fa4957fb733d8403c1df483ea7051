@@ -1,0 +1,6 @@
+//#region src/constants.ts
+var e = typeof OVERRIDE_PACKAGE_VERSION < "u" ? OVERRIDE_PACKAGE_VERSION : "0.1.8";
+//#endregion
+export { e as APP_VERSION };
+
+//# sourceMappingURL=constants.js.map

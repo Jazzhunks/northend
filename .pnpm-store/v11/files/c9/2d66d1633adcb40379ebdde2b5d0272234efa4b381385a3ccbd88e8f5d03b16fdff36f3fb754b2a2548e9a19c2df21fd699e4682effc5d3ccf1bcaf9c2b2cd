@@ -1,0 +1,202 @@
+import { Fragment, computed, createBlock, createCommentVNode, createElementBlock, createElementVNode, createTextVNode, createVNode, defineComponent, normalizeClass, normalizeStyle, onMounted, openBlock, ref, renderList, toDisplayString, unref, watch, withCtx, withModifiers } from "vue";
+import { ScalarButton } from "@scalar/components/button";
+import { ScalarIconPlus } from "@scalar/icons";
+import { POPULAR_CONTEXT_FUNCTION_KEYS } from "@scalar/workspace-store/request-example";
+import { ScalarTeleport } from "@scalar/components/teleport";
+import { onClickOutside } from "@vueuse/core";
+import Fuse from "fuse.js";
+//#region src/v2/features/environments/components/EnvironmentVariablesDropdown.vue?vue&type=script&setup=true&lang.ts
+var _hoisted_1 = ["id"];
+var _hoisted_2 = [
+	"id",
+	"aria-selected",
+	"onClick"
+];
+var _hoisted_3 = { class: "flex items-center gap-2 whitespace-nowrap" };
+var _hoisted_4 = {
+	key: 1,
+	class: "text-c-3 bg-b-3 flex h-4.5 min-w-4.5 items-center justify-center rounded px-0.5 font-sans text-[9px] font-semibold"
+};
+var _hoisted_5 = { class: "max-w-[9rem] overflow-hidden text-right text-ellipsis whitespace-nowrap" };
+var DROPDOWN_LIMIT = 12;
+var EnvironmentVariablesDropdown_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	__name: "EnvironmentVariablesDropdown",
+	props: {
+		query: {},
+		environment: {},
+		dropdownPosition: {},
+		contextFunctionItems: { default: () => [] },
+		listboxId: {}
+	},
+	emits: [
+		"select",
+		"redirect",
+		"close"
+	],
+	setup(__props, { expose: __expose, emit: __emit }) {
+		const emit = __emit;
+		const isOpen = ref(true);
+		const dropdownRef = ref(null);
+		const selectedVariableIndex = ref(0);
+		const redirectToEnvironment = () => {
+			emit("redirect");
+			isOpen.value = false;
+			emit("close");
+		};
+		/** Normalize the variables to have a name and value */
+		const normalizedVariables = computed(() => (__props.environment?.variables ?? []).map((v) => ({
+			key: v.name,
+			value: typeof v.value === "string" ? v.value : v.value.default
+		})));
+		const contextRows = computed(() => __props.contextFunctionItems.map((item) => ({
+			kind: "context",
+			key: item.key,
+			secondary: item.description
+		})));
+		const envRows = computed(() => normalizedVariables.value.filter(({ key, value }) => key !== "" || value !== "").map(({ key, value }) => ({
+			kind: "env",
+			key,
+			secondary: value
+		})));
+		const envFuseSource = computed(() => envRows.value.map((row) => ({
+			...row,
+			fuseText: `${row.key} ${row.secondary}`
+		})));
+		const contextFuseSource = computed(() => contextRows.value.map((row) => ({
+			...row,
+			fuseText: `${row.key} ${row.secondary}`
+		})));
+		const fuseEnv = computed(() => new Fuse(envFuseSource.value, {
+			keys: ["fuseText"],
+			threshold: .35
+		}));
+		const fuseContext = computed(() => new Fuse(contextFuseSource.value, {
+			keys: ["fuseText"],
+			threshold: .35
+		}));
+		const popularContextRows = computed(() => {
+			const byKey = new Map(__props.contextFunctionItems.map((c) => [c.key, c]));
+			return POPULAR_CONTEXT_FUNCTION_KEYS.flatMap((key) => {
+				const item = byKey.get(key);
+				return item ? [{
+					kind: "context",
+					key: item.key,
+					secondary: item.description
+				}] : [];
+			});
+		});
+		const filteredVariables = computed(() => {
+			if (!__props.query.trim()) return [...envRows.value.slice(-4), ...popularContextRows.value];
+			const q = __props.query.trim();
+			const envMatches = fuseEnv.value.search(q, { limit: DROPDOWN_LIMIT }).map((res) => {
+				const { kind, key, secondary } = res.item;
+				return {
+					kind,
+					key,
+					secondary
+				};
+			});
+			const remaining = DROPDOWN_LIMIT - envMatches.length;
+			const contextMatches = remaining > 0 ? fuseContext.value.search(q, { limit: remaining }).map((res) => {
+				const { kind, key, secondary } = res.item;
+				return {
+					kind,
+					key,
+					secondary
+				};
+			}) : [];
+			return [...envMatches, ...contextMatches];
+		});
+		const optionId = (index) => __props.listboxId ? `${__props.listboxId}-option-${index}` : void 0;
+		/**
+		* Id of the currently highlighted option, for the combobox's
+		* `aria-activedescendant`. Undefined when there is no list to point at.
+		*/
+		const activeOptionId = computed(() => filteredVariables.value.length ? optionId(selectedVariableIndex.value) : void 0);
+		const selectVariable = (variableKey) => {
+			emit("select", variableKey);
+		};
+		watch(() => filteredVariables.value.length, (length) => {
+			if (selectedVariableIndex.value > length - 1) selectedVariableIndex.value = Math.max(0, length - 1);
+		});
+		const handleArrowKey = (direction) => {
+			const offset = direction === "up" ? -1 : 1;
+			const length = filteredVariables.value.length;
+			if (length === 0) return;
+			selectedVariableIndex.value = (selectedVariableIndex.value + offset + length) % length;
+		};
+		const handleSelect = () => {
+			if (selectedVariableIndex.value >= 0) {
+				const selectedVariable = filteredVariables.value[selectedVariableIndex.value];
+				if (selectedVariable) selectVariable(selectedVariable.key);
+			}
+		};
+		__expose({
+			handleArrowKey,
+			handleSelect,
+			activeOptionId
+		});
+		onMounted(() => {
+			selectedVariableIndex.value = 0;
+		});
+		const dropdownStyle = computed(() => {
+			return {
+				left: (__props.dropdownPosition?.left ?? 0) + "px",
+				top: (__props.dropdownPosition?.top ?? 0) + 5 + "px"
+			};
+		});
+		onClickOutside(dropdownRef, () => {
+			isOpen.value = false;
+			emit("close");
+		}, { ignore: [dropdownRef] });
+		return (_ctx, _cache) => {
+			return isOpen.value ? (openBlock(), createBlock(unref(ScalarTeleport), {
+				key: 0,
+				class: "scalar-client"
+			}, {
+				default: withCtx(() => [createElementVNode("div", {
+					ref_key: "dropdownRef",
+					ref: dropdownRef,
+					class: "custom-scroll z-context fixed top-0 left-0 flex max-h-[60svh] w-56 flex-col rounded border p-0.75",
+					style: normalizeStyle(dropdownStyle.value),
+					onMousedown: _cache[0] || (_cache[0] = withModifiers(() => {}, ["prevent"]))
+				}, [
+					createElementVNode("ul", {
+						id: __props.listboxId,
+						"aria-label": "Variable suggestions",
+						class: "gap-1/2 flex flex-col",
+						role: "listbox"
+					}, [(openBlock(true), createElementBlock(Fragment, null, renderList(filteredVariables.value, (item, index) => {
+						return openBlock(), createElementBlock("li", {
+							key: `${item.kind}-${item.key}`,
+							id: optionId(index),
+							"aria-selected": index === selectedVariableIndex.value,
+							class: normalizeClass(["font-code text-xxs hover:bg-b-3 flex h-8 cursor-pointer items-center justify-between gap-1.5 rounded p-1.5 transition-colors duration-150", { "bg-b-3": index === selectedVariableIndex.value }]),
+							role: "option",
+							onClick: ($event) => selectVariable(item.key)
+						}, [createElementVNode("div", _hoisted_3, [item.kind === "env" ? (openBlock(), createElementBlock("span", {
+							key: 0,
+							class: "h-2.25 w-2.25 min-w-2.25 rounded-full",
+							style: normalizeStyle({ backgroundColor: __props.environment?.color })
+						}, null, 4)) : (openBlock(), createElementBlock("span", _hoisted_4, " fn ")), createTextVNode(" " + toDisplayString(item.key), 1)]), createElementVNode("span", _hoisted_5, toDisplayString(item.secondary), 1)], 10, _hoisted_2);
+					}), 128))], 8, _hoisted_1),
+					!filteredVariables.value.length ? (openBlock(), createBlock(unref(ScalarButton), {
+						key: 0,
+						class: "font-code text-xxs bg-b-inherit hover:bg-b-3 flex h-8 w-full justify-start gap-2 px-1.5 transition-colors duration-150",
+						variant: "outlined",
+						onClick: redirectToEnvironment
+					}, {
+						default: withCtx(() => [createVNode(unref(ScalarIconPlus), { class: "size-3" }), _cache[1] || (_cache[1] = createTextVNode(" Add Variable ", -1))]),
+						_: 1
+					})) : createCommentVNode("", true),
+					_cache[2] || (_cache[2] = createElementVNode("div", { class: "bg-b-1 brightness-lifted absolute inset-0 -z-1 rounded shadow-lg" }, null, -1))
+				], 36)]),
+				_: 1
+			})) : createCommentVNode("", true);
+		};
+	}
+});
+//#endregion
+export { EnvironmentVariablesDropdown_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=EnvironmentVariablesDropdown.vue.script.js.map

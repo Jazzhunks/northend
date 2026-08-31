@@ -1,0 +1,14 @@
+import { F as NODE_SEA_MIN_VERSION, I as NODE_SEA_MIN_VERSION_PARSED, Q as Overwrite, U as Logger, Z as MarkPartial } from "./types-D8DLoC_H.mjs";
+//#region src/features/target.d.ts
+declare function expandBaselineTarget(targets: string[]): string[];
+//#endregion
+//#region src/utils/fs.d.ts
+declare function fsExists(path: string): Promise<boolean>;
+declare function fsRemove(path: string): Promise<void>;
+//#endregion
+//#region src/utils/general.d.ts
+declare function toArray<T>(val: T | T[] | null | undefined, defaultValue?: T): T[];
+declare function resolveComma<T extends string>(arr: T[]): T[];
+declare function importWithError<T>(moduleName: string): Promise<T>;
+//#endregion
+export { type Logger, type MarkPartial, NODE_SEA_MIN_VERSION, NODE_SEA_MIN_VERSION_PARSED, type Overwrite, expandBaselineTarget, fsExists, fsRemove, importWithError, resolveComma, toArray };

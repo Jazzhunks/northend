@@ -1,0 +1,241 @@
+import CollapsibleSection_default from "../../../components/layout/CollapsibleSection.vue.js";
+import DeleteRequestAuthModal_default from "./DeleteRequestAuthModal.vue.js";
+import { formatComplexScheme, formatScheme, getSecuritySchemeOptions } from "../helpers/security-scheme.js";
+import RequestAuthDataTable_default from "./RequestAuthDataTable.vue.js";
+import { Fragment, computed, createBlock, createCommentVNode, createElementBlock, createElementVNode, createTextVNode, createVNode, defineComponent, normalizeClass, openBlock, ref, toDisplayString, unref, useId, withCtx, withModifiers } from "vue";
+import { ScalarButton } from "@scalar/components/button";
+import { ScalarListboxCheckbox } from "@scalar/components/listbox";
+import { ScalarIconCaretDown, ScalarIconTrash } from "@scalar/icons";
+import { useModal } from "@scalar/components/modal";
+import { ScalarIconButton } from "@scalar/components/icon-button";
+import { isAuthOptional } from "@scalar/workspace-store/request-example";
+import { ScalarComboboxMultiselect } from "@scalar/components/combobox";
+import { getResolvedRef } from "@scalar/workspace-store/helpers/get-resolved-ref";
+import { unpackProxyObject } from "@scalar/workspace-store/helpers/unpack-proxy";
+//#region src/v2/blocks/scalar-auth-selector-block/components/AuthSelector.vue?vue&type=script&setup=true&lang.ts
+var _hoisted_1 = ["id"];
+var _hoisted_2 = { class: "min-w-0 flex-1 truncate" };
+var AuthSelector_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	__name: "AuthSelector",
+	props: {
+		environment: {},
+		eventBus: {},
+		createAnySecurityScheme: {
+			type: Boolean,
+			default: false
+		},
+		canDeleteSchemes: {
+			type: Boolean,
+			default: true
+		},
+		defaultOpen: {
+			type: Boolean,
+			default: true
+		},
+		isStatic: {
+			type: Boolean,
+			default: false
+		},
+		meta: {},
+		proxyUrl: {},
+		securityRequirements: {},
+		securitySchemes: {},
+		selectedSecurity: {},
+		server: {},
+		title: {},
+		options: {},
+		documentType: {}
+	},
+	setup(__props, { expose: __expose }) {
+		const titleId = useId();
+		const comboboxButtonRef = ref(null);
+		const isDisclosureOpen = ref(false);
+		const deleteModal = useModal();
+		const schemeToDelete = ref(null);
+		/**
+		* Determines if authentication is required or optional
+		*
+		* Auth is optional when there is an empty security requirement and no complex requirements.
+		* Complex requirements have multiple auth schemes combined (e.g., API key + OAuth).
+		*/
+		const authIndicator = computed(() => {
+			if (!__props.securityRequirements?.length) return null;
+			const isOptional = isAuthOptional(__props.securityRequirements);
+			return {
+				icon: isOptional ? "Unlock" : "Lock",
+				text: isOptional ? "Optional" : "Required"
+			};
+		});
+		/** All available auth scheme options for the dropdown */
+		const availableSchemeOptions = computed(() => getSecuritySchemeOptions(__props.securityRequirements ?? [], __props.securitySchemes ?? {}, __props.selectedSecurity?.selectedSchemes ?? [], __props.createAnySecurityScheme));
+		/** Currently active auth schemes selected for this operation or collection */
+		const activeSchemeOptions = computed(() => {
+			const schemes = __props.selectedSecurity?.selectedSchemes;
+			if (!schemes?.length) return [];
+			return schemes.flatMap((requirement) => {
+				const schemeNames = Object.keys(requirement);
+				if (schemeNames.length === 0) return [];
+				if (schemeNames.length > 1) return formatComplexScheme(requirement);
+				const schemeName = schemeNames[0];
+				if (!schemeName) return [];
+				if (!getResolvedRef(__props.securitySchemes?.[schemeName])) return [];
+				return formatScheme({
+					name: schemeName,
+					value: requirement
+				});
+			});
+		});
+		/**
+		* Opens the combobox dropdown when clicking the auth indicator badge.
+		* Prevents the disclosure from toggling if it is already open.
+		*/
+		const handleAuthIndicatorClick = (event) => {
+			if (isDisclosureOpen.value) event.stopPropagation();
+			comboboxButtonRef.value?.$el.click();
+		};
+		/**
+		* Updates the selected auth schemes.
+		* Separates existing schemes from newly created ones for the event payload.
+		*/
+		const handleSchemeSelection = (selected) => {
+			const existingSchemes = selected.filter((option) => option.payload === void 0).map((option) => unpackProxyObject(option.value, { depth: 2 }));
+			const newSchemes = selected.filter((option) => option.payload !== void 0).map((option) => ({
+				name: option.label,
+				scheme: option.payload
+			}));
+			__props.eventBus.emit("auth:update:selected-security-schemes", {
+				selectedRequirements: existingSchemes,
+				newSchemes,
+				meta: __props.meta
+			});
+		};
+		/** Shows the delete confirmation modal for the selected scheme */
+		const handleDeleteRequest = (option) => {
+			schemeToDelete.value = {
+				label: option.label,
+				payload: option.value
+			};
+			deleteModal.show();
+		};
+		/** Deletes the selected auth scheme after confirmation */
+		const handleDeleteConfirm = () => {
+			if (!schemeToDelete.value) return;
+			__props.eventBus.emit("auth:delete:security-scheme", { names: Object.keys(schemeToDelete.value.payload) });
+			schemeToDelete.value = null;
+			deleteModal.hide();
+		};
+		__expose({
+			authIndicator,
+			selectedSchemeOptions: activeSchemeOptions,
+			schemeOptions: availableSchemeOptions
+		});
+		return (_ctx, _cache) => {
+			return openBlock(), createBlock(unref(CollapsibleSection_default), {
+				class: "group/params relative",
+				defaultOpen: __props.defaultOpen,
+				isStatic: __props.isStatic,
+				itemCount: activeSchemeOptions.value.length,
+				"onUpdate:modelValue": _cache[1] || (_cache[1] = (open) => isDisclosureOpen.value = open)
+			}, {
+				title: withCtx(() => [createElementVNode("div", {
+					id: unref(titleId),
+					class: "inline-flex items-center gap-0.5 leading-[20px]"
+				}, [createElementVNode("span", null, toDisplayString(__props.title), 1), authIndicator.value ? (openBlock(), createElementBlock("span", {
+					key: 0,
+					class: normalizeClass(["text-c-3 hover:bg-b-3 hover:text-c-1 -my-0.5 -mr-1 cursor-pointer rounded px-1 py-0.5 leading-[normal] font-normal", { "text-c-1": authIndicator.value.text === "Required" }]),
+					"data-testid": "auth-indicator",
+					onClick: handleAuthIndicatorClick
+				}, toDisplayString(authIndicator.value.text), 3)) : createCommentVNode("", true)], 8, _hoisted_1)]),
+				actions: withCtx(() => [createVNode(unref(ScalarComboboxMultiselect), {
+					class: "w-72 text-xs",
+					modelValue: activeSchemeOptions.value,
+					multiple: "",
+					options: availableSchemeOptions.value,
+					placement: "bottom-end",
+					teleport: "",
+					onDelete: handleDeleteRequest,
+					"onUpdate:modelValue": handleSchemeSelection
+				}, {
+					option: withCtx(({ option, selected }) => [
+						createVNode(unref(ScalarListboxCheckbox), {
+							multiselect: "",
+							selected
+						}, null, 8, ["selected"]),
+						createElementVNode("div", _hoisted_2, toDisplayString(option.label), 1),
+						option.isDeletable && __props.canDeleteSchemes ? (openBlock(), createBlock(unref(ScalarIconButton), {
+							key: 0,
+							class: "-m-0.5 shrink-0 p-0.5 opacity-0 group-hover/item:opacity-100",
+							icon: unref(ScalarIconTrash),
+							label: `Delete ${option.label}`,
+							size: "xs",
+							onClick: withModifiers(($event) => handleDeleteRequest(option), ["stop"])
+						}, null, 8, [
+							"icon",
+							"label",
+							"onClick"
+						])) : createCommentVNode("", true)
+					]),
+					default: withCtx(() => [createVNode(unref(ScalarButton), {
+						ref_key: "comboboxButtonRef",
+						ref: comboboxButtonRef,
+						"aria-describedby": unref(titleId),
+						class: "group/combobox-button hover:text-c-1 text-c-2 flex h-fit w-full items-center gap-1 px-0.75 py-0.25 text-base font-normal",
+						variant: "ghost"
+					}, {
+						default: withCtx(() => [activeSchemeOptions.value.length === 1 ? (openBlock(), createElementBlock(Fragment, { key: 0 }, [_cache[2] || (_cache[2] = createElementVNode("span", { class: "sr-only" }, "Selected Auth Type:", -1)), createTextVNode(" " + toDisplayString(activeSchemeOptions.value[0]?.label), 1)], 64)) : activeSchemeOptions.value.length > 1 ? (openBlock(), createElementBlock(Fragment, { key: 1 }, [_cache[3] || (_cache[3] = createTextVNode(" Multiple ", -1)), _cache[4] || (_cache[4] = createElementVNode("span", { class: "sr-only" }, "Auth Types Selected", -1))], 64)) : (openBlock(), createElementBlock(Fragment, { key: 2 }, [_cache[5] || (_cache[5] = createElementVNode("span", { class: "sr-only" }, "Select", -1)), _cache[6] || (_cache[6] = createTextVNode(" Auth Type ", -1))], 64)), createVNode(unref(ScalarIconCaretDown), {
+							class: "size-3 shrink-0 transition-transform duration-100 group-aria-expanded/combobox-button:rotate-180",
+							weight: "bold"
+						})]),
+						_: 1
+					}, 8, ["aria-describedby"])]),
+					_: 1
+				}, 8, ["modelValue", "options"])]),
+				default: withCtx(() => [createVNode(RequestAuthDataTable_default, {
+					activeAuthIndex: __props.selectedSecurity?.selectedIndex ?? 0,
+					documentType: __props.documentType,
+					environment: __props.environment,
+					eventBus: __props.eventBus,
+					isStatic: __props.isStatic,
+					meta: __props.meta,
+					options: __props.options,
+					proxyUrl: __props.proxyUrl,
+					securitySchemes: __props.securitySchemes,
+					selectedSchemeOptions: activeSchemeOptions.value,
+					server: __props.server
+				}, null, 8, [
+					"activeAuthIndex",
+					"documentType",
+					"environment",
+					"eventBus",
+					"isStatic",
+					"meta",
+					"options",
+					"proxyUrl",
+					"securitySchemes",
+					"selectedSchemeOptions",
+					"server"
+				]), schemeToDelete.value ? (openBlock(), createBlock(DeleteRequestAuthModal_default, {
+					key: 0,
+					label: schemeToDelete.value.label,
+					scheme: schemeToDelete.value,
+					state: unref(deleteModal),
+					onClose: _cache[0] || (_cache[0] = ($event) => unref(deleteModal).hide()),
+					onDelete: handleDeleteConfirm
+				}, null, 8, [
+					"label",
+					"scheme",
+					"state"
+				])) : createCommentVNode("", true)]),
+				_: 1
+			}, 8, [
+				"defaultOpen",
+				"isStatic",
+				"itemCount"
+			]);
+		};
+	}
+});
+//#endregion
+export { AuthSelector_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=AuthSelector.vue.script.js.map

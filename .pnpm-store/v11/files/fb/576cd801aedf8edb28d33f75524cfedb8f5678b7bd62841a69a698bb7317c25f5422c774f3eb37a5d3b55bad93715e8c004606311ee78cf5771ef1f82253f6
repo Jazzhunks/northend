@@ -1,0 +1,77 @@
+import ScalarCopyBackdrop_default from "../ScalarCopy/ScalarCopyBackdrop.vue.js";
+import ScalarCodeBlockCopy_default from "./ScalarCodeBlockCopy.vue.js";
+import { useBindCx } from "@scalar/use-hooks/useBindCx";
+import { computed, createBlock, createCommentVNode, createElementBlock, createElementVNode, createVNode, defineComponent, guardReactiveProps, normalizeClass, normalizeProps, openBlock, unref, useId, withCtx } from "vue";
+import { standardLanguages, syntaxHighlight } from "@scalar/code-highlight";
+import { prettyPrintJson } from "@scalar/helpers/json/pretty-print-json";
+//#region src/components/ScalarCodeBlock/ScalarCodeBlock.vue?vue&type=script&setup=true&lang.ts
+var _hoisted_1 = {
+	tabindex: "0",
+	class: "custom-scroll overflow-x-auto p-2 -outline-offset-2 rounded-[inherit] min-h-0 min-w-0 flex-1"
+};
+var _hoisted_2 = ["id", "innerHTML"];
+var ScalarCodeBlock_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	inheritAttrs: false,
+	__name: "ScalarCodeBlock",
+	props: {
+		content: {},
+		prettyPrintedContent: {},
+		lang: { default: "plaintext" },
+		lineNumbers: {
+			type: Boolean,
+			default: false
+		},
+		hideCredentials: {},
+		copy: {
+			type: [String, Boolean],
+			default: "hover"
+		}
+	},
+	setup(__props) {
+		/** Base id for the code block */
+		const id = useId();
+		/** Formatted the content into an indented json string */
+		const prettyContent = computed(() => __props.prettyPrintedContent || prettyPrintJson(__props.content ?? ""));
+		const highlightedCode = computed(() => {
+			return syntaxHighlight(prettyContent.value, {
+				lang: __props.lang.trim(),
+				languages: standardLanguages,
+				lineNumbers: __props.lineNumbers,
+				maskCredentials: __props.hideCredentials
+			}).slice(5, -6);
+		});
+		/** Determine if the content is a single line */
+		const isOneLine = computed(() => !prettyContent.value.includes("\n"));
+		const isContentValid = computed(() => {
+			return prettyContent.value !== null && prettyContent.value !== "null" && prettyContent.value !== "404 Not Found";
+		});
+		const { cx } = useBindCx();
+		return (_ctx, _cache) => {
+			return openBlock(), createElementBlock("div", normalizeProps(guardReactiveProps(unref(cx)("scalar-code-block group/code-block flex flex-col", "relative bg-b-1 min-h-0 min-w-0 focus-visible:outline"))), [createElementVNode("div", _hoisted_1, [createElementVNode("pre", {
+				id: unref(id),
+				class: "m-0 bg-transparent text-nowrap whitespace-pre w-fit",
+				innerHTML: highlightedCode.value
+			}, null, 8, _hoisted_2)]), __props.copy && isContentValid.value ? (openBlock(), createBlock(unref(ScalarCodeBlockCopy_default), {
+				key: 0,
+				class: normalizeClass(["scalar-code-copy absolute", [isOneLine.value ? "top-1/2 -translate-y-1/2 m-0 right-1" : "top-2.5 right-2.5", { "opacity-100": __props.copy === "always" }]]),
+				content: prettyContent.value,
+				showLang: !isOneLine.value,
+				lang: __props.lang,
+				"aria-controls": unref(id)
+			}, {
+				backdrop: withCtx(() => [createVNode(ScalarCopyBackdrop_default, { class: normalizeClass(["scalar-code-copy-backdrop", [isOneLine.value ? "-inset-y-0.75 -right-1 group-hocus-within/code-block:-left-0.5 left-3" : "-right-1.5 -top-1"]]) }, null, 8, ["class"])]),
+				_: 1
+			}, 8, [
+				"class",
+				"content",
+				"showLang",
+				"lang",
+				"aria-controls"
+			])) : createCommentVNode("", true)], 16);
+		};
+	}
+});
+//#endregion
+export { ScalarCodeBlock_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=ScalarCodeBlock.vue.script.js.map

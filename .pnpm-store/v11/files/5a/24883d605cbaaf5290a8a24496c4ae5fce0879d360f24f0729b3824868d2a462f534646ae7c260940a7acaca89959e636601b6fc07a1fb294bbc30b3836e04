@@ -1,0 +1,86 @@
+import type { AsyncApiDocument, AsyncApiOperationObject } from '@scalar/types/asyncapi/3.1';
+/** Sentinel used by the protocol and server pickers to mean "don't filter". */
+export declare const ALL: "all";
+/** A single protocol option for the picker (e.g. `{ id: 'mqtt', label: 'MQTT' }`). */
+export type AsyncApiProtocolOption = {
+    /** The normalized protocol id (lowercase), or {@link ALL}. */
+    id: string;
+    /** Human-friendly label shown in the dropdown. */
+    label: string;
+};
+/**
+ * Builds the protocol options for the picker from a document's servers.
+ *
+ * Always prepends an "All protocols" entry so the picker can clear the filter,
+ * matching how the document picker always offers every document. Protocols are
+ * de-duplicated and sorted alphabetically for a stable order.
+ */
+export declare const getAsyncApiProtocols: (document: AsyncApiDocument) => AsyncApiProtocolOption[];
+/** A single server option for the picker (e.g. `{ id: 'mqtt-prod', label: 'mqtt-prod (mqtt)' }`). */
+export type AsyncApiServerOption = {
+    /** The server name (its key in `document.servers`), or {@link ALL}. */
+    id: string;
+    /** Human-friendly label: the server name, suffixed with its protocol when known. */
+    label: string;
+};
+/**
+ * Builds the server options for the picker from a document's servers.
+ *
+ * Like {@link getAsyncApiProtocols}, always prepends an "All servers" entry so the
+ * filter can be cleared. Each option is labelled with the server name and its
+ * protocol so the picker reads as `mqtt-prod (mqtt)`.
+ */
+export declare const getAsyncApiServerOptions: (document: AsyncApiDocument) => AsyncApiServerOption[];
+/**
+ * Document-level lookups the per-operation reachability check needs.
+ *
+ * Building this once per filter pass (instead of recomputing it for every operation)
+ * keeps sidebar filtering at O(operations + servers) rather than O(operations × servers).
+ */
+export type AsyncApiReachabilityContext = {
+    /** Normalized protocol of every named server, keyed by server name. */
+    serverProtocols: Map<string, string>;
+    /** Every server name declared on the document. */
+    allServerNames: Set<string>;
+};
+/** Precomputes the document-level data shared across every operation in a filter pass. */
+export declare const createReachabilityContext: (document: AsyncApiDocument) => AsyncApiReachabilityContext;
+/** The servers (and the protocols they speak) a single operation is reachable through. */
+export type OperationReachability = {
+    /** Server names the operation's channel can be reached through. */
+    serverNames: Set<string>;
+    /** Protocols those servers use. */
+    protocols: Set<string>;
+};
+/**
+ * Resolves the servers and protocols a single operation is reachable over.
+ *
+ * Resolves the operation's channel once, then intersects the channel's servers
+ * (or all servers, when the channel pins none) with the document's servers. The
+ * shared {@link AsyncApiReachabilityContext} is built once per filter pass; a fresh
+ * one is created when called standalone.
+ */
+export declare const getOperationReachability: (document: AsyncApiDocument, operation: AsyncApiOperationObject, context?: AsyncApiReachabilityContext) => OperationReachability;
+/**
+ * Returns the set of protocols an operation is reachable over.
+ */
+export declare const getOperationProtocols: (document: AsyncApiDocument, operation: AsyncApiOperationObject, context?: AsyncApiReachabilityContext) => Set<string>;
+/**
+ * Returns the names of the servers an operation is reachable through.
+ */
+export declare const getOperationServerNames: (document: AsyncApiDocument, operation: AsyncApiOperationObject, context?: AsyncApiReachabilityContext) => Set<string>;
+/**
+ * Whether an operation should be shown for the currently selected protocol.
+ *
+ * Selecting {@link ALL} (or nothing) matches every operation; otherwise the
+ * operation is kept only when one of its channel's servers uses that protocol.
+ */
+export declare const operationMatchesProtocol: (document: AsyncApiDocument, operation: AsyncApiOperationObject, protocol: string | undefined, context?: AsyncApiReachabilityContext) => boolean;
+/**
+ * Whether an operation should be shown for the currently selected server.
+ *
+ * Selecting {@link ALL} (or nothing) matches every operation; otherwise the
+ * operation is kept only when its channel is reachable through that server.
+ */
+export declare const operationMatchesServer: (document: AsyncApiDocument, operation: AsyncApiOperationObject, serverName: string | undefined, context?: AsyncApiReachabilityContext) => boolean;
+//# sourceMappingURL=get-async-api-protocols.d.ts.map

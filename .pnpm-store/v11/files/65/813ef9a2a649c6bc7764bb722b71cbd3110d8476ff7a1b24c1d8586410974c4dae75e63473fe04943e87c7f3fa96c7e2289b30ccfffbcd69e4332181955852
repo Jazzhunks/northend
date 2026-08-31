@@ -1,0 +1,23 @@
+import { SidebarProviderProps as SidebarProviderProps$1, useSidebar as useSidebar$1 } from "../../../components/sidebar/base.js";
+import { SidebarPageTreeComponents } from "../../../components/sidebar/page-tree.js";
+import { ComponentProps, FC, ReactNode } from "react";
+//#region src/layouts/notebook/slots/sidebar.d.ts
+interface SidebarProps extends ComponentProps<'aside'> {
+  components?: Partial<SidebarPageTreeComponents>;
+  banner?: ReactNode | FC<ComponentProps<'div'>>;
+  footer?: ReactNode | FC<ComponentProps<'div'>>;
+  /**
+   * Support collapsing the sidebar on desktop mode
+   *
+   * @defaultValue true
+   */
+  collapsible?: boolean;
+}
+type SidebarProviderProps = SidebarProviderProps$1;
+declare const useSidebar: typeof useSidebar$1;
+declare function SidebarProvider(props: SidebarProviderProps): import("react").JSX.Element;
+declare function SidebarTrigger(props: ComponentProps<'button'>): import("react").JSX.Element;
+declare function SidebarCollapseTrigger(props: ComponentProps<'button'>): import("react").JSX.Element;
+declare function Sidebar({ banner, footer, components, collapsible, ...rest }: SidebarProps): import("react").JSX.Element;
+//#endregion
+export { Sidebar, SidebarCollapseTrigger, SidebarProps, SidebarProvider, SidebarProviderProps, SidebarTrigger, useSidebar };

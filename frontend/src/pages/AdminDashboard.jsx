@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -10,12 +10,54 @@ import {
   Download, Trash2, Plus, Save, Terminal, GraduationCap, 
   ClipboardList, Briefcase, Building2, MessageSquare, 
   HelpCircle, Megaphone, Trophy, Search, Menu, X,
-  Loader2, CheckCircle2, AlertCircle, Send, FileSpreadsheet
+  Loader2, CheckCircle2, AlertCircle, Send, FileSpreadsheet,
+  UploadCloud, PlaySquare, Filter, RefreshCw, Eye, ExternalLink,
+  User, UserPlus, Printer, Wand2
 } from "lucide-react";
 import ChipInput from "@/components/ChipInput";
 import WhatsAppInbox from "@/pages/WhatsAppInbox";
 
 const CATEGORIES = ["NEET", "IIT-JEE", "Foundation", "CBSE", "JKBOSE"];
+
+// 1. STANDARD CLASSES CONSTANT
+const CLASSES = ["Class 7", "Class 8", "Class 9", "Class 10", "Class 11", "Class 12", "Dropper (JEE)", "Dropper (NEET)"];
+
+// 2. NORMALIZATION HELPERS
+const normalizeClass = (std, targetExam) => {
+  if (!std) return "Unknown";
+  // Strip whitespace & special characters for robust matching
+  const s = String(std).toLowerCase().replace(/[^a-z0-9]/g, '');
+  const t = String(targetExam || "").toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  if (s.includes("drop") || s.includes("repeat") || s.includes("13")) {
+    if (s.includes("jee") || t.includes("jee")) return "Dropper (JEE)";
+    return "Dropper (NEET)"; 
+  }
+  
+  // Catch standard numbers, words, and Roman Numerals
+  if (s.includes("12") || s.includes("twel") || s === "xii" || s === "classxii") return "Class 12";
+  if (s.includes("11") || s.includes("elev") || s === "xi" || s === "classxi") return "Class 11";
+  if (s.includes("10") || s.includes("ten") || s === "x" || s === "classx") return "Class 10";
+  if (s.includes("9") || s.includes("nin") || s === "ix" || s === "classix") return "Class 9";
+  if (s.includes("8") || s.includes("eigh") || s === "viii" || s === "classviii") return "Class 8";
+  if (s.includes("7") || s.includes("seven") || s === "vii" || s === "classvii") return "Class 7";
+  
+  return std; // return original if no match
+};
+
+const normalizeVenue = (rawVenue) => {
+  if (!rawVenue) return "Unassigned";
+  const vLower = String(rawVenue).trim().toLowerCase();
+  let venue = String(rawVenue).trim();
+  
+  if (vLower === "90 ft" || vLower === "90ft" || vLower === "srinagar") {
+    return "90 FT";
+  } else if (vLower !== "unassigned") {
+    // Force Title Case (e.g. "ANANTNAG" -> "Anantnag")
+    return venue.charAt(0).toUpperCase() + venue.slice(1).toLowerCase();
+  }
+  return "Unassigned";
+};
 
 const SIDE_NAV = [
   { id: "enrollments", label: "Enrollments", icon: ClipboardList },
@@ -32,17 +74,36 @@ const SIDE_NAV = [
   { id: "inquiries", label: "Inquiries", icon: HelpCircle },
 ];
 
-function StatCard({ label, value, testId }) {
+function StatCard({ label, value, icon: Icon, testId }) {
   return (
-    <div className="glass-elevated p-4 sm:p-5 rounded-2xl border border-white/5 bg-background/20 min-w-0" data-testid={testId}>
-      <div className="text-[10px] sm:text-xs uppercase tracking-[0.18em] text-muted-foreground font-semibold truncate">{label}</div>
-      <div className="font-display text-2xl sm:text-3xl font-medium mt-1 text-foreground truncate">{value}</div>
+    <div className="glass-elevated p-4 sm:p-5 rounded-2xl border border-white/10 bg-background/30 hover:bg-background/40 transition-all min-w-0 flex items-center justify-between" data-testid={testId}>
+      <div className="min-w-0">
+        <div className="text-[10px] sm:text-xs uppercase tracking-[0.18em] text-muted-foreground font-semibold truncate">{label}</div>
+        <div className="font-display text-2xl sm:text-3xl font-medium mt-1 text-foreground truncate">{value ?? 0}</div>
+      </div>
+      {Icon && (
+        <div className="p-3 bg-accent/10 border border-accent/20 rounded-xl text-accent shrink-0">
+          <Icon size={20} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EmptyState({ title = "No records found", description = "Try refining your search query or clear filters." }) {
+  return (
+    <div className="flex flex-col items-center justify-center p-8 text-center glass border border-white/5 rounded-2xl bg-background/20 space-y-2">
+      <AlertCircle className="text-muted-foreground/40" size={36} />
+      <div className="font-medium text-foreground text-sm">{title}</div>
+      <div className="text-xs text-muted-foreground max-w-xs">{description}</div>
     </div>
   );
 }
 
 function ExportBtn({ kind }) {
+  const [loading, setLoading] = useState(false);
   const dl = async () => {
+    setLoading(true);
     try {
       const res = await api.get(`/admin/export/${kind}`, { responseType: "blob" });
       const blob = new Blob([res.data]);
@@ -54,16 +115,17 @@ function ExportBtn({ kind }) {
       URL.revokeObjectURL(url);
     } catch (e) { 
       toast.error(formatError(e.response?.data?.detail) || e.message); 
+    } finally {
+      setLoading(false);
     }
   };
   return (
-    <Button size="sm" variant="outline" onClick={dl} data-testid={`export-${kind}`} className="border-white/10 rounded-xl text-xs px-2.5 sm:px-3 shrink-0">
-      <Download size={14} className="mr-1 sm:mr-1.5"/>Excel
+    <Button size="sm" variant="outline" onClick={dl} disabled={loading} data-testid={`export-${kind}`} className="border-white/10 rounded-xl text-xs px-2.5 sm:px-3 shrink-0 hover:bg-white/5">
+      {loading ? <Loader2 size={14} className="mr-1.5 animate-spin" /> : <Download size={14} className="mr-1 sm:mr-1.5"/>} Excel
     </Button>
   );
 }
 
-// Bulk Upload Progress & Confirmation Modal
 function BulkProgressModal({ isOpen, onClose, state }) {
   if (!isOpen) return null;
 
@@ -84,7 +146,7 @@ function BulkProgressModal({ isOpen, onClose, state }) {
             </h3>
           </div>
           {state.status !== "uploading" && state.status !== "processing" && (
-            <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
               <X size={18} />
             </button>
           )}
@@ -139,6 +201,719 @@ function BulkProgressModal({ isOpen, onClose, state }) {
   );
 }
 
+function WhatsAppBroadcastModal({ scholarshipId, onClose, allApps }) {
+  const [jobId, setJobId] = useState(null);
+  const [jobStatus, setJobStatus] = useState(null);
+  const [starting, setStarting] = useState(false);
+  const logContainerRef = useRef(null);
+
+  const campaignApps = useMemo(() => allApps.filter(a => a.scholarship_id === scholarshipId), [allApps, scholarshipId]);
+
+  useEffect(() => {
+    let interval;
+    if (jobId && jobStatus?.status !== "completed" && jobStatus?.status !== "failed") {
+      interval = setInterval(async () => {
+        try {
+          const res = await api.get(`/admin/bulk-jobs/${jobId}`);
+          setJobStatus(res.data);
+          if (logContainerRef.current) {
+            logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+          }
+        } catch (err) {
+          console.error("Failed to fetch job status", err);
+        }
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [jobId, jobStatus?.status]);
+
+  const handleStart = async () => {
+    setStarting(true);
+    try {
+      const { data } = await api.post(`/admin/scholarships/${scholarshipId}/notify-applicants`);
+      setJobId(data.job_id);
+      toast.success("Broadcast engine started");
+    } catch (error) {
+      toast.error(formatError(error.response?.data?.detail) || "Failed to start broadcast");
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  const getPercentage = () => {
+    if (!jobStatus || jobStatus.total_rows === 0) return 0;
+    return Math.round((jobStatus.processed / jobStatus.total_rows) * 100);
+  };
+
+  if (!scholarshipId) return null;
+
+  return (
+    <div className="fixed inset-0 z-[2147483648] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+      <div className="w-full max-w-4xl glass-elevated border border-white/10 bg-[#090d16] p-6 rounded-3xl shadow-2xl flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4 shrink-0">
+          <h3 className="font-display font-medium text-xl text-foreground flex items-center gap-2">
+            <MessageSquare className="text-[#25D366]" size={20} />
+            WhatsApp Broadcast Engine
+          </h3>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer p-1">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-4">
+          {!jobId ? (
+            <>
+              <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
+                <div>
+                  <div className="font-bold text-foreground">Ready to Broadcast</div>
+                  <div className="text-sm text-muted-foreground mt-1 max-w-md">
+                    This will generate personalized PDF Admit Cards and send WhatsApp notifications to all <strong>{campaignApps.length}</strong> applicants.
+                  </div>
+                </div>
+                <Button 
+                  onClick={handleStart} 
+                  disabled={starting || campaignApps.length === 0}
+                  className="bg-[#25D366] text-black hover:brightness-110 font-bold rounded-xl px-6 py-3 cursor-pointer shrink-0"
+                >
+                  {starting ? <Loader2 className="animate-spin mr-2" size={18} /> : <Send size={18} className="mr-2"/>} 
+                  Start Broadcast
+                </Button>
+              </div>
+
+              <div className="border border-white/5 rounded-2xl bg-background/20 overflow-hidden flex-1 flex flex-col min-h-[300px]">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-[#141417] text-muted-foreground text-xs uppercase tracking-wider sticky top-0 shadow-sm z-10">
+                    <tr>
+                      <th className="p-3 sm:p-4">App No</th>
+                      <th className="p-3 sm:p-4">Applicant Name</th>
+                      <th className="p-3 sm:p-4">Phone Number</th>
+                      <th className="p-3 sm:p-4">Venue</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/[0.04]">
+                    {campaignApps.length === 0 ? (
+                      <tr><td colSpan="4" className="p-8 text-center text-muted-foreground italic">No applicants found.</td></tr>
+                    ) : (
+                      campaignApps.map(a => (
+                        <tr key={a.id} className="hover:bg-white/[0.02]">
+                          <td className="p-3 sm:p-4 font-mono text-xs text-muted-foreground">{a.application_no}</td>
+                          <td className="p-3 sm:p-4 font-bold">{a.name}</td>
+                          <td className="p-3 sm:p-4 font-mono text-xs text-muted-foreground">{a.phone}</td>
+                          <td className="p-3 sm:p-4 text-emerald-400 font-medium">{a.venue || a.city}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center bg-white/[0.02] p-4 rounded-xl border border-white/5">
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  {jobStatus?.status === "completed" ? <CheckCircle2 className="text-emerald-400" /> : jobStatus?.status === "failed" ? <AlertCircle className="text-rose-400" /> : <Loader2 className="animate-spin text-accent" />}
+                  Live Broadcast Dashboard
+                </h3>
+                <span className="text-xs font-mono bg-white/10 px-2 py-1 rounded border border-white/10">Job ID: {jobId.slice(0,8)}</span>
+              </div>
+
+              <div className="grid grid-cols-4 gap-3">
+                <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 flex flex-col items-center">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total</div>
+                  <div className="text-2xl font-bold">{jobStatus?.total_rows || 0}</div>
+                </div>
+                <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 flex flex-col items-center">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Processed</div>
+                  <div className="text-2xl font-bold">{jobStatus?.processed || 0}</div>
+                </div>
+                <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 flex flex-col items-center">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Success</div>
+                  <div className="text-2xl font-bold text-emerald-400">{jobStatus?.success || 0}</div>
+                </div>
+                <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 flex flex-col items-center">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Errors</div>
+                  <div className="text-2xl font-bold text-rose-400">{jobStatus?.errors || 0}</div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm font-medium">
+                  <span>Overall Progress</span>
+                  <span>{getPercentage()}%</span>
+                </div>
+                <div className="h-3 w-full bg-white/10 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-[#25D366] transition-all duration-500 ease-out" 
+                    style={{ width: `${getPercentage()}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="bg-black/60 border border-white/5 rounded-xl overflow-hidden shadow-inner">
+                <div className="px-4 py-2 border-b border-white/10 text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex justify-between bg-black/80">
+                  <span>System Activity Log</span>
+                  <span>Real-time Stream</span>
+                </div>
+                <div 
+                  ref={logContainerRef}
+                  className="p-4 h-64 overflow-y-auto font-mono text-[11px] leading-relaxed space-y-1.5 text-white/80 custom-scrollbar"
+                >
+                  {!jobStatus?.recent_logs?.length && <div className="text-muted-foreground italic">Waiting for logs...</div>}
+                  {jobStatus?.recent_logs?.map((log, idx) => (
+                    <div key={idx} className={`${log.includes("❌") || log.includes("⚠️") ? "text-rose-400" : log.includes("✅") ? "text-emerald-400" : ""}`}>
+                      <span className="text-white/30 mr-2 shrink-0">[{new Date().toLocaleTimeString()}]</span>
+                      <span className="break-words">{log}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        <div className="mt-5 pt-4 border-t border-white/10 flex justify-end gap-3 shrink-0">
+           {(jobStatus?.status === "completed" || jobStatus?.status === "failed") && (
+            <Button 
+              variant="outline"
+              onClick={() => { setJobId(null); setJobStatus(null); }}
+              className="rounded-xl text-xs font-bold cursor-pointer"
+            >
+              Start New Broadcast
+            </Button>
+          )}
+          <Button 
+            onClick={onClose} 
+            className="bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold px-6 cursor-pointer"
+          >
+            {jobStatus && jobStatus.status !== "completed" && jobStatus.status !== "failed" ? "Close (Runs in Background)" : "Close"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AsyncBulkRegModal({ scholarshipId, onClose }) {
+  const [file, setFile] = useState(null);
+  const [jobId, setJobId] = useState(null);
+  const [jobStatus, setJobStatus] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const logContainerRef = useRef(null);
+
+  useEffect(() => {
+    let interval;
+    if (jobId && jobStatus?.status !== "completed" && jobStatus?.status !== "failed") {
+      interval = setInterval(async () => {
+        try {
+          const res = await api.get(`/admin/bulk-jobs/${jobId}`);
+          setJobStatus(res.data);
+          
+          if (logContainerRef.current) {
+            logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+          }
+        } catch (err) {
+          console.error("Failed to fetch job status", err);
+        }
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [jobId, jobStatus?.status]);
+
+  const handleUpload = async () => {
+    if (!file) return toast.error("Please select a file first");
+    
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const { data } = await api.post(`/admin/scholarships/${scholarshipId}/bulk-register`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setJobId(data.job_id);
+      toast.success("Bulk job started successfully");
+    } catch (error) {
+      toast.error(formatError(error.response?.data?.detail) || "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const getPercentage = () => {
+    if (!jobStatus || jobStatus.total_rows === 0) return 0;
+    return Math.round((jobStatus.processed / jobStatus.total_rows) * 100);
+  };
+
+  if (!scholarshipId) return null;
+
+  return (
+    <div className="fixed inset-0 z-[2147483648] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+      <div className="w-full max-w-2xl glass-elevated border border-white/10 bg-[#090d16] p-6 rounded-3xl shadow-2xl flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-6 shrink-0">
+          <h3 className="font-display font-medium text-xl text-foreground flex items-center gap-2">
+            <UserPlus className="text-emerald-400" size={20} /> Bulk Registration Engine
+          </h3>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+          {!jobId ? (
+            <div className="flex flex-col items-center justify-center py-10 border-2 border-dashed border-white/10 rounded-xl bg-white/[0.02] p-6">
+              <UploadCloud size={48} className="text-muted-foreground mb-4 opacity-50" />
+              <h3 className="text-lg font-medium mb-1">Upload Bulk Applicant List</h3>
+              <p className="text-sm text-muted-foreground mb-6 text-center">Handles 10,000+ rows asynchronously with real-time feedback</p>
+              
+              <input
+                type="file"
+                accept=".xlsx"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                className="mb-6 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent file:text-accent-foreground hover:file:bg-accent/90 cursor-pointer"
+              />
+              
+              <Button
+                onClick={handleUpload}
+                disabled={!file || uploading}
+                className="flex items-center gap-2 px-8 py-3 bg-[#25D366] text-black font-semibold rounded-xl hover:brightness-110 disabled:opacity-50 transition cursor-pointer"
+              >
+                {uploading ? <Loader2 className="animate-spin" size={18} /> : <PlaySquare size={18} />}
+                Start Processing Engine
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  {jobStatus?.status === "completed" ? <CheckCircle2 className="text-emerald-400" /> : jobStatus?.status === "failed" ? <AlertCircle className="text-rose-400" /> : <Loader2 className="animate-spin text-accent" />}
+                  Live Processing Dashboard
+                </h3>
+                <span className="text-xs font-mono bg-white/10 px-2 py-1 rounded border border-white/10">Job ID: {jobId.slice(0,8)}</span>
+              </div>
+
+              <div className="grid grid-cols-4 gap-3">
+                <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3 flex flex-col items-center">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total</div>
+                  <div className="text-xl font-bold">{jobStatus?.total_rows || 0}</div>
+                </div>
+                <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3 flex flex-col items-center">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Processed</div>
+                  <div className="text-xl font-bold">{jobStatus?.processed || 0}</div>
+                </div>
+                <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3 flex flex-col items-center">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Success</div>
+                  <div className="text-xl font-bold text-emerald-400">{jobStatus?.success || 0}</div>
+                </div>
+                <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3 flex flex-col items-center">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Errors</div>
+                  <div className="text-xl font-bold text-rose-400">{jobStatus?.errors || 0}</div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm font-medium">
+                  <span>Overall Progress</span>
+                  <span>{getPercentage()}%</span>
+                </div>
+                <div className="h-3 w-full bg-white/10 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-accent transition-all duration-500 ease-out" 
+                    style={{ width: `${getPercentage()}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="bg-black/60 border border-white/5 rounded-xl overflow-hidden shadow-inner">
+                <div className="px-4 py-2 border-b border-white/10 text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex justify-between bg-black/80">
+                  <span>System Activity Log</span>
+                  <span>Real-time Stream</span>
+                </div>
+                <div 
+                  ref={logContainerRef}
+                  className="p-4 h-56 overflow-y-auto font-mono text-[11px] leading-relaxed space-y-1.5 text-white/80 custom-scrollbar"
+                >
+                  {!jobStatus?.recent_logs?.length && <div className="text-muted-foreground italic">Waiting for logs...</div>}
+                  {jobStatus?.recent_logs?.map((log, idx) => (
+                    <div key={idx} className={`${log.includes("❌") || log.includes("⚠️") ? "text-rose-400" : log.includes("✅") ? "text-emerald-400" : ""}`}>
+                      <span className="text-white/30 mr-2 shrink-0">[{new Date().toLocaleTimeString()}]</span>
+                      <span className="break-words">{log}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6 pt-4 border-t border-white/10 flex justify-end gap-3 shrink-0">
+          {(jobStatus?.status === "completed" || jobStatus?.status === "failed") && (
+            <Button 
+              variant="outline"
+              onClick={() => { setJobId(null); setFile(null); setJobStatus(null); }}
+              className="rounded-xl text-xs font-bold"
+            >
+              Start Another Upload
+            </Button>
+          )}
+          <Button 
+            onClick={onClose} 
+            className="bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold px-6"
+          >
+            {jobStatus && jobStatus.status !== "completed" && jobStatus.status !== "failed" ? "Background Execution" : "Close"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CampaignOperationsModal({ 
+  scholarshipId, 
+  onClose, 
+  onDownloadResultsTemplate, 
+  onUploadResults, 
+  onDownloadRegTemplate,
+  onOpenBulkReg,
+  onDownloadAttendance,
+  allApps,
+  onRefresh
+}) {
+  const [downloading, setDownloading] = useState(null); 
+  const [viewTab, setViewTab] = useState("applicants"); 
+  const [isCleaning, setIsCleaning] = useState(false);
+
+  const campaignApps = useMemo(() => allApps.filter(a => a.scholarship_id === scholarshipId), [allApps, scholarshipId]);
+
+  // Generate logistics matrix based on current applications and force all CLASSES to exist
+  const logisticsData = useMemo(() => {
+    const matrix = {};
+    const classesSet = new Set(CLASSES);
+
+    campaignApps.forEach(a => {
+      // Use the visual normalizer here so the Matrix is always perfectly formatted!
+      const venue = normalizeVenue(a.venue || a.city || "Unassigned");
+      const std = normalizeClass(a.standard || "Unknown", a.target_exam);
+      
+      classesSet.add(std);
+      
+      if (!matrix[venue]) matrix[venue] = {};
+      if (!matrix[venue][std]) matrix[venue][std] = 0;
+      matrix[venue][std]++;
+    });
+
+    return {
+      matrix,
+      classes: Array.from(classesSet).sort((a, b) => {
+        const idxA = CLASSES.indexOf(a);
+        const idxB = CLASSES.indexOf(b);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return a.localeCompare(b);
+      }),
+      venues: Object.keys(matrix).sort()
+    };
+  }, [campaignApps]);
+
+  const handleDownload = async (actionName, actionFn, ...args) => {
+    setDownloading(actionName);
+    try {
+      await actionFn(...args);
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  // AUTO-CLEAN CLASS & VENUE DATA
+  const handleCleanData = async () => {
+    setIsCleaning(true);
+    let updatedCount = 0;
+    try {
+      for (const app of campaignApps) {
+        const currentStd = app.standard || "";
+        const normalizedStd = normalizeClass(currentStd, app.target_exam);
+        
+        const currentVenue = app.venue || app.city || "Unassigned";
+        const normalizedVenue = normalizeVenue(currentVenue);
+
+        const updates = {};
+        
+        // If class needs updating
+        if (normalizedStd !== currentStd && CLASSES.includes(normalizedStd)) {
+          updates.standard = normalizedStd;
+        }
+        
+        // If venue needs updating
+        if (normalizedVenue !== currentVenue && normalizedVenue !== "Unassigned") {
+          updates.venue = normalizedVenue;
+          updates.city = normalizedVenue; // Keep city in sync with venue to keep DB clean
+        }
+
+        if (Object.keys(updates).length > 0) {
+          await api.put(`/scholarship-applications/${app.application_no}`, updates);
+          updatedCount++;
+        }
+      }
+      if (updatedCount > 0) {
+        toast.success(`Successfully auto-formatted ${updatedCount} applicant records.`);
+        if (onRefresh) onRefresh();
+      } else {
+        toast.info("All classes and venues are already uniformly formatted.");
+      }
+    } catch (error) {
+      toast.error(formatError(error.response?.data?.detail) || "Error formatting data");
+    } finally {
+      setIsCleaning(false);
+    }
+  };
+
+  // Safe early return placed AFTER all hooks
+  if (!scholarshipId) return null;
+
+  return (
+    <div className="fixed inset-0 z-[2147483648] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+      <div className="w-full max-w-5xl glass-elevated border border-white/10 bg-[#090d16] p-6 rounded-3xl shadow-2xl flex flex-col max-h-[90vh]">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-5 shrink-0">
+          <h3 className="font-display font-medium text-xl text-foreground flex items-center gap-2">
+            <Terminal className="text-accent" size={20} />
+            Manage Campaign Operations
+          </h3>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer p-1">
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Top Action Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 shrink-0">
+          {/* Pre-Exam Panel */}
+          <div className="glass p-5 rounded-2xl border border-white/5 bg-background/30 flex flex-col items-center text-center gap-2 relative overflow-hidden">
+            <div className="absolute top-0 inset-x-0 h-1 bg-emerald-500/50"></div>
+            <UserPlus size={26} className="text-emerald-400 mb-1" />
+            <div className="font-bold text-foreground text-sm">1. Bulk Registration</div>
+            <div className="text-xs text-muted-foreground flex-1 mb-2">Register students and dispatch WhatsApp admit cards.</div>
+            
+            <Button 
+              variant="outline" size="sm" 
+              onClick={() => handleDownload("reg-temp", onDownloadRegTemplate, scholarshipId)} 
+              disabled={downloading === "reg-temp"} 
+              className="w-full text-xs rounded-xl border-white/10 hover:bg-white/5 cursor-pointer"
+            >
+              {downloading === "reg-temp" ? <Loader2 size={13} className="animate-spin mr-1.5"/> : <Download size={13} className="mr-1.5"/>} 
+              Registration Template
+            </Button>
+            <Button 
+              size="sm" 
+              onClick={() => { onOpenBulkReg(scholarshipId); onClose(); }} 
+              className="w-full text-xs font-bold rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 cursor-pointer"
+            >
+              <Send size={13} className="mr-1.5"/> Upload & Dispatch
+            </Button>
+          </div>
+
+          {/* Post-Exam Panel */}
+          <div className="glass p-5 rounded-2xl border border-white/5 bg-background/30 flex flex-col items-center text-center gap-2 relative overflow-hidden">
+            <div className="absolute top-0 inset-x-0 h-1 bg-accent/50"></div>
+            <FileSpreadsheet size={26} className="text-accent mb-1" />
+            <div className="font-bold text-foreground text-sm">2. Grade & Publish</div>
+            <div className="text-xs text-muted-foreground flex-1 mb-2">Input offline exam scores to update student results.</div>
+            
+            <Button 
+              variant="outline" size="sm" 
+              onClick={() => handleDownload("res-temp", onDownloadResultsTemplate, scholarshipId)} 
+              disabled={downloading === "res-temp"} 
+              className="w-full text-xs rounded-xl border-white/10 hover:bg-white/5 cursor-pointer"
+            >
+              {downloading === "res-temp" ? <Loader2 size={13} className="animate-spin mr-1.5"/> : <Download size={13} className="mr-1.5"/>} 
+              Scores Template
+            </Button>
+            
+            <input
+              type="file"
+              accept=".xlsx"
+              id="bulk-result-upload"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) {
+                  onUploadResults(scholarshipId, f);
+                  e.target.value = ""; 
+                  onClose(); 
+                }
+              }}
+            />
+            <Button 
+              size="sm" 
+              onClick={() => document.getElementById("bulk-result-upload")?.click()} 
+              className="w-full text-xs font-bold rounded-xl bg-accent text-accent-foreground hover:bg-accent/90 cursor-pointer"
+            >
+              <UploadCloud size={13} className="mr-1.5" /> Upload Scores
+            </Button>
+          </div>
+
+          {/* Reports Panel */}
+          <div className="glass p-5 rounded-2xl border border-white/5 bg-background/30 flex flex-col items-center text-center gap-2 relative overflow-hidden">
+            <div className="absolute top-0 inset-x-0 h-1 bg-blue-400/50"></div>
+            <Printer size={26} className="text-blue-400 mb-1" />
+            <div className="font-bold text-foreground text-sm">3. Logistics & Reports</div>
+            <div className="text-xs text-muted-foreground flex-1 mb-2">Export attendance logs and check print requirements.</div>
+            
+            <Button 
+              variant="outline" size="sm" 
+              onClick={() => handleDownload("att-rep", onDownloadAttendance, scholarshipId)} 
+              disabled={downloading === "att-rep"} 
+              className="w-full text-xs font-bold rounded-xl border-white/10 hover:bg-white/5 cursor-pointer"
+            >
+              {downloading === "att-rep" ? <Loader2 size={13} className="animate-spin mr-1.5"/> : <Download size={13} className="mr-1.5"/>} 
+              Attendance Log
+            </Button>
+            <Button 
+              size="sm" 
+              onClick={() => setViewTab("logistics")} 
+              className="w-full text-xs font-bold rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 cursor-pointer"
+            >
+              <ClipboardList size={13} className="mr-1.5"/> Print Requirements
+            </Button>
+          </div>
+        </div>
+
+        {/* Data / Matrix Viewer */}
+        <div className="flex-1 min-h-[250px] flex flex-col border border-white/5 rounded-2xl bg-background/20 relative overflow-hidden">
+          <div className="flex items-center justify-between gap-2 px-4 py-3 bg-[#101012] border-b border-white/5 shrink-0 z-20">
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setViewTab("applicants")} 
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors cursor-pointer ${viewTab === "applicants" ? "bg-accent text-accent-foreground" : "bg-white/5 text-muted-foreground hover:text-foreground"}`}
+              >
+                Applicants ({campaignApps.length})
+              </button>
+              <button 
+                onClick={() => setViewTab("logistics")} 
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors cursor-pointer ${viewTab === "logistics" ? "bg-accent text-accent-foreground" : "bg-white/5 text-muted-foreground hover:text-foreground"}`}
+              >
+                Print & Logistics Matrix
+              </button>
+            </div>
+            
+            {/* CLEAN DATA BUTTON (Now handles venues AND classes) */}
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={handleCleanData}
+              disabled={isCleaning || campaignApps.length === 0}
+              className="h-8 text-xs font-bold bg-white/5 hover:bg-white/10 border-white/10 cursor-pointer text-muted-foreground hover:text-foreground"
+            >
+              {isCleaning ? <Loader2 size={13} className="animate-spin mr-1.5"/> : <Wand2 size={13} className="mr-1.5"/>}
+              Auto-Format Data
+            </Button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
+            {viewTab === "applicants" && (
+              <table className="w-full text-sm text-left relative">
+                <thead className="bg-[#141417] text-muted-foreground text-xs uppercase tracking-wider sticky top-0 z-10 shadow-[0_4px_20px_rgba(0,0,0,0.5)] border-b border-white/5">
+                  <tr>
+                    <th className="p-3 sm:p-4 whitespace-nowrap">App No</th>
+                    <th className="p-3 sm:p-4 whitespace-nowrap">Applicant Name</th>
+                    <th className="p-3 sm:p-4 whitespace-nowrap">School / Institute</th>
+                    <th className="p-3 sm:p-4 whitespace-nowrap">Standard</th>
+                    <th className="p-3 sm:p-4 text-center whitespace-nowrap">Score Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.04] text-foreground">
+                  {campaignApps.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="p-8 text-center text-muted-foreground italic bg-background/10">
+                        No approved applicants found for this campaign yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    campaignApps.map(a => (
+                      <tr key={a.id} className="hover:bg-white/[0.02] transition-colors">
+                        <td className="p-3 sm:p-4 font-mono text-xs text-muted-foreground whitespace-nowrap">{a.application_no}</td>
+                        <td className="p-3 sm:p-4 font-bold whitespace-nowrap">{a.name}</td>
+                        <td className="p-3 sm:p-4 text-muted-foreground truncate max-w-[200px]" title={a.school || ""}>{a.school || "—"}</td>
+                        <td className="p-3 sm:p-4 text-muted-foreground whitespace-nowrap">{a.standard || "—"}</td>
+                        <td className="p-3 sm:p-4 text-center">
+                          {a.result_published ? (
+                            <span className="text-[10px] uppercase tracking-wider bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-md font-bold whitespace-nowrap">
+                              Published ({a.result_marks_obtained || 0})
+                            </span>
+                          ) : (
+                            <span className="text-[10px] uppercase tracking-wider bg-white/5 border border-white/10 text-muted-foreground px-2.5 py-1 rounded-md font-bold whitespace-nowrap">
+                              Pending
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            )}
+
+            {viewTab === "logistics" && (
+              <div className="p-4 sm:p-6 animate-fadeIn">
+                <div className="mb-4">
+                  <h4 className="font-display font-medium text-lg text-foreground">Printing Requirements Matrix</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">Use this breakdown to determine exact exam paper counts needed per class, per center.</p>
+                </div>
+                
+                {campaignApps.length === 0 ? (
+                  <EmptyState title="No Data Available" description="Register applicants to generate the logistics matrix." />
+                ) : (
+                  <div className="overflow-x-auto glass border border-white/5 rounded-2xl">
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-[#141417] text-muted-foreground text-xs uppercase tracking-wider border-b border-white/5">
+                        <tr>
+                          <th className="p-3 sm:p-4 whitespace-nowrap">Standard / Class</th>
+                          {logisticsData.venues.map(v => (
+                            <th key={v} className="p-3 sm:p-4 text-center whitespace-nowrap">{v}</th>
+                          ))}
+                          <th className="p-3 sm:p-4 text-center text-accent whitespace-nowrap">Total Print</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/[0.04]">
+                        {logisticsData.classes.map(c => {
+                          let rowTotal = 0;
+                          return (
+                            <tr key={c} className="hover:bg-white/[0.02]">
+                              <td className="p-3 sm:p-4 font-bold text-foreground whitespace-nowrap">{c}</td>
+                              {logisticsData.venues.map(v => {
+                                const count = logisticsData.matrix[v]?.[c] || 0;
+                                rowTotal += count;
+                                return (
+                                  <td key={v} className="p-3 sm:p-4 text-center font-mono text-muted-foreground">
+                                    {count > 0 ? count : "-"}
+                                  </td>
+                                );
+                              })}
+                              <td className="p-3 sm:p-4 text-center font-bold text-accent font-mono">{rowTotal}</td>
+                            </tr>
+                          );
+                        })}
+                        {/* Grand Totals Row */}
+                        <tr className="bg-[#141417] border-t border-white/10">
+                          <td className="p-3 sm:p-4 font-bold text-foreground whitespace-nowrap">VENUE TOTAL</td>
+                          {logisticsData.venues.map(v => {
+                            const vTotal = logisticsData.classes.reduce((sum, c) => sum + (logisticsData.matrix[v]?.[c] || 0), 0);
+                            return <td key={v} className="p-3 sm:p-4 text-center font-bold text-emerald-400 font-mono">{vTotal}</td>;
+                          })}
+                          <td className="p-3 sm:p-4 text-center font-bold text-accent font-mono">{campaignApps.length}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const emptyCourse = { title:"", category:"NEET", duration:"", fee:0, description:"", syllabus:[], faculty:[], features:[], scholarship_available:true, featured:false, image_url:"" };
 
 function CourseForm({ initial, onCancel, onSave, busy }) {
@@ -146,30 +921,33 @@ function CourseForm({ initial, onCancel, onSave, busy }) {
   const submit = (e) => { e.preventDefault(); onSave({ ...c, fee: Number(c.fee) }); };
   return (
     <form onSubmit={submit} className="glass-elevated p-4 sm:p-6 rounded-2xl bg-background border border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fadeIn" data-testid="course-form">
-      <Input placeholder="Title" value={c.title} onChange={e=>setC({...c, title:e.target.value})} required data-testid="cf-title" className="rounded-xl border-white/10 bg-background/50 text-foreground"/>
+      <Input placeholder="Course Title" value={c.title} onChange={e=>setC({...c, title:e.target.value})} required data-testid="cf-title" className="rounded-xl border-white/10 bg-background/50 text-foreground"/>
       <select className="border border-white/10 rounded-xl px-3 py-2 bg-background text-sm focus:outline-none focus:border-accent text-foreground font-medium" value={c.category} onChange={e=>setC({...c, category:e.target.value})} data-testid="cf-cat">
         {CATEGORIES.map(x=><option key={x} className="bg-background text-foreground">{x}</option>)}
       </select>
       <Input placeholder="Duration (e.g. 12 months)" value={c.duration} onChange={e=>setC({...c, duration:e.target.value})} required data-testid="cf-dur" className="rounded-xl border-white/10 bg-background/50 text-foreground"/>
       <Input placeholder="Fee in ₹" type="number" value={c.fee} onChange={e=>setC({...c, fee:e.target.value})} required data-testid="cf-fee" className="rounded-xl border-white/10 bg-background/50 text-foreground"/>
-      <Input placeholder="Banner image URL" value={c.image_url || ""} onChange={e=>setC({...c, image_url:e.target.value})} className="sm:col-span-2 rounded-xl border-white/10 bg-background/50 text-foreground" data-testid="cf-img"/>
+      <Input placeholder="Banner Image URL" value={c.image_url || ""} onChange={e=>setC({...c, image_url:e.target.value})} className="sm:col-span-2 rounded-xl border-white/10 bg-background/50 text-foreground" data-testid="cf-img"/>
       <textarea className="sm:col-span-2 glass border border-white/10 rounded-xl px-3 py-2 bg-background/50 text-sm focus:outline-none focus:border-accent text-foreground min-h-20 resize-none" placeholder="Description details..." value={c.description} onChange={e=>setC({...c, description:e.target.value})} required data-testid="cf-desc"/>
       <div className="sm:col-span-2">
-        <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Syllabus highlights</label>
-        <ChipInput testId="cf-syllabus" value={c.syllabus} onChange={v => setC({...c, syllabus: v})} placeholder="e.g. Physics, Chemistry, NCERT Mastery"/>
+        <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Syllabus Highlights</label>
+        <ChipInput testId="cf-syllabus" value={c.syllabus || []} onChange={(v) => setC({...c, syllabus: v})} placeholder="e.g. Physics, Chemistry, NCERT Mastery"/>
       </div>
       <div className="sm:col-span-2">
-        <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Faculty</label>
-        <ChipInput testId="cf-faculty" value={c.faculty} onChange={v => setC({...c, faculty: v})} placeholder="e.g. Dr. A. Wani (Physics)"/>
+        <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Faculty Members</label>
+        <ChipInput testId="cf-faculty" value={c.faculty || []} onChange={(v) => setC({...c, faculty: v})} placeholder="e.g. Dr. A. Wani (Physics)"/>
       </div>
       <div className="sm:col-span-2">
-        <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Features</label>
-        <ChipInput testId="cf-features" value={c.features} onChange={v => setC({...c, features: v})} placeholder="e.g. Daily doubt sessions, Weekly mock tests"/>
+        <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Key Features</label>
+        <ChipInput testId="cf-features" value={c.features || []} onChange={(v) => setC({...c, features: v})} placeholder="e.g. Daily doubt sessions, Weekly mock tests"/>
       </div>
-      <label className="text-sm flex items-center gap-2 text-muted-foreground select-none cursor-pointer"><input type="checkbox" checked={c.scholarship_available} onChange={e=>setC({...c, scholarship_available: e.target.checked})} className="accent-primary" data-testid="cf-sch"/>Scholarship available</label>
-      <label className="text-sm flex items-center gap-2 text-muted-foreground select-none cursor-pointer"><input type="checkbox" checked={c.featured} onChange={e=>setC({...c, featured: e.target.checked})} className="accent-primary" data-testid="cf-feat"/>Featured on home</label>
+      <label className="text-sm flex items-center gap-2 text-muted-foreground select-none cursor-pointer"><input type="checkbox" checked={c.scholarship_available} onChange={e=>setC({...c, scholarship_available: e.target.checked})} className="accent-primary" data-testid="cf-sch"/>Scholarship Available</label>
+      <label className="text-sm flex items-center gap-2 text-muted-foreground select-none cursor-pointer"><input type="checkbox" checked={c.featured} onChange={e=>setC({...c, featured: e.target.checked})} className="accent-primary" data-testid="cf-feat"/>Featured on Home</label>
       <div className="sm:col-span-2 flex flex-wrap gap-2 pt-2">
-        <Button type="submit" disabled={busy} className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2" data-testid="cf-save"><Save size={14} className="mr-1.5"/>{initial?.id ? "Save changes" : "Create course"}</Button>
+        <Button type="submit" disabled={busy} className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2" data-testid="cf-save">
+          {busy ? <Loader2 className="animate-spin mr-1.5" size={14} /> : <Save size={14} className="mr-1.5"/>}
+          {initial?.id ? "Save Changes" : "Create Course"}
+        </Button>
         {onCancel && <Button type="button" variant="outline" onClick={onCancel} data-testid="cf-cancel" className="rounded-xl text-xs font-bold uppercase tracking-wider">Cancel</Button>}
       </div>
     </form>
@@ -192,21 +970,27 @@ export default function AdminDashboard() {
   const [results, setResults] = useState([]);
   const [adminCampaigns, setAdminCampaigns] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [loadingData, setLoadingData] = useState(false);
 
   const [editingCourse, setEditingCourse] = useState(null);
   const [busy, setBusy] = useState(false);
   const [innerSearch, setInnerSearch] = useState("");
 
   const [newNotice, setNewNotice] = useState({ title:"", content:"", category:"General", pinned:false });
-  const [newJob, setNewJob] = useState({ title:"", department:"", location:"", type:"Full-time", description:"", requirements:[], active:true });
+  const [newJob, setNewJob] = useState({ title:"", department:"", location:"", type:"Full-time", description:"", requirements: [], active:true });
   const [newCenter, setNewCenter] = useState({ name:"", city:"", address:"", phone:"", timing:"8:00 AM – 8:00 PM", lat:34.0837, lng:74.7973 });
   const [newTestimonial, setNewTestimonial] = useState({ name:"", role:"", quote:"" });
   const [newResult, setNewResult] = useState({ student_name:"", exam:"", rank:"", year:new Date().getFullYear(), course:"NEET", photo_url:"", quote:"" });
-  const [newCampaign, setNewCampaign] = useState({ title:"", description:"", exam_date:"", deadline:"", eligibility:"", venue:"", available_venues:[], whatsapp_community_url:"", exam_time:"10:00 AM", total_marks:100, active:true, is_featured:false });
+  const [newCampaign, setNewCampaign] = useState({ title:"", description:"", exam_date:"", deadline:"", eligibility:"", venue:"", available_venues: [], whatsapp_community_url:"", exam_time:"10:00 AM", total_marks:100, active:true, is_featured:false });
+  
   const [resultEditor, setResultEditor] = useState({});
+  const [appEditor, setAppEditor] = useState({});
+  
+  const [operationsModalId, setOperationsModalId] = useState(null);
+  const [broadcastModalId, setBroadcastModalId] = useState(null);
+  
   const [portalHost, setPortalHost] = useState(null);
 
-  // Bulk Modal State
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [bulkState, setBulkState] = useState({
     title: "",
@@ -216,6 +1000,8 @@ export default function AdminDashboard() {
     details: [],
     error: null
   });
+
+  const [asyncBulkRegId, setAsyncBulkRegId] = useState(null);
 
   useEffect(() => {
     if (typeof document === "undefined") return undefined;
@@ -245,6 +1031,7 @@ export default function AdminDashboard() {
   }, []);
 
   const load = async () => {
+    setLoadingData(true);
     try {
       const [s, e, sa, ja, iq, c, n, j, ce, ts, rs, acm] = await Promise.all([
         api.get("/admin/summary"), api.get("/enrollments"), api.get("/scholarship-applications"),
@@ -257,12 +1044,32 @@ export default function AdminDashboard() {
       setJobApps(ja.data || []); setInquiries(iq.data || []); setCourses(c.data || []); setNotices(n.data || []); setJobs(j.data || []);
       setCenters(ce.data || []); setTestimonials(ts.data || []); setResults(rs.data || []); setAdminCampaigns(acm.data || []);
     } catch (err) { toast.error(formatError(err.response?.data?.detail) || err.message); }
+    finally { setLoadingData(false); }
   };
+
   useEffect(() => { load(); }, []);
+
+  const searchMatch = (obj, fields) => {
+    if (!innerSearch.trim()) return true;
+    const term = innerSearch.toLowerCase();
+    return fields.some(f => String(obj[f] || "").toLowerCase().includes(term));
+  };
+
+  const filteredEnrollments = useMemo(() => enrollments.filter(x => searchMatch(x, ["name", "receipt_no", "phone", "center"])), [enrollments, innerSearch]);
+  const filteredScholarships = useMemo(() => scholarshipApps.filter(x => searchMatch(x, ["name", "application_no", "email", "phone", "target_exam"])), [scholarshipApps, innerSearch]);
+  const filteredJobApps = useMemo(() => jobApps.filter(x => searchMatch(x, ["name", "email", "qualification"])), [jobApps, innerSearch]);
+  const filteredCourses = useMemo(() => courses.filter(x => searchMatch(x, ["title", "category", "description"])), [courses, innerSearch]);
+  const filteredNotices = useMemo(() => notices.filter(x => searchMatch(x, ["title", "category", "content"])), [notices, innerSearch]);
+  const filteredJobs = useMemo(() => jobs.filter(x => searchMatch(x, ["title", "department", "location"])), [jobs, innerSearch]);
+  const filteredCenters = useMemo(() => centers.filter(x => searchMatch(x, ["name", "city", "address", "phone"])), [centers, innerSearch]);
+  const filteredTestimonials = useMemo(() => testimonials.filter(x => searchMatch(x, ["name", "role", "quote"])), [testimonials, innerSearch]);
+  const filteredResults = useMemo(() => results.filter(x => searchMatch(x, ["student_name", "exam", "rank", "course"])), [results, innerSearch]);
+  const filteredCampaigns = useMemo(() => adminCampaigns.filter(x => searchMatch(x, ["title", "eligibility", "exam_date"])), [adminCampaigns, innerSearch]);
+  const filteredInquiries = useMemo(() => inquiries.filter(x => searchMatch(x, ["name", "email", "subject", "message"])), [inquiries, innerSearch]);
 
   const updateStatus = async (kind, id, status) => {
     const map = { enr: "enrollments", sch: "scholarship-applications", job: "job-applications" };
-    try { await api.put(`/${map[kind]}/${id}/status?status=${encodeURIComponent(status)}`); toast.success("Status matrix updated"); load(); }
+    try { await api.put(`/${map[kind]}/${id}/status?status=${encodeURIComponent(status)}`); toast.success("Status updated"); load(); }
     catch (e) { toast.error(formatError(e.response?.data?.detail)); }
   };
 
@@ -274,14 +1081,14 @@ export default function AdminDashboard() {
         toast.success("Course configuration synchronized");
       } else {
         await api.post("/courses", data);
-        toast.success("New course framework deployed safely");
+        toast.success("New course framework deployed");
       }
       setEditingCourse(null); load();
     } catch (e) { toast.error(formatError(e.response?.data?.detail) || e.message); }
     finally { setBusy(false); }
   };
 
-  const deleteCourse = async (id) => { if (!confirm("Delete this course parameters?")) return; await api.delete(`/courses/${id}`); load(); };
+  const deleteCourse = async (id) => { if (!confirm("Delete this course parameter?")) return; await api.delete(`/courses/${id}`); load(); };
 
   const saveResult = async (aid, payload) => {
     try {
@@ -293,20 +1100,32 @@ export default function AdminDashboard() {
         percentile: payload.percentile ? Number(payload.percentile) : null,
         scholarship_percentage: Number(payload.scholarship_percentage || 0),
       });
-      toast.success(payload.publish ? "Result published into student metrics loop" : "Draft state saved safely");
+      toast.success(payload.publish ? "Result published into student metrics loop" : "Draft saved");
       setResultEditor(prev => ({ ...prev, [aid]: undefined }));
       load();
     } catch (e) { toast.error(formatError(e.response?.data?.detail) || e.message); }
+  };
+
+  const saveAppDetails = async (appNo, payload) => {
+    try {
+      await api.put(`/scholarship-applications/${appNo}`, payload);
+      toast.success("Applicant details & venue updated successfully");
+      setAppEditor(prev => ({ ...prev, [appNo]: undefined }));
+      load();
+    } catch (e) {
+      toast.error(formatError(e.response?.data?.detail) || e.message);
+    }
   };
 
   const post = async (path, body, reset, label) => {
     try { await api.post(path, body); toast.success(`${label} record created`); reset && reset(); load(); }
     catch (e) { toast.error(formatError(e.response?.data?.detail) || e.message); }
   };
+
   const del = async (path, label) => { if (!confirm(`Delete this ${label}?`)) return; await api.delete(path); load(); };
 
   const setFeatured = async (kind, id) => {
-    try { await api.post(`/admin/feature?kind=${kind}&id=${id}`); toast.success("Asset promoted to home page dashboard track"); load(); }
+    try { await api.post(`/admin/feature?kind=${kind}&id=${id}`); toast.success("Asset promoted to home layout"); load(); }
     catch (e) { toast.error(formatError(e.response?.data?.detail) || e.message); }
   };
   const clearFeatured = async () => {
@@ -376,18 +1195,18 @@ export default function AdminDashboard() {
     try {
       const fd = new FormData(); fd.append("file", file);
       
-      setBulkState(prev => ({ 
+      setBulkState((prev) => ({ 
         ...prev, 
         progress: 60, 
         status: "processing", 
-        currentStep: "Parsing scores & compiling student ranks..." 
+        currentStep: "Parsing scores & compiling ranks..." 
       }));
 
       const { data } = await api.post(`/admin/scholarships/${sid}/bulk-results`, fd, {
         headers: { "Content-Type": "multipart/form-data" },
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 100));
-          setBulkState(prev => ({ ...prev, progress: Math.min(percentCompleted, 50) }));
+          setBulkState((prev) => ({ ...prev, progress: Math.min(percentCompleted, 50) }));
         }
       });
 
@@ -408,63 +1227,7 @@ export default function AdminDashboard() {
       load();
     } catch (e) {
       const err = formatError(e.response?.data?.detail) || e.message;
-      setBulkState(prev => ({
-        ...prev,
-        status: "error",
-        error: err
-      }));
-      toast.error(err);
-    }
-  };
-
-  const bulkRegisterScholarship = async (sid, file) => {
-    setBulkState({
-      title: "Bulk Registration & Admit Card Dispatch",
-      status: "uploading",
-      progress: 15,
-      currentStep: "Uploading applicant manifest sheet...",
-      details: [{ label: "File Name", value: file.name }],
-      error: null
-    });
-    setBulkModalOpen(true);
-
-    try {
-      const fd = new FormData(); fd.append("file", file);
-      
-      setBulkState(prev => ({ 
-        ...prev, 
-        progress: 45, 
-        status: "processing", 
-        currentStep: "Registering applicants & generating roll numbers..." 
-      }));
-
-      const { data } = await api.post(`/admin/scholarships/${sid}/bulk-register`, fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 100));
-          setBulkState(prev => ({ ...prev, progress: Math.min(percentCompleted, 40) }));
-        }
-      });
-
-      setBulkState({
-        title: "Bulk Registration & Admit Card Dispatch",
-        status: "completed",
-        progress: 100,
-        currentStep: "Registration & Dispatch Complete",
-        details: [
-          { label: "File Name", value: file.name },
-          { label: "Registered Applicants", value: data.registered || 0 },
-          { label: "Admit Cards Sent", value: data.registered || 0 },
-          { label: "Skipped / Duplicates", value: data.skipped || 0 }
-        ],
-        error: null
-      });
-
-      toast.success(`Registered ${data.registered || 0} students & sent admit cards!`);
-      load();
-    } catch (e) {
-      const err = formatError(e.response?.data?.detail) || e.message;
-      setBulkState(prev => ({
+      setBulkState((prev) => ({
         ...prev,
         status: "error",
         error: err
@@ -500,7 +1263,29 @@ export default function AdminDashboard() {
         state={bulkState} 
       />
 
-      {/* Ambient background */}
+      <AsyncBulkRegModal 
+        scholarshipId={asyncBulkRegId} 
+        onClose={() => { setAsyncBulkRegId(null); load(); }} 
+      />
+
+      <WhatsAppBroadcastModal 
+        scholarshipId={broadcastModalId}
+        onClose={() => setBroadcastModalId(null)}
+        allApps={scholarshipApps}
+      />
+
+      <CampaignOperationsModal 
+        scholarshipId={operationsModalId}
+        onClose={() => setOperationsModalId(null)}
+        onDownloadResultsTemplate={downloadResultsTemplate}
+        onUploadResults={bulkUploadResults}
+        onDownloadRegTemplate={downloadBulkRegisterTemplate}
+        onOpenBulkReg={setAsyncBulkRegId}
+        onDownloadAttendance={downloadAttendance}
+        allApps={scholarshipApps}
+        onRefresh={load} 
+      />
+
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
         <div className="ambient-orb ambient-orb--primary drift" style={{ width: 500, height: 500, top: "-150px", left: "10%" }} />
         <div className="ambient-orb ambient-orb--accent" style={{ width: 380, height: 380, bottom: "10%", right: "5%", opacity: 0.25 }} />
@@ -541,7 +1326,7 @@ export default function AdminDashboard() {
               <button
                 key={item.id}
                 onClick={() => { setActiveTab(item.id); setInnerSearch(""); setSidebarOpen(false); }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer ${
                   isActive
                     ? "bg-accent text-accent-foreground shadow-[0_0_20px_rgba(var(--accent-rgb),0.12)] font-semibold"
                     : "text-foreground/70 hover:text-foreground hover:bg-white/[0.04]"
@@ -557,7 +1342,7 @@ export default function AdminDashboard() {
         <div className="p-3 border-t border-white/[0.06] shrink-0 bg-background/40">
           <button 
             onClick={() => navigate("/erp")}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs uppercase font-bold tracking-wider text-accent border border-accent/20 bg-accent/5 hover:bg-accent/15 transition duration-200"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs uppercase font-bold tracking-wider text-accent border border-accent/20 bg-accent/5 hover:bg-accent/15 transition duration-200 cursor-pointer"
           >
             <Terminal size={14} className="shrink-0"/> <span>Launch ERP Hub</span>
           </button>
@@ -589,24 +1374,34 @@ export default function AdminDashboard() {
             </div>
           </div>
           
-          <div className="relative w-full sm:w-80 shrink-0">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"/>
-            <input 
-              type="text"
-              value={innerSearch}
-              onChange={e => setInnerSearch(e.target.value)}
-              placeholder="Search running page vectors..."
-              className="w-full pl-9 pr-4 py-2 border border-white/10 bg-background/50 rounded-xl text-sm focus:outline-none focus:border-accent/40 transition text-foreground"
-            />
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative w-full sm:w-80 shrink-0">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"/>
+              <input 
+                type="text"
+                value={innerSearch}
+                onChange={e => setInnerSearch(e.target.value)}
+                placeholder="Search active tab records..."
+                className="w-full pl-9 pr-8 py-2 border border-white/10 bg-background/50 rounded-xl text-sm focus:outline-none focus:border-accent/40 transition text-foreground placeholder:text-muted-foreground/60"
+              />
+              {innerSearch && (
+                <button onClick={() => setInnerSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+            <Button size="icon" variant="outline" onClick={load} disabled={loadingData} className="rounded-xl border-white/10 shrink-0 hover:bg-white/5 cursor-pointer">
+              <RefreshCw size={14} className={loadingData ? "animate-spin" : ""} />
+            </Button>
           </div>
         </header>
 
         <main className="relative z-10 flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 space-y-6 min-w-0 custom-scrollbar overscroll-contain">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 animate-fadeIn">
-            <StatCard label="Pipeline Students" value={summary.total_students || 0} testId="stat-students"/>
-            <StatCard label="Inbound Admissions" value={summary.total_enrollments || 0} testId="stat-enrollments"/>
-            <StatCard label="Scholarship Drives" value={summary.total_scholarship_apps || 0} testId="stat-sch"/>
-            <StatCard label="Talent Profiles" value={summary.total_job_apps || 0} testId="stat-jobs"/>
+            <StatCard label="Pipeline Students" value={summary.total_students} icon={GraduationCap} testId="stat-students"/>
+            <StatCard label="Inbound Admissions" value={summary.total_enrollments} icon={ClipboardList} testId="stat-enrollments"/>
+            <StatCard label="Scholarship Drives" value={summary.total_scholarship_apps} icon={Trophy} testId="stat-sch"/>
+            <StatCard label="Talent Profiles" value={summary.total_job_apps} icon={Briefcase} testId="stat-jobs"/>
           </div>
 
           <div className="w-full min-w-0">
@@ -616,36 +1411,40 @@ export default function AdminDashboard() {
                   <h3 className="font-display font-medium text-lg sm:text-xl text-foreground truncate">Inbound Admissions Registry</h3>
                   <ExportBtn kind="enrollments"/>
                 </div>
-                <div className="glass border border-white/5 rounded-2xl overflow-hidden w-full">
-                  <div className="overflow-x-auto w-full">
-                    <table className="w-full text-sm min-w-[650px] table-auto">
-                      <thead className="bg-[#141417] text-muted-foreground text-xs uppercase tracking-wider">
-                        <tr>
-                          <th className="p-3 sm:p-4 text-left bg-[#101012]">Receipt</th>
-                          <th className="p-3 sm:p-4 text-left bg-[#101012]">Name</th>
-                          <th className="p-3 sm:p-4 text-left bg-[#101012]">Phone Line</th>
-                          <th className="p-3 sm:p-4 text-left bg-[#101012]">Station Center</th>
-                          <th className="p-3 sm:p-4 text-left bg-[#101012]">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/[0.04] text-foreground bg-background/20">
-                        {enrollments.filter(x => x.name?.toLowerCase().includes(innerSearch.toLowerCase())).map(e => (
-                          <tr key={e.id} className="hover:bg-white/[0.01] transition-colors">
-                            <td className="p-3 sm:p-4 font-mono text-xs font-semibold">{e.receipt_no}</td>
-                            <td className="p-3 sm:p-4 font-bold">{e.name}</td>
-                            <td className="p-3 sm:p-4 font-mono text-xs text-muted-foreground">{e.phone}</td>
-                            <td className="p-3 sm:p-4 text-muted-foreground truncate">{e.center}</td>
-                            <td className="p-3 sm:p-4">
-                              <select value={e.status} onChange={ev => updateStatus("enr", e.id, ev.target.value)} className="text-xs font-bold uppercase border border-white/10 rounded-lg px-2 py-1 bg-background text-foreground focus:outline-none">
-                                <option value="pending">pending</option><option value="approved">approved</option><option value="rejected">rejected</option>
-                              </select>
-                            </td>
+                {filteredEnrollments.length === 0 ? (
+                  <EmptyState />
+                ) : (
+                  <div className="glass border border-white/5 rounded-2xl overflow-hidden w-full">
+                    <div className="overflow-x-auto w-full">
+                      <table className="w-full text-sm min-w-[650px] table-auto">
+                        <thead className="bg-[#141417] text-muted-foreground text-xs uppercase tracking-wider">
+                          <tr>
+                            <th className="p-3 sm:p-4 text-left bg-[#101012]">Receipt</th>
+                            <th className="p-3 sm:p-4 text-left bg-[#101012]">Name</th>
+                            <th className="p-3 sm:p-4 text-left bg-[#101012]">Phone Line</th>
+                            <th className="p-3 sm:p-4 text-left bg-[#101012]">Station Center</th>
+                            <th className="p-3 sm:p-4 text-left bg-[#101012]">Status</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-white/[0.04] text-foreground bg-background/20">
+                          {filteredEnrollments.map((e) => (
+                            <tr key={e.id} className="hover:bg-white/[0.01] transition-colors">
+                              <td className="p-3 sm:p-4 font-mono text-xs font-semibold">{e.receipt_no}</td>
+                              <td className="p-3 sm:p-4 font-bold">{e.name}</td>
+                              <td className="p-3 sm:p-4 font-mono text-xs text-muted-foreground">{e.phone}</td>
+                              <td className="p-3 sm:p-4 text-muted-foreground truncate">{e.center}</td>
+                              <td className="p-3 sm:p-4">
+                                <select value={e.status} onChange={ev => updateStatus("enr", e.id, ev.target.value)} className="text-xs font-bold uppercase border border-white/10 rounded-lg px-2 py-1 bg-background text-foreground focus:outline-none cursor-pointer">
+                                  <option value="pending">pending</option><option value="approved">approved</option><option value="rejected">rejected</option>
+                                </select>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
 
@@ -667,45 +1466,126 @@ export default function AdminDashboard() {
                   <h3 className="font-display font-medium text-lg sm:text-xl text-foreground truncate">Scholarship Processing Queue</h3>
                   <ExportBtn kind="scholarship-applications"/>
                 </div>
-                <div className="space-y-3">
-                  {scholarshipApps.filter(x => x.name?.toLowerCase().includes(innerSearch.toLowerCase())).map(a => {
-                    const editing = resultEditor[a.id];
-                    const r = editing || { marks_obtained: a.result_marks_obtained ?? "", total_marks: a.result_total_marks ?? 100, rank: a.result_rank ?? "", percentile: a.result_percentile ?? "", scholarship_percentage: a.result_scholarship_percentage ?? 0, remarks: a.result_remarks ?? "", publish: a.result_published ?? false };
-                    return (
-                      <div key={a.id} className="glass border border-white/5 rounded-2xl bg-background/40 p-4 transition hover:border-white/10" data-testid={`adm-sch-${a.id}`}>
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="font-mono text-xs text-muted-foreground/60 truncate">{a.application_no}</div>
-                            <div className="font-bold text-foreground text-sm sm:text-base break-words">{a.name} <span className="text-xs font-normal text-muted-foreground">· Class {a.standard} · Target: {a.target_exam}</span></div>
-                            <div className="text-xs text-muted-foreground mt-0.5 truncate">{a.email} · <span className="font-mono">{a.phone}</span></div>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
-                            {a.result_published && <span className="text-[10px] uppercase tracking-wider bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2.5 py-0.5 rounded-md font-bold">Published</span>}
-                            <select value={a.status} onChange={ev => updateStatus("sch", a.id, ev.target.value)} className="text-xs font-bold uppercase border border-white/10 rounded-lg px-2.5 py-1 bg-background text-foreground"><option>pending</option><option>approved</option><option>rejected</option></select>
-                            <Button size="sm" variant={editing ? "outline" : "default"} onClick={() => setResultEditor(prev => ({ ...prev, [a.id]: editing ? undefined : r }))} data-testid={`toggle-result-${a.id}`} className="rounded-xl text-xs uppercase tracking-wider font-bold">
-                              {editing ? "Close" : (a.result_published ? "Edit Score" : "Log Result")}
-                            </Button>
-                          </div>
-                        </div>
-                        {editing && (
-                          <div className="mt-4 pt-4 border-t border-white/[0.06] grid grid-cols-1 sm:grid-cols-3 gap-3 animate-fadeIn" data-testid={`result-form-${a.id}`}>
-                            <Input placeholder="Marks obtained" type="number" value={r.marks_obtained} onChange={e=>setResultEditor(prev=>({...prev, [a.id]: {...r, marks_obtained: e.target.value}}))} data-testid={`r-marks-${a.id}`} className="rounded-xl border-white/10 bg-background text-foreground font-mono"/>
-                            <Input placeholder="Total marks" type="number" value={r.total_marks} onChange={e=>setResultEditor(prev=>({...prev, [a.id]: {...r, total_marks: e.target.value}}))} data-testid={`r-total-${a.id}`} className="rounded-xl border-white/10 bg-background text-foreground font-mono"/>
-                            <Input placeholder="Scholarship %" type="number" min={0} max={100} value={r.scholarship_percentage} onChange={e=>setResultEditor(prev=>({...prev, [a.id]: {...r, scholarship_percentage: e.target.value}}))} data-testid={`r-pct-${a.id}`} className="rounded-xl border-white/10 bg-background text-foreground font-mono"/>
-                            <Input placeholder="Rank (optional)" type="number" value={r.rank} onChange={e=>setResultEditor(prev=>({...prev, [a.id]: {...r, rank: e.target.value}}))} data-testid={`r-rank-${a.id}`} className="rounded-xl border-white/10 bg-background text-foreground font-mono"/>
-                            <Input placeholder="Percentile (optional)" type="number" step="0.01" value={r.percentile} onChange={e=>setResultEditor(prev=>({...prev, [a.id]: {...r, percentile: e.target.value}}))} data-testid={`r-perc-${a.id}`} className="rounded-xl border-white/10 bg-background text-foreground font-mono"/>
-                            <label className="text-xs uppercase font-bold tracking-wider text-muted-foreground flex items-center gap-2 select-none cursor-pointer"><input type="checkbox" checked={!!r.publish} onChange={e=>setResultEditor(prev=>({...prev, [a.id]: {...r, publish: e.target.checked}}))} className="accent-primary"/>Publish output</label>
-                            <textarea className="sm:col-span-3 border border-white/10 rounded-xl px-3 py-2 bg-background text-sm text-foreground focus:outline-none focus:border-accent min-h-16 resize-none" placeholder="Remarks / Guidance (optional)" value={r.remarks} onChange={e=>setResultEditor(prev=>({...prev, [a.id]: {...r, remarks: e.target.value}}))} />
-                            <div className="sm:col-span-3 flex flex-wrap gap-2 pt-1">
-                              <Button onClick={() => saveResult(a.id, r)} className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2" data-testid={`r-save-${a.id}`}><Save size={14} className="mr-1.5"/>{r.publish ? "Commit & Publish" : "Save Draft"}</Button>
-                              <Button variant="outline" onClick={() => setResultEditor(prev => ({ ...prev, [a.id]: undefined }))} className="rounded-xl text-xs font-bold uppercase tracking-wider">Cancel</Button>
+                {filteredScholarships.length === 0 ? (
+                  <EmptyState />
+                ) : (
+                  <div className="space-y-3">
+                    {filteredScholarships.map((a) => {
+                      const editing = resultEditor[a.id];
+                      const r = editing || { marks_obtained: a.result_marks_obtained ?? "", total_marks: a.result_total_marks ?? 100, rank: a.result_rank ?? "", percentile: a.result_percentile ?? "", scholarship_percentage: a.result_scholarship_percentage ?? 0, remarks: a.result_remarks ?? "", publish: a.result_published ?? false };
+                      
+                      const editingApp = appEditor[a.application_no];
+                      const appData = editingApp || { name: a.name || "", email: a.email || "", phone: a.phone || "", school: a.school || "", standard: a.standard || "", target_exam: a.target_exam || "", city: a.city || "", venue: a.venue || "" };
+
+                      return (
+                        <div key={a.id} className="glass border border-white/5 rounded-2xl bg-background/40 p-4 transition hover:border-white/10" data-testid={`adm-sch-${a.id}`}>
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="font-mono text-xs text-muted-foreground/60 truncate">App No: {a.application_no}</div>
+                              <div className="font-bold text-foreground text-sm sm:text-base break-words">
+                                {a.name} <span className="text-xs font-normal text-muted-foreground">· {a.standard} · Target: {a.target_exam}</span>
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-0.5 truncate">
+                                {a.email} · <span className="font-mono">{a.phone}</span>
+                              </div>
+                              <div className="text-xs font-medium text-muted-foreground mt-0.5 flex gap-1">
+                                Venue/School: <span className="text-emerald-400 font-bold">{a.venue || a.city}</span>
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
+                              {a.result_published && <span className="text-[10px] uppercase tracking-wider bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2.5 py-0.5 rounded-md font-bold">Published</span>}
+                              <select value={a.status} onChange={ev => updateStatus("sch", a.id, ev.target.value)} className="text-xs font-bold uppercase border border-white/10 rounded-lg px-2.5 py-1 bg-background text-foreground cursor-pointer"><option>pending</option><option>approved</option><option>rejected</option></select>
+                              
+                              <Button size="sm" variant={editingApp ? "default" : "outline"} onClick={() => setAppEditor(prev => ({ ...prev, [a.application_no]: editingApp ? undefined : appData }))} className="rounded-xl text-xs uppercase tracking-wider font-bold cursor-pointer">
+                                {editingApp ? "Close Info" : "Edit Info"}
+                              </Button>
+
+                              <Button size="sm" variant={editing ? "default" : "outline"} onClick={() => setResultEditor(prev => ({ ...prev, [a.id]: editing ? undefined : r }))} data-testid={`toggle-result-${a.id}`} className="rounded-xl text-xs uppercase tracking-wider font-bold cursor-pointer">
+                                {editing ? "Close Score" : (a.result_published ? "Edit Score" : "Log Result")}
+                              </Button>
                             </div>
                           </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+
+                          {editingApp && (
+                            <div className="mt-4 pt-4 border-t border-white/[0.06] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 animate-fadeIn">
+                              <div className="col-span-full text-[11px] uppercase tracking-wider font-bold text-accent mb-1 flex items-center">
+                                <User size={14} className="mr-1.5"/> Edit Applicant Identity & Venue
+                              </div>
+                              
+                              <div>
+                                <label className="text-[10px] uppercase tracking-wider text-muted-foreground ml-1">Full Name</label>
+                                <Input value={appData.name} onChange={e=>setAppEditor(prev=>({...prev, [a.application_no]: {...appData, name: e.target.value}}))} className="rounded-xl border-white/10 bg-background text-foreground"/>
+                              </div>
+                              
+                              <div>
+                                <label className="text-[10px] uppercase tracking-wider text-muted-foreground ml-1">Email</label>
+                                <Input value={appData.email} onChange={e=>setAppEditor(prev=>({...prev, [a.application_no]: {...appData, email: e.target.value}}))} className="rounded-xl border-white/10 bg-background text-foreground"/>
+                              </div>
+                              
+                              <div>
+                                <label className="text-[10px] uppercase tracking-wider text-muted-foreground ml-1">Phone Number</label>
+                                <Input value={appData.phone} onChange={e=>setAppEditor(prev=>({...prev, [a.application_no]: {...appData, phone: e.target.value}}))} className="rounded-xl border-white/10 bg-background text-foreground"/>
+                              </div>
+                              
+                              <div>
+                                <label className="text-[10px] uppercase tracking-wider text-muted-foreground ml-1">School / Institute</label>
+                                <Input value={appData.school} onChange={e=>setAppEditor(prev=>({...prev, [a.application_no]: {...appData, school: e.target.value}}))} className="rounded-xl border-white/10 bg-background text-foreground"/>
+                              </div>
+                              
+                              <div>
+                                <label className="text-[10px] uppercase tracking-wider text-muted-foreground ml-1">Standard / Class</label>
+                                <Input value={appData.standard} onChange={e=>setAppEditor(prev=>({...prev, [a.application_no]: {...appData, standard: e.target.value}}))} className="rounded-xl border-white/10 bg-background text-foreground"/>
+                              </div>
+                              
+                              <div>
+                                <label className="text-[10px] uppercase tracking-wider text-muted-foreground ml-1">Target Exam</label>
+                                <Input value={appData.target_exam} onChange={e=>setAppEditor(prev=>({...prev, [a.application_no]: {...appData, target_exam: e.target.value}}))} className="rounded-xl border-white/10 bg-background text-foreground"/>
+                              </div>
+                              
+                              <div>
+                                <label className="text-[10px] uppercase tracking-wider text-muted-foreground ml-1">City / Region</label>
+                                <Input value={appData.city} onChange={e=>setAppEditor(prev=>({...prev, [a.application_no]: {...appData, city: e.target.value}}))} className="rounded-xl border-white/10 bg-background text-foreground"/>
+                              </div>
+                              
+                              <div>
+                                <label className="text-[10px] uppercase tracking-wider text-muted-foreground ml-1 flex items-center justify-between">Venue <span className="text-emerald-400 font-bold ml-1">(Can be custom)</span></label>
+                                <Input value={appData.venue} onChange={e=>setAppEditor(prev=>({...prev, [a.application_no]: {...appData, venue: e.target.value}}))} className="rounded-xl border-emerald-500/30 bg-emerald-500/5 text-foreground"/>
+                              </div>
+                              
+                              <div className="col-span-full flex flex-wrap gap-2 pt-2">
+                                <Button onClick={() => saveAppDetails(a.application_no, appData)} className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2 cursor-pointer">
+                                  <Save size={14} className="mr-1.5"/> Save Applicant Details
+                                </Button>
+                                <Button variant="outline" onClick={() => setAppEditor(prev => ({ ...prev, [a.application_no]: undefined }))} className="rounded-xl text-xs font-bold uppercase tracking-wider cursor-pointer">
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+
+                          {editing && (
+                            <div className="mt-4 pt-4 border-t border-white/[0.06] grid grid-cols-1 sm:grid-cols-3 gap-3 animate-fadeIn" data-testid={`result-form-${a.id}`}>
+                              <div className="col-span-full text-[11px] uppercase tracking-wider font-bold text-accent mb-1 flex items-center">
+                                <Trophy size={14} className="mr-1.5"/> Edit Examination Scores
+                              </div>
+                              <Input placeholder="Marks obtained" type="number" value={r.marks_obtained} onChange={e=>setResultEditor(prev=>({...prev, [a.id]: {...r, marks_obtained: e.target.value}}))} data-testid={`r-marks-${a.id}`} className="rounded-xl border-white/10 bg-background text-foreground font-mono"/>
+                              <Input placeholder="Total marks" type="number" value={r.total_marks} onChange={e=>setResultEditor(prev=>({...prev, [a.id]: {...r, total_marks: e.target.value}}))} data-testid={`r-total-${a.id}`} className="rounded-xl border-white/10 bg-background text-foreground font-mono"/>
+                              <Input placeholder="Scholarship %" type="number" min={0} max={100} value={r.scholarship_percentage} onChange={e=>setResultEditor(prev=>({...prev, [a.id]: {...r, scholarship_percentage: e.target.value}}))} data-testid={`r-pct-${a.id}`} className="rounded-xl border-white/10 bg-background text-foreground font-mono"/>
+                              <Input placeholder="Rank (optional)" type="number" value={r.rank} onChange={e=>setResultEditor(prev=>({...prev, [a.id]: {...r, rank: e.target.value}}))} data-testid={`r-rank-${a.id}`} className="rounded-xl border-white/10 bg-background text-foreground font-mono"/>
+                              <Input placeholder="Percentile (optional)" type="number" step="0.01" value={r.percentile} onChange={e=>setResultEditor(prev=>({...prev, [a.id]: {...r, percentile: e.target.value}}))} data-testid={`r-perc-${a.id}`} className="rounded-xl border-white/10 bg-background text-foreground font-mono"/>
+                              <label className="text-xs uppercase font-bold tracking-wider text-muted-foreground flex items-center gap-2 select-none cursor-pointer"><input type="checkbox" checked={!!r.publish} onChange={e=>setResultEditor(prev=>({...prev, [a.id]: {...r, publish: e.target.checked}}))} className="accent-primary"/>Publish output</label>
+                              <textarea className="sm:col-span-3 border border-white/10 rounded-xl px-3 py-2 bg-background text-sm text-foreground focus:outline-none focus:border-accent min-h-16 resize-none" placeholder="Remarks / Guidance (optional)" value={r.remarks} onChange={e=>setResultEditor(prev=>({...prev, [a.id]: {...r, remarks: e.target.value}}))} />
+                              <div className="sm:col-span-3 flex flex-wrap gap-2 pt-1">
+                                <Button onClick={() => saveResult(a.id, r)} className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2 cursor-pointer" data-testid={`r-save-${a.id}`}><Save size={14} className="mr-1.5"/>{r.publish ? "Commit & Publish" : "Save Draft"}</Button>
+                                <Button variant="outline" onClick={() => setResultEditor(prev => ({ ...prev, [a.id]: undefined }))} className="rounded-xl text-xs font-bold uppercase tracking-wider cursor-pointer">Cancel</Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 
@@ -715,36 +1595,40 @@ export default function AdminDashboard() {
                   <h3 className="font-display font-medium text-lg sm:text-xl text-foreground truncate">Talent Recruitment Applications</h3>
                   <ExportBtn kind="job-applications"/>
                 </div>
-                <div className="glass border border-white/5 rounded-2xl overflow-hidden w-full">
-                  <div className="overflow-x-auto w-full">
-                    <table className="w-full text-sm min-w-[650px] table-auto">
-                      <thead className="bg-[#141417] text-muted-foreground text-xs uppercase tracking-wider">
-                        <tr>
-                          <th className="p-3 sm:p-4 text-left bg-[#101012]">Applicant Name</th>
-                          <th className="p-3 sm:p-4 text-left bg-[#101012]">Email Endpoint</th>
-                          <th className="p-3 sm:p-4 text-left bg-[#101012]">Qualification</th>
-                          <th className="p-3 sm:p-4 text-left bg-[#101012]">Dossier Sheet</th>
-                          <th className="p-3 sm:p-4 text-left bg-[#101012]">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/[0.04] text-foreground bg-background/20">
-                        {jobApps.filter(x => x.name?.toLowerCase().includes(innerSearch.toLowerCase())).map(a => (
-                          <tr key={a.id} className="hover:bg-white/[0.01] transition-colors">
-                            <td className="p-3 sm:p-4 font-bold text-foreground">{a.name}</td>
-                            <td className="p-3 sm:p-4 text-muted-foreground font-mono text-xs">{a.email}</td>
-                            <td className="p-3 sm:p-4 text-muted-foreground truncate">{a.qualification}</td>
-                            <td className="p-3 sm:p-4">{a.resume_url ? <a href={a.resume_url} target="_blank" rel="noreferrer" className="text-accent underline font-semibold text-xs uppercase tracking-wider">View Resume</a> : "—"}</td>
-                            <td className="p-3 sm:p-4">
-                              <select value={a.status} onChange={ev => updateStatus("job", a.id, ev.target.value)} className="text-xs font-bold uppercase border border-white/10 rounded-lg px-2 py-1 bg-background text-foreground focus:outline-none">
-                                <option>received</option><option>shortlisted</option><option>rejected</option><option>hired</option>
-                              </select>
-                            </td>
+                {filteredJobApps.length === 0 ? (
+                  <EmptyState />
+                ) : (
+                  <div className="glass border border-white/5 rounded-2xl overflow-hidden w-full">
+                    <div className="overflow-x-auto w-full">
+                      <table className="w-full text-sm min-w-[650px] table-auto">
+                        <thead className="bg-[#141417] text-muted-foreground text-xs uppercase tracking-wider">
+                          <tr>
+                            <th className="p-3 sm:p-4 text-left bg-[#101012]">Applicant Name</th>
+                            <th className="p-3 sm:p-4 text-left bg-[#101012]">Email Endpoint</th>
+                            <th className="p-3 sm:p-4 text-left bg-[#101012]">Qualification</th>
+                            <th className="p-3 sm:p-4 text-left bg-[#101012]">Dossier Sheet</th>
+                            <th className="p-3 sm:p-4 text-left bg-[#101012]">Status</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-white/[0.04] text-foreground bg-background/20">
+                          {filteredJobApps.map((a) => (
+                            <tr key={a.id} className="hover:bg-white/[0.01] transition-colors">
+                              <td className="p-3 sm:p-4 font-bold text-foreground">{a.name}</td>
+                              <td className="p-3 sm:p-4 text-muted-foreground font-mono text-xs">{a.email}</td>
+                              <td className="p-3 sm:p-4 text-muted-foreground truncate">{a.qualification}</td>
+                              <td className="p-3 sm:p-4">{a.resume_url ? <a href={a.resume_url} target="_blank" rel="noreferrer" className="text-accent underline font-semibold text-xs uppercase tracking-wider">View Resume</a> : "—"}</td>
+                              <td className="p-3 sm:p-4">
+                                <select value={a.status} onChange={ev => updateStatus("job", a.id, ev.target.value)} className="text-xs font-bold uppercase border border-white/10 rounded-lg px-2 py-1 bg-background text-foreground focus:outline-none cursor-pointer">
+                                  <option>received</option><option>shortlisted</option><option>rejected</option><option>hired</option>
+                                </select>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
 
@@ -752,32 +1636,36 @@ export default function AdminDashboard() {
               <div className="space-y-4 animate-fadeIn">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                   <h3 className="font-display font-medium text-lg sm:text-xl text-foreground truncate">Course Catalog Matrix</h3>
-                  {!editingCourse && <Button onClick={() => setEditingCourse({})} className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider shrink-0"><Plus size={14} className="mr-1.5"/>Add Custom Course</Button>}
+                  {!editingCourse && <Button onClick={() => setEditingCourse({})} className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider shrink-0 cursor-pointer"><Plus size={14} className="mr-1.5"/>Add Custom Course</Button>}
                 </div>
                 {editingCourse && <div className="mb-6"><CourseForm initial={editingCourse} onCancel={() => setEditingCourse(null)} onSave={saveCourse} busy={busy}/></div>}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {courses.filter(x => x.title?.toLowerCase().includes(innerSearch.toLowerCase())).map(c => (
-                    <div key={c.id} className="border border-white/10 bg-background/30 p-4 sm:p-5 rounded-2xl flex flex-col justify-between group hover:border-accent/30 transition duration-300 min-w-0" data-testid={`course-row-${c.id}`}>
-                      <div>
-                        <div className="flex justify-between items-start gap-2">
-                          <div>
-                            <div className="text-xs uppercase tracking-[0.18em] font-bold text-accent font-mono">{c.category}</div>
-                            <h4 className="font-bold text-foreground text-base sm:text-lg break-words mt-1">{c.title}</h4>
-                            <div className="text-xs text-muted-foreground font-mono mt-1">{c.duration} · ₹{c.fee?.toLocaleString()}</div>
+                {filteredCourses.length === 0 ? (
+                  <EmptyState />
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredCourses.map((c) => (
+                      <div key={c.id} className="border border-white/10 bg-background/30 p-4 sm:p-5 rounded-2xl flex flex-col justify-between group hover:border-accent/30 transition duration-300 min-w-0" data-testid={`course-row-${c.id}`}>
+                        <div>
+                          <div className="flex justify-between items-start gap-2">
+                            <div>
+                              <div className="text-xs uppercase tracking-[0.18em] font-bold text-accent font-mono">{c.category}</div>
+                              <h4 className="font-bold text-foreground text-base sm:text-lg break-words mt-1">{c.title}</h4>
+                              <div className="text-xs text-muted-foreground font-mono mt-1">{c.duration} · ₹{c.fee?.toLocaleString()}</div>
+                            </div>
+                            <div className="flex gap-1.5 shrink-0 opacity-80 group-hover:opacity-100 transition-opacity">
+                              <Button size="sm" variant="outline" onClick={() => setEditingCourse(c)} className="rounded-lg text-xs font-bold cursor-pointer">Edit</Button>
+                              <Button size="sm" variant="outline" onClick={() => deleteCourse(c.id)} className="rounded-lg text-xs text-rose-400 border-transparent hover:border-rose-500/20 hover:bg-rose-500/5 cursor-pointer"><Trash2 size={14}/></Button>
+                            </div>
                           </div>
-                          <div className="flex gap-1.5 shrink-0 opacity-80 group-hover:opacity-100 transition-opacity">
-                            <Button size="sm" variant="outline" onClick={() => setEditingCourse(c)} className="rounded-lg text-xs font-bold">Edit</Button>
-                            <Button size="sm" variant="outline" onClick={() => deleteCourse(c.id)} className="rounded-lg text-xs text-rose-400 border-transparent hover:border-rose-500/20 hover:bg-rose-500/5"><Trash2 size={14}/></Button>
-                          </div>
+                          <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{c.description}</p>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{c.description}</p>
+                        <div className="mt-4 flex flex-wrap gap-1 border-t border-white/[0.04] pt-3">
+                          {(c.features || []).slice(0, 3).map((f) => <span key={f} className="text-[10px] uppercase font-bold font-mono tracking-wider bg-white/5 border border-white/5 px-2.5 py-0.5 rounded-md text-muted-foreground">{f}</span>)}
+                        </div>
                       </div>
-                      <div className="mt-4 flex flex-wrap gap-1 border-t border-white/[0.04] pt-3">
-                        {(c.features || []).slice(0, 3).map((f) => <span key={f} className="text-[10px] uppercase font-bold font-mono tracking-wider bg-white/5 border border-white/5 px-2.5 py-0.5 rounded-md text-muted-foreground">{f}</span>)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -789,25 +1677,29 @@ export default function AdminDashboard() {
                   <Input placeholder="Category Tag" value={newNotice.category} onChange={e=>setNewNotice({...newNotice, category:e.target.value})} required data-testid="nn-cat" className="rounded-xl border-white/10 bg-background/50 text-foreground"/>
                   <textarea className="sm:col-span-2 border border-white/10 rounded-xl px-3 py-2 bg-background/50 text-sm focus:outline-none focus:border-accent text-foreground min-h-20 resize-none" placeholder="Notice body content..." value={newNotice.content} onChange={e=>setNewNotice({...newNotice, content:e.target.value})} required />
                   <label className="text-sm flex items-center gap-2 text-muted-foreground cursor-pointer select-none"><input type="checkbox" checked={newNotice.pinned} onChange={e=>setNewNotice({...newNotice, pinned: e.target.checked})} className="accent-primary" />Pin dispatch to priority index window</label>
-                  <Button type="submit" className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2"><Plus size={14} className="mr-1.5"/>Post Notice</Button>
+                  <Button type="submit" className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2 cursor-pointer"><Plus size={14} className="mr-1.5"/>Post Notice</Button>
                 </form>
-                <div className="space-y-2">
-                  {notices.map(n => (
-                    <div key={n.id} className={`border ${n.is_featured ? "border-accent ring-1 ring-accent/20 bg-accent/[0.01]" : "border-white/5 bg-background/30"} p-4 rounded-2xl flex items-center justify-between gap-4`}>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <div className="text-xs uppercase tracking-[0.18em] font-bold text-accent font-mono">{n.category}</div>
-                          {n.is_featured && <span className="text-[9px] uppercase font-bold tracking-widest bg-accent text-accent-foreground px-2 py-0.5 rounded">★ Featured</span>}
+                {filteredNotices.length === 0 ? (
+                  <EmptyState />
+                ) : (
+                  <div className="space-y-2">
+                    {filteredNotices.map((n) => (
+                      <div key={n.id} className={`border ${n.is_featured ? "border-accent ring-1 ring-accent/20 bg-accent/[0.01]" : "border-white/5 bg-background/30"} p-4 rounded-2xl flex items-center justify-between gap-4`}>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <div className="text-xs uppercase tracking-[0.18em] font-bold text-accent font-mono">{n.category}</div>
+                            {n.is_featured && <span className="text-[9px] uppercase font-bold tracking-widest bg-accent text-accent-foreground px-2 py-0.5 rounded">★ Featured</span>}
+                          </div>
+                          <div className="font-bold text-foreground text-base mt-1 truncate">{n.title}</div>
                         </div>
-                        <div className="font-bold text-foreground text-base mt-1 truncate">{n.title}</div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Button size="sm" variant={n.is_featured ? "default" : "outline"} onClick={() => n.is_featured ? clearFeatured() : setFeatured("notice", n.id)} className="rounded-xl text-xs font-bold cursor-pointer">{n.is_featured ? "Demote" : "Feature"}</Button>
+                          <Button size="sm" variant="outline" onClick={() => del(`/notices/${n.id}`, "notice")} className="rounded-xl border-transparent text-rose-400 hover:bg-rose-500/5 cursor-pointer"><Trash2 size={14}/></Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Button size="sm" variant={n.is_featured ? "default" : "outline"} onClick={() => n.is_featured ? clearFeatured() : setFeatured("notice", n.id)} className="rounded-xl text-xs font-bold">{n.is_featured ? "Demote" : "Feature"}</Button>
-                        <Button size="sm" variant="outline" onClick={() => del(`/notices/${n.id}`, "notice")} className="rounded-xl border-transparent text-rose-400 hover:bg-rose-500/5"><Trash2 size={14}/></Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -819,26 +1711,30 @@ export default function AdminDashboard() {
                   <Input placeholder="Department" value={newJob.department} onChange={e=>setNewJob({...newJob, department:e.target.value})} required data-testid="nj-dept" className="rounded-xl border-white/10 bg-background/50 text-foreground"/>
                   <Input placeholder="Location" value={newJob.location} onChange={e=>setNewJob({...newJob, location:e.target.value})} required data-testid="nj-loc" className="rounded-xl border-white/10 bg-background/50 text-foreground"/>
                   <Input placeholder="Short Description Summary" value={newJob.description} onChange={e=>setNewJob({...newJob, description:e.target.value})} required data-testid="nj-desc" className="sm:col-span-3 rounded-xl border-white/10 bg-background/50 text-foreground"/>
-                  <div className="sm:col-span-3"><label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Prerequisite Qualifications Requirements</label><ChipInput testId="nj-req" value={newJob.requirements} onChange={v=>setNewJob({...newJob, requirements:v})}/></div>
-                  <Button type="submit" className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2"><Plus size={14} className="mr-1.5"/>Deploy Career Index</Button>
+                  <div className="sm:col-span-3"><label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Prerequisite Qualifications Requirements</label><ChipInput testId="nj-req" value={newJob.requirements} onChange={(v)=>setNewJob({...newJob, requirements:v})}/></div>
+                  <Button type="submit" className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2 cursor-pointer"><Plus size={14} className="mr-1.5"/>Deploy Career Index</Button>
                 </form>
-                <div className="space-y-2">
-                  {jobs.map(j => (
-                    <div key={j.id} className={`border ${j.is_featured ? "border-accent ring-1 ring-accent/20 bg-accent/[0.01]" : "border-white/5 bg-background/30"} p-4 rounded-2xl flex items-center justify-between gap-4`}>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <div className="font-bold text-foreground text-base">{j.title}</div>
-                          {j.is_featured && <span className="text-[9px] uppercase font-bold tracking-widest bg-accent text-accent-foreground px-2 py-0.5 rounded">★ Active</span>}
+                {filteredJobs.length === 0 ? (
+                  <EmptyState />
+                ) : (
+                  <div className="space-y-2">
+                    {filteredJobs.map((j) => (
+                      <div key={j.id} className={`border ${j.is_featured ? "border-accent ring-1 ring-accent/20 bg-accent/[0.01]" : "border-white/5 bg-background/30"} p-4 rounded-2xl flex items-center justify-between gap-4`}>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <div className="font-bold text-foreground text-base">{j.title}</div>
+                            {j.is_featured && <span className="text-[9px] uppercase font-bold tracking-widest bg-accent text-accent-foreground px-2 py-0.5 rounded">★ Active</span>}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5">{j.department} · {j.location}</div>
                         </div>
-                        <div className="text-xs text-muted-foreground mt-0.5">{j.department} · {j.location}</div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Button size="sm" variant={j.is_featured ? "default" : "outline"} onClick={() => j.is_featured ? clearFeatured() : setFeatured("job", j.id)} className="rounded-xl text-xs font-bold cursor-pointer">{j.is_featured ? "Demote" : "Feature"}</Button>
+                          <Button size="sm" variant="outline" onClick={() => del(`/jobs/${j.id}`, "job")} className="rounded-xl border-transparent text-rose-400 hover:bg-rose-500/5 cursor-pointer"><Trash2 size={14}/></Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Button size="sm" variant={j.is_featured ? "default" : "outline"} onClick={() => j.is_featured ? clearFeatured() : setFeatured("job", j.id)} className="rounded-xl text-xs font-bold">{j.is_featured ? "Demote" : "Feature"}</Button>
-                        <Button size="sm" variant="outline" onClick={() => del(`/jobs/${j.id}`, "job")} className="rounded-xl border-transparent text-rose-400 hover:bg-rose-500/5"><Trash2 size={14}/></Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -853,20 +1749,24 @@ export default function AdminDashboard() {
                   <Input placeholder="Timing Boundaries" value={newCenter.timing} onChange={e=>setNewCenter({...newCenter, timing:e.target.value})} data-testid="nc2-timing" className="rounded-xl border-white/10 bg-background/50 text-foreground"/>
                   <Input placeholder="Latitude" type="number" step="any" value={newCenter.lat} onChange={e=>setNewCenter({...newCenter, lat: Number(e.target.value)})} data-testid="nc2-lat" className="rounded-xl border-white/10 bg-background/50 text-foreground font-mono"/>
                   <Input placeholder="Longitude" type="number" step="any" value={newCenter.lng} onChange={e=>setNewCenter({...newCenter, lng: Number(e.target.value)})} data-testid="nc2-lng" className="rounded-xl border-white/10 bg-background/50 text-foreground font-mono"/>
-                  <Button type="submit" className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2"><Plus size={14} className="mr-1.5"/>Add Station Hub</Button>
+                  <Button type="submit" className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2 cursor-pointer"><Plus size={14} className="mr-1.5"/>Add Station Hub</Button>
                 </form>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {centers.map(c => (
-                    <div key={c.id} className="border border-white/10 bg-background/30 p-4 rounded-2xl flex items-start justify-between gap-4">
-                      <div>
-                        <div className="text-xs uppercase tracking-[0.18em] font-bold text-accent font-mono">{c.city}</div>
-                        <div className="font-bold text-foreground text-base mt-0.5">{c.name}</div>
-                        <div className="text-xs text-muted-foreground mt-1.5">{c.address} · <span className="font-mono">{c.phone}</span></div>
+                {filteredCenters.length === 0 ? (
+                  <EmptyState />
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredCenters.map((c) => (
+                      <div key={c.id} className="border border-white/10 bg-background/30 p-4 rounded-2xl flex items-start justify-between gap-4">
+                        <div>
+                          <div className="text-xs uppercase tracking-[0.18em] font-bold text-accent font-mono">{c.city}</div>
+                          <div className="font-bold text-foreground text-base mt-0.5">{c.name}</div>
+                          <div className="text-xs text-muted-foreground mt-1.5">{c.address} · <span className="font-mono">{c.phone}</span></div>
+                        </div>
+                        <Button size="sm" variant="outline" onClick={() => del(`/centers/${c.id}`, "center")} className="rounded-xl border-transparent text-rose-400 hover:bg-rose-500/5 cursor-pointer"><Trash2 size={14}/></Button>
                       </div>
-                      <Button size="sm" variant="outline" onClick={() => del(`/centers/${c.id}`, "center")} className="rounded-xl border-transparent text-rose-400 hover:bg-rose-500/5"><Trash2 size={14}/></Button>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -877,22 +1777,26 @@ export default function AdminDashboard() {
                   <Input placeholder="Endorsee Full Name" value={newTestimonial.name} onChange={e=>setNewTestimonial({...newTestimonial, name:e.target.value})} required data-testid="nt-name" className="rounded-xl border-white/10 bg-background/50 text-foreground"/>
                   <Input placeholder="Role / Standing Identity" value={newTestimonial.role} onChange={e=>setNewTestimonial({...newTestimonial, role:e.target.value})} required data-testid="nt-role" className="rounded-xl border-white/10 bg-background/50 text-foreground"/>
                   <textarea className="sm:col-span-2 border border-white/10 rounded-xl px-3 py-2 bg-background/50 text-sm focus:outline-none focus:border-accent text-foreground min-h-20 resize-none" placeholder="Verbatim review quotation string..." value={newTestimonial.quote} onChange={e=>setNewTestimonial({...newTestimonial, quote:e.target.value})} required />
-                  <Button type="submit" className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2"><Plus size={14} className="mr-1.5"/>Commit Review</Button>
+                  <Button type="submit" className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2 cursor-pointer"><Plus size={14} className="mr-1.5"/>Commit Review</Button>
                 </form>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {testimonials.map(t => (
-                    <div key={t.id} className="border border-white/10 bg-background/30 p-5 rounded-2xl flex flex-col justify-between">
-                      <div>
-                        <div className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 bg-white/5 border border-white/5 rounded text-accent inline-block">{t.role}</div>
-                        <div className="font-bold text-foreground text-base mt-2">{t.name}</div>
-                        <div className="text-sm text-muted-foreground/80 mt-2 italic">"{t.quote}"</div>
+                {filteredTestimonials.length === 0 ? (
+                  <EmptyState />
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredTestimonials.map((t) => (
+                      <div key={t.id} className="border border-white/10 bg-background/30 p-5 rounded-2xl flex flex-col justify-between">
+                        <div>
+                          <div className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 bg-white/5 border border-white/5 rounded text-accent inline-block">{t.role}</div>
+                          <div className="font-bold text-foreground text-base mt-2">{t.name}</div>
+                          <div className="text-sm text-muted-foreground/80 mt-2 italic">"{t.quote}"</div>
+                        </div>
+                        <div className="flex justify-end pt-3 border-t border-white/[0.04] mt-3">
+                          <Button size="sm" variant="outline" onClick={() => del(`/testimonials/${t.id}`, "testimonial")} className="rounded-xl border-transparent text-rose-400 hover:bg-rose-500/5 cursor-pointer"><Trash2 size={14}/></Button>
+                        </div>
                       </div>
-                      <div className="flex justify-end pt-3 border-t border-white/[0.04] mt-3">
-                        <Button size="sm" variant="outline" onClick={() => del(`/testimonials/${t.id}`, "testimonial")} className="rounded-xl border-transparent text-rose-400 hover:bg-rose-500/5"><Trash2 size={14}/></Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -903,37 +1807,41 @@ export default function AdminDashboard() {
                   <Input placeholder="Student Name" value={newResult.student_name} onChange={e=>setNewResult({...newResult, student_name:e.target.value})} required data-testid="nr-name" className="rounded-xl border-white/10 bg-background/50 text-foreground"/>
                   <Input placeholder="Examination Scale" value={newResult.exam} onChange={e=>setNewResult({...newResult, exam:e.target.value})} required data-testid="nr-exam" className="rounded-xl border-white/10 bg-background/50 text-foreground"/>
                   <Input placeholder="Score Rank Metric (AIR/State)" value={newResult.rank} onChange={e=>setNewResult({...newResult, rank:e.target.value})} required data-testid="nr-rank" className="rounded-xl border-white/10 bg-background/50 text-foreground text-accent font-bold"/>
-                  <Input placeholder="Year" type="number" value={newResult.year} onChange={e=>setNewResult({...newResult, year:e.target.value})} required data-testid="nr-year" className="rounded-xl border-white/10 bg-background/50 text-foreground font-mono"/>
-                  <select className="border border-white/10 rounded-xl px-3 py-2 bg-background text-sm text-foreground focus:outline-none focus:border-accent" value={newResult.course} onChange={e=>setNewResult({...newResult, course:e.target.value})} data-testid="nr-course">
+                  <Input placeholder="Year" type="number" value={newResult.year} onChange={e=>setNewResult({...newResult, year:Number(e.target.value)})} required data-testid="nr-year" className="rounded-xl border-white/10 bg-background/50 text-foreground font-mono"/>
+                  <select className="border border-white/10 rounded-xl px-3 py-2 bg-background text-sm text-foreground focus:outline-none focus:border-accent cursor-pointer" value={newResult.course} onChange={e=>setNewResult({...newResult, course:e.target.value})} data-testid="nr-course">
                     {CATEGORIES.map(x=><option key={x} className="bg-background text-foreground">{x}</option>)}
                   </select>
                   <Input placeholder="Portrait asset URL endpoint" value={newResult.photo_url} onChange={e=>setNewResult({...newResult, photo_url:e.target.value})} data-testid="nr-photo" className="rounded-xl border-white/10 bg-background/50 text-foreground"/>
                   <textarea className="sm:col-span-3 border border-white/10 rounded-xl px-3 py-2 bg-background/50 text-sm focus:outline-none focus:border-accent text-foreground min-h-20 resize-none" placeholder="Learner reflection quote validation string..." value={newResult.quote} onChange={e=>setNewResult({...newResult, quote:e.target.value})} />
-                  <Button type="submit" className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2"><Plus size={14} className="mr-1.5"/>Publish Honors Record</Button>
+                  <Button type="submit" className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2 cursor-pointer"><Plus size={14} className="mr-1.5"/>Publish Honors Record</Button>
                 </form>
-                <div className="glass border border-white/5 rounded-2xl overflow-hidden w-full">
-                  <div className="overflow-x-auto w-full">
-                    <table className="w-full text-sm min-w-[650px] table-auto">
-                      <thead className="bg-[#141417] text-muted-foreground text-xs uppercase tracking-wider">
-                        <tr><th className="p-3 sm:p-4 text-left bg-[#101012]">Topper Identity</th><th className="p-3 sm:p-4 text-left bg-[#101012]">Examination Scale</th><th className="p-3 sm:p-4 text-left bg-[#101012]">Rank Secured</th><th className="p-3 sm:p-4 text-left bg-[#101012]">Year</th><th className="p-3 sm:p-4 text-left bg-[#101012]">Syllabus Track</th><th className="p-3 sm:p-4 text-right bg-[#101012]"></th></tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/[0.04] text-foreground bg-background/20">
-                        {results.map(r => (
-                          <tr key={r.id} className="hover:bg-white/[0.01] transition-colors">
-                            <td className="p-3 sm:p-4 font-bold text-foreground">{r.student_name}</td>
-                            <td className="p-3 sm:p-4 text-muted-foreground">{r.exam}</td>
-                            <td className="p-3 sm:p-4 text-accent font-bold tracking-wide font-mono">{r.rank}</td>
-                            <td className="p-3 sm:p-4 font-mono text-xs text-muted-foreground">{r.year}</td>
-                            <td className="p-3 sm:p-4 text-muted-foreground">{r.course}</td>
-                            <td className="p-3 sm:p-4 text-right">
-                              <Button size="sm" variant="outline" onClick={() => del(`/results/${r.id}`, "result")} className="rounded-xl border-transparent text-rose-400 hover:bg-rose-500/5"><Trash2 size={14}/></Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                {filteredResults.length === 0 ? (
+                  <EmptyState />
+                ) : (
+                  <div className="glass border border-white/5 rounded-2xl overflow-hidden w-full">
+                    <div className="overflow-x-auto w-full">
+                      <table className="w-full text-sm min-w-[650px] table-auto">
+                        <thead className="bg-[#141417] text-muted-foreground text-xs uppercase tracking-wider">
+                          <tr><th className="p-3 sm:p-4 text-left bg-[#101012]">Topper Identity</th><th className="p-3 sm:p-4 text-left bg-[#101012]">Examination Scale</th><th className="p-3 sm:p-4 text-left bg-[#101012]">Rank Secured</th><th className="p-3 sm:p-4 text-left bg-[#101012]">Year</th><th className="p-3 sm:p-4 text-left bg-[#101012]">Syllabus Track</th><th className="p-3 sm:p-4 text-right bg-[#101012]"></th></tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/[0.04] text-foreground bg-background/20">
+                          {filteredResults.map((r) => (
+                            <tr key={r.id} className="hover:bg-white/[0.01] transition-colors">
+                              <td className="p-3 sm:p-4 font-bold text-foreground">{r.student_name}</td>
+                              <td className="p-3 sm:p-4 text-muted-foreground">{r.exam}</td>
+                              <td className="p-3 sm:p-4 text-accent font-bold tracking-wide font-mono">{r.rank}</td>
+                              <td className="p-3 sm:p-4 font-mono text-xs text-muted-foreground">{r.year}</td>
+                              <td className="p-3 sm:p-4 text-muted-foreground">{r.course}</td>
+                              <td className="p-3 sm:p-4 text-right">
+                                <Button size="sm" variant="outline" onClick={() => del(`/results/${r.id}`, "result")} className="rounded-xl border-transparent text-rose-400 hover:bg-rose-500/5 cursor-pointer"><Trash2 size={14}/></Button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
 
@@ -951,7 +1859,7 @@ export default function AdminDashboard() {
                   <div className="sm:col-span-2">
                     <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Authorized Running Venues</label>
                     <div className="flex flex-wrap gap-2 glass rounded-xl p-2.5 bg-background/50 border border-white/10">
-                      {centers.map(c => {
+                      {centers.map((c) => {
                         const checked = newCampaign.available_venues.includes(c.name);
                         return (
                           <label key={c.id} className={`text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg border cursor-pointer select-none transition ${checked ? "bg-primary text-primary-foreground border-primary shadow-md" : "border-white/10 text-muted-foreground hover:bg-white/5"}`} data-testid={`ncm-venue-${c.id}`}>
@@ -966,63 +1874,60 @@ export default function AdminDashboard() {
                   </div>
                   <textarea className="sm:col-span-2 border border-white/10 rounded-xl px-3 py-2 bg-background/50 text-sm focus:outline-none focus:border-accent text-foreground min-h-20 resize-none" placeholder="Description data string..." value={newCampaign.description} onChange={e=>setNewCampaign({...newCampaign, description:e.target.value})} required data-testid="ncm-desc"/>
                   <label className="text-sm flex items-center gap-2 text-muted-foreground select-none cursor-pointer font-medium"><input type="checkbox" checked={newCampaign.active} onChange={e=>setNewCampaign({...newCampaign, active:e.target.checked})} className="accent-primary"/>Flag project as active status</label>
-                  <Button type="submit" className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2"><Plus size={14} className="mr-1.5"/>Launch Test Campaign</Button>
+                  <Button type="submit" className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2 cursor-pointer"><Plus size={14} className="mr-1.5"/>Launch Test Campaign</Button>
                 </form>
                 
-                <div className="space-y-4">
-                  {adminCampaigns.map(c => (
-                    <div key={c.id} className={`border ${c.is_featured ? "border-accent ring-1 ring-accent/20 bg-accent/[0.01]" : "border-white/5 bg-background/30"} p-5 rounded-2xl transition duration-200`}>
-                      <div className="flex flex-wrap items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <div className="text-xs uppercase font-bold tracking-widest text-accent font-mono">{c.active ? "LIVE PROFILE" : "ARCHIVED RECORD"}</div>
-                            {c.is_featured && <span className="text-[9px] uppercase font-bold tracking-widest bg-accent text-accent-foreground px-2 py-0.5 rounded">★ Top Showcase</span>}
-                          </div>
-                          <div className="font-bold text-foreground text-lg mt-1">{c.title}</div>
-                          <div className="text-xs text-muted-foreground mt-1">Slot: <span className="font-semibold text-foreground">{c.exam_date}</span> {c.exam_time ? `at ${c.exam_time}` : ""} · Expiration Lock: <span className="font-semibold text-foreground font-mono">{c.deadline}</span></div>
-                          {(c.available_venues || []).length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2.5">
-                              {c.available_venues.map(v => <span key={v} className="text-[10px] uppercase font-bold font-mono tracking-wider bg-white/5 px-2.5 py-0.5 border border-white/5 rounded text-muted-foreground">{v}</span>)}
+                {filteredCampaigns.length === 0 ? (
+                  <EmptyState />
+                ) : (
+                  <div className="space-y-4">
+                    {filteredCampaigns.map((c) => (
+                      <div key={c.id} className={`border ${c.is_featured ? "border-accent ring-1 ring-accent/20 bg-accent/[0.01]" : "border-white/5 bg-background/30"} p-5 rounded-2xl transition duration-200`}>
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <div className="text-xs uppercase font-bold tracking-widest text-accent font-mono">{c.active ? "LIVE PROFILE" : "ARCHIVED RECORD"}</div>
+                              {c.is_featured && <span className="text-[9px] uppercase font-bold tracking-widest bg-accent text-accent-foreground px-2 py-0.5 rounded">★ Top Showcase</span>}
                             </div>
-                          )}
-                        </div>
+                            <div className="font-bold text-foreground text-lg mt-1">{c.title}</div>
+                            <div className="text-xs text-muted-foreground mt-1">Slot: <span className="font-semibold text-foreground">{c.exam_date}</span> {c.exam_time ? `at ${c.exam_time}` : ""} · Expiration Lock: <span className="font-semibold text-foreground font-mono">{c.deadline}</span></div>
+                            {(c.available_venues || []).length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2.5">
+                                {c.available_venues.map((v) => <span key={v} className="text-[10px] uppercase font-bold font-mono tracking-wider bg-white/5 px-2.5 py-0.5 border border-white/5 rounded text-muted-foreground">{v}</span>)}
+                              </div>
+                            )}
+                          </div>
 
-                        <div className="grid grid-cols-2 sm:flex sm:flex-row gap-1.5 shrink-0 w-full sm:w-auto">
-                          <ScholarshipNotificationButton 
-                            scholarshipId={c.id} 
-                            scholarshipTitle={c.title} 
-                          />
-                          <Button size="sm" variant="default" onClick={() => navigate(`/admin/scholarships/${c.id}/dashboard`)} className="rounded-lg text-xs font-bold bg-accent text-accent-foreground hover:bg-accent/90" data-testid={`campaign-dashboard-${c.id}`}>Dashboard</Button>
-                          <Button size="sm" variant={c.is_featured ? "default" : "outline"} onClick={() => c.is_featured ? clearFeatured() : setFeatured("scholarship", c.id)} className="rounded-lg text-xs font-bold">Promote</Button>
-                          <Button size="sm" variant="outline" onClick={() => downloadAttendance(c.id)} className="rounded-lg text-xs font-bold text-muted-foreground"><Download size={13} className="mr-1"/>Attendance</Button>
-                          
-                          {/* Results Template & Bulk Upload */}
-                          <Button size="sm" variant="outline" onClick={() => downloadResultsTemplate(c.id)} className="rounded-lg text-xs font-bold text-muted-foreground"><Download size={13} className="mr-1"/>Results Template</Button>
-                          <Button size="sm" variant="outline" type="button" onClick={() => document.getElementById(`bulk-input-${c.id}`)?.click()} className="rounded-lg text-xs font-bold text-accent border-accent/20 hover:bg-accent/5"><FileSpreadsheet size={13} className="mr-1"/>Bulk Results</Button>
-                          <input id={`bulk-input-${c.id}`} type="file" accept=".xlsx" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) { bulkUploadResults(c.id, f); e.target.value = ""; } }}/>
-                          
-                          {/* Bulk Registration Template & Bulk Upload */}
-                          <Button size="sm" variant="outline" onClick={() => downloadBulkRegisterTemplate(c.id)} className="rounded-lg text-xs font-bold text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/10"><Download size={13} className="mr-1"/>Reg Template</Button>
-                          <Button size="sm" variant="outline" type="button" onClick={() => document.getElementById(`bulk-reg-input-${c.id}`)?.click()} className="rounded-lg text-xs font-bold text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/10"><Send size={13} className="mr-1"/>Bulk Register &amp; Admit Cards</Button>
-                          <input id={`bulk-reg-input-${c.id}`} type="file" accept=".xlsx" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) { bulkRegisterScholarship(c.id, f); e.target.value = ""; } }}/>
+                          <div className="grid grid-cols-2 sm:flex sm:flex-row gap-1.5 shrink-0 w-full sm:w-auto">
+                            <Button size="sm" variant="default" onClick={() => navigate(`/admin/scholarships/${c.id}/dashboard`)} className="rounded-lg text-xs font-bold bg-accent text-accent-foreground hover:bg-accent/90 cursor-pointer" data-testid={`campaign-dashboard-${c.id}`}>Dashboard</Button>
+                            
+                            <Button size="sm" onClick={() => setBroadcastModalId(c.id)} className="rounded-lg text-xs font-bold bg-[#25D366] hover:bg-[#20b858] text-black cursor-pointer shadow-md">
+                              <MessageSquare size={13} className="mr-1.5"/> Broadcast
+                            </Button>
 
-                          <Button size="sm" variant="outline" onClick={() => del(`/scholarships/${c.id}`, "campaign")} className="rounded-lg text-xs border-transparent text-rose-400 hover:bg-rose-500/5 col-span-2 sm:col-span-1"><Trash2 size={13}/></Button>
-                        </div>
-                      </div>
+                            <Button size="sm" variant="outline" onClick={() => setOperationsModalId(c.id)} className="rounded-lg text-xs font-bold text-accent border-accent/20 hover:bg-accent/5 cursor-pointer">
+                              <Terminal size={13} className="mr-1.5"/> Operations
+                            </Button>
 
-                      {c.examiner_token && (
-                        <div className="mt-4 pt-4 border-t border-white/[0.04] bg-white/[0.01] -mx-5 -mb-5 px-5 py-4 rounded-b-2xl">
-                          <div className="text-[10px] uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5">Independent Evaluation Gateway Link</div>
-                          <div className="flex flex-wrap items-center gap-2 text-xs">
-                            <code className="glass-elevated px-3 py-1.5 rounded-lg border border-white/5 break-all flex-1 font-mono text-emerald-400 font-medium">{examinerLink(c.examiner_token)}</code>
-                            <Button size="sm" variant="outline" onClick={() => copy(examinerLink(c.examiner_token))} className="rounded-lg text-xs font-bold">Copy Link</Button>
-                            <Button size="sm" variant="outline" onClick={() => regenerateToken(c.id)} className="rounded-lg text-xs font-bold text-muted-foreground">Rotate Token</Button>
+                            <Button size="sm" variant={c.is_featured ? "default" : "outline"} onClick={() => c.is_featured ? clearFeatured() : setFeatured("scholarship", c.id)} className="rounded-lg text-xs font-bold cursor-pointer">Promote</Button>
+                            <Button size="sm" variant="outline" onClick={() => del(`/scholarships/${c.id}`, "campaign")} className="rounded-lg text-xs border-transparent text-rose-400 hover:bg-rose-500/5 col-span-2 sm:col-span-1 cursor-pointer"><Trash2 size={13}/></Button>
                           </div>
                         </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+
+                        {c.examiner_token && (
+                          <div className="mt-4 pt-4 border-t border-white/[0.04] bg-white/[0.01] -mx-5 -mb-5 px-5 py-4 rounded-b-2xl">
+                            <div className="text-[10px] uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5">Independent Evaluation Gateway Link</div>
+                            <div className="flex flex-wrap items-center gap-2 text-xs">
+                              <code className="glass-elevated px-3 py-1.5 rounded-lg border border-white/5 break-all flex-1 font-mono text-emerald-400 font-medium">{examinerLink(c.examiner_token)}</code>
+                              <Button size="sm" variant="outline" onClick={() => copy(examinerLink(c.examiner_token))} className="rounded-lg text-xs font-bold cursor-pointer">Copy Link</Button>
+                              <Button size="sm" variant="outline" onClick={() => regenerateToken(c.id)} className="rounded-lg text-xs font-bold text-muted-foreground cursor-pointer">Rotate Token</Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -1032,30 +1937,34 @@ export default function AdminDashboard() {
                   <h3 className="font-display font-medium text-lg sm:text-xl text-foreground truncate">Marketing &amp; Support Inquiries</h3>
                   <ExportBtn kind="inquiries"/>
                 </div>
-                <div className="glass border border-white/5 rounded-2xl overflow-hidden w-full">
-                  <div className="overflow-x-auto w-full">
-                    <table className="w-full text-sm min-w-[650px] table-auto">
-                      <thead className="bg-[#141417] text-muted-foreground text-xs uppercase tracking-wider">
-                        <tr>
-                          <th className="p-3 sm:p-4 text-left bg-[#101012]">Identity contact</th>
-                          <th className="p-3 sm:p-4 text-left bg-[#101012]">Email Address</th>
-                          <th className="p-3 sm:p-4 text-left bg-[#101012]">Subject Parameter</th>
-                          <th className="p-3 sm:p-4 text-left bg-[#101012]">Message Context Body</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/[0.04] text-foreground bg-background/20">
-                        {inquiries.filter(x => x.name?.toLowerCase().includes(innerSearch.toLowerCase())).map(i => (
-                          <tr key={i.id} className="hover:bg-white/[0.01] transition-colors">
-                            <td className="p-3 sm:p-4 font-bold text-foreground whitespace-nowrap">{i.name}</td>
-                            <td className="p-3 sm:p-4 text-muted-foreground font-mono text-xs whitespace-nowrap">{i.email}</td>
-                            <td className="p-3 sm:p-4 text-foreground font-medium truncate" title={i.subject}>{i.subject}</td>
-                            <td className="p-3 sm:p-4 text-muted-foreground/80 leading-relaxed max-w-sm truncate" title={i.message}>{i.message}</td>
+                {filteredInquiries.length === 0 ? (
+                  <EmptyState />
+                ) : (
+                  <div className="glass border border-white/5 rounded-2xl overflow-hidden w-full">
+                    <div className="overflow-x-auto w-full">
+                      <table className="w-full text-sm min-w-[650px] table-auto">
+                        <thead className="bg-[#141417] text-muted-foreground text-xs uppercase tracking-wider">
+                          <tr>
+                            <th className="p-3 sm:p-4 text-left bg-[#101012]">Identity contact</th>
+                            <th className="p-3 sm:p-4 text-left bg-[#101012]">Email Address</th>
+                            <th className="p-3 sm:p-4 text-left bg-[#101012]">Subject Parameter</th>
+                            <th className="p-3 sm:p-4 text-left bg-[#101012]">Message Context Body</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-white/[0.04] text-foreground bg-background/20">
+                          {filteredInquiries.map((i) => (
+                            <tr key={i.id} className="hover:bg-white/[0.01] transition-colors">
+                              <td className="p-3 sm:p-4 font-bold text-foreground whitespace-nowrap">{i.name}</td>
+                              <td className="p-3 sm:p-4 text-muted-foreground font-mono text-xs whitespace-nowrap">{i.email}</td>
+                              <td className="p-3 sm:p-4 text-foreground font-medium truncate" title={i.subject}>{i.subject}</td>
+                              <td className="p-3 sm:p-4 text-muted-foreground/80 leading-relaxed max-w-sm truncate" title={i.message}>{i.message}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
           </div>

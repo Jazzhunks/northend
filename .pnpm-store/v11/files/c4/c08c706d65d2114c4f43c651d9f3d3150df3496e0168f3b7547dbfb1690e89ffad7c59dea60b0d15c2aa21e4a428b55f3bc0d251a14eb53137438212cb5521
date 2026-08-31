@@ -1,0 +1,117 @@
+import { deSerializeSchemaValue } from "@scalar/workspace-store/request-example";
+import { setValueAtPath } from "@scalar/helpers/object/set-value-at-path";
+//#region src/v2/blocks/request-block/helpers/create-parameter-handlers.ts
+var isEmptyValue = (value) => value === void 0 || value === null || value === "";
+/**
+* Whether a row name carries the display-only deepObject array marker (`filters[id][in][]`). The
+* marker is only ever appended after a real path bracket, so it always shows up as `][]`. That lets
+* us tell it apart from a genuinely empty key: an interior empty (`filters[][in]`) or a lone empty
+* group (`filters[]`, value path `['']`) is not a marker and keeps its segment.
+*/
+var hasArrayMarker = (name) => name.endsWith("][]");
+/** Parse a parameter key like `filter[a][b]` into its path segments `['filter', 'a', 'b']`. */
+var parseBracketKey = (name) => {
+	const withoutArrayMarker = hasArrayMarker(name) ? name.slice(0, -2) : name;
+	const segments = [];
+	const head = withoutArrayMarker.match(/^[^[\]]*/)?.[0] ?? "";
+	if (head) segments.push(head);
+	for (const match of withoutArrayMarker.matchAll(/\[([^\]]*)\]/g)) segments.push(match[1] ?? "");
+	return segments;
+};
+/**
+* Derives the value path for an edited expanded row from the key the user typed, so renaming a
+* property actually moves the value to the new key instead of being dropped. deepObject rows are
+* prefixed with the parent parameter name (`filter[a]`), which we strip to get the path inside the
+* value. Falls back to the row's original path when the typed name cannot be parsed.
+*/
+var getEditedValuePath = (typedName, parameterName, fallback) => {
+	const segments = parseBracketKey(typedName);
+	if (segments.length === 0) return fallback;
+	if (parameterName && segments[0] === parameterName && segments.length > 1) return segments.slice(1);
+	return segments;
+};
+var getExpandedObjectPayload = (row, context, payload) => {
+	const value = {};
+	const parameter = row.originalParameter;
+	const isDeepObjectParameter = Boolean(parameter && "style" in parameter && parameter.style === "deepObject");
+	for (const contextRow of context) {
+		if (contextRow.originalParameter !== row.originalParameter || !contextRow.sourceParameterValuePath) continue;
+		if (contextRow === row && !payload) continue;
+		const isEditedRow = contextRow === row && payload !== void 0;
+		const nextValue = isEditedRow ? payload.value : contextRow.value;
+		if (isEmptyValue(nextValue)) continue;
+		const path = isEditedRow ? payload.shouldRenameExpandedRow ? getEditedValuePath(payload.name, row.originalParameter?.name, contextRow.sourceParameterValuePath) : contextRow.sourceParameterValuePath : contextRow.sourceParameterValuePath;
+		const isCommittedRename = isEditedRow && Boolean(payload.shouldRenameExpandedRow);
+		const leafSchema = hasArrayMarker(isCommittedRename ? payload.name : contextRow.name) ? { type: "array" } : isCommittedRename ? void 0 : contextRow.schema;
+		setValueAtPath(value, path, isDeepObjectParameter && leafSchema ? deSerializeSchemaValue(nextValue, leafSchema) : nextValue);
+	}
+	return {
+		name: row.originalParameter?.name ?? payload?.name ?? row.name,
+		value,
+		isDisabled: payload?.isDisabled ?? row.isDisabled ?? false
+	};
+};
+/** Create parameter event handlers for a given type */
+var createParameterHandlers = (type, eventBus, meta, { context, defaultParameters = 0, globalParameters = 0, onDeleteExpandedRow, onRenameExpandedRow }) => {
+	const offset = defaultParameters + globalParameters;
+	return {
+		delete: (payload) => {
+			const row = context[payload.index];
+			if (!row?.originalParameter) return;
+			if (row.sourceParameterValuePath) {
+				onDeleteExpandedRow?.(row);
+				return eventBus.emit("operation:upsert:parameter", {
+					type,
+					payload: getExpandedObjectPayload(row, context),
+					originalParameter: row.originalParameter,
+					meta
+				}, { skipUnpackProxy: true });
+			}
+			eventBus.emit("operation:delete:parameter", {
+				originalParameter: row.originalParameter,
+				meta
+			}, { skipUnpackProxy: true });
+		},
+		deleteAll: () => eventBus.emit("operation:delete-all:parameters", {
+			type,
+			meta
+		}),
+		upsert: (index, payload) => {
+			const row = context[index];
+			const { shouldRenameExpandedRow, ...parameterPayload } = payload;
+			if (index < defaultParameters + globalParameters) {
+				const extraParameterType = index < defaultParameters ? "default" : "global";
+				return eventBus.emit("operation:update:extra-parameters", {
+					type: extraParameterType,
+					in: type,
+					meta: {
+						...meta,
+						name: row?.name?.toLowerCase?.() ?? "NON_VALID"
+					},
+					payload: { isDisabled: payload.isDisabled ?? false }
+				});
+			}
+			if (index >= offset) {
+				const isExpandedRow = Boolean(row?.sourceParameterValuePath && row.originalParameter);
+				if (isExpandedRow && row && shouldRenameExpandedRow && payload.name !== row.name) {
+					const newValuePath = getEditedValuePath(payload.name, row.originalParameter?.name, row.sourceParameterValuePath ?? []);
+					onRenameExpandedRow?.(row, newValuePath);
+				}
+				const nextPayload = isExpandedRow && row ? getExpandedObjectPayload(row, context, payload) : parameterPayload;
+				return eventBus.emit("operation:upsert:parameter", {
+					type,
+					payload: nextPayload,
+					originalParameter: row?.originalParameter ?? null,
+					meta
+				}, {
+					skipUnpackProxy: true,
+					debounceKey: `update:parameter-${type}-${index - offset}`
+				});
+			}
+		}
+	};
+};
+//#endregion
+export { createParameterHandlers };
+
+//# sourceMappingURL=create-parameter-handlers.js.map

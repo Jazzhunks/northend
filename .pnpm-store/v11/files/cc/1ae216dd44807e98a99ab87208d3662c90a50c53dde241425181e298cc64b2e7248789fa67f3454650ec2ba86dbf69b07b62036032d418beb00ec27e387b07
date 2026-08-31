@@ -1,0 +1,30 @@
+import { type AvailableClients } from '@scalar/snippetz';
+import type { XCodeSample } from '@scalar/workspace-store/schemas/extensions/operation';
+import type { ClientOptionGroup } from '../types';
+/** Type of custom code sample IDs */
+export type CustomCodeSampleId = `custom/${string}`;
+/**
+ * Build stable, language-keyed ids for an operation's custom code samples.
+ *
+ * Custom samples are defined per operation, but a selection (e.g. the Python SDK
+ * example) should sync across every operation that ships the same language. So we
+ * key the id by language rather than by position: the first sample of a language
+ * becomes `custom/<lang>`, and any further samples that repeat a language fall back
+ * to `custom/<lang>/<n>` so they stay individually selectable within the operation.
+ *
+ * The language is lower-cased so a selection still matches when operations (or
+ * extensions) spell the same language with different casing (e.g. `Python` vs
+ * `python`).
+ *
+ * @param samples - The custom code samples for a single operation
+ * @returns A list of ids aligned by index with the input samples
+ */
+export declare const getCustomClientIds: (samples: XCodeSample[]) => CustomCodeSampleId[];
+/**
+ * Generate client options for the request example block by filtering by allowed clients
+ *
+ * @param allowedClients - The list of allowed clients to include in the options
+ * @returns A list of client option groups
+ */
+export declare const generateClientOptions: (allowedClients?: AvailableClients) => ClientOptionGroup[];
+//# sourceMappingURL=generate-client-options.d.ts.map

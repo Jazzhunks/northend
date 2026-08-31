@@ -1,0 +1,45 @@
+import type { Icon } from '@scalar/components/icon';
+import type { SelectedSecurity } from '@scalar/workspace-store/entities/auth';
+import type { AuthMeta, WorkspaceEventBus } from '@scalar/workspace-store/events';
+import { type MergedSecuritySchemes } from '@scalar/workspace-store/request-example';
+import type { XScalarEnvironment } from '@scalar/workspace-store/schemas/extensions/document/x-scalar-environments';
+import type { OpenApiDocument, ServerObject } from '@scalar/workspace-store/schemas/v3.1/strict/openapi-document';
+import type { OAuth2Options } from '../../../../v2/blocks/scalar-auth-selector-block/components/OAuth2.vue.js';
+import { type SecuritySchemeOption } from '../../../../v2/blocks/scalar-auth-selector-block/helpers/security-scheme.js';
+type __VLS_Props = {
+    environment: XScalarEnvironment;
+    eventBus: WorkspaceEventBus;
+    /** Allows adding authentication which is not in the document */
+    createAnySecurityScheme?: boolean;
+    /**
+     * Whether schemes can be deleted from the selector. Enabled for the editable client, disabled in
+     * the read-only reference where the schemes come from the document and cannot be removed.
+     */
+    canDeleteSchemes?: boolean;
+    /** Whether the authentication disclosure should start expanded */
+    defaultOpen?: boolean;
+    /** Creates a static disclosure that cannot be collapsed */
+    isStatic?: boolean;
+    meta: AuthMeta;
+    proxyUrl: string;
+    securityRequirements: OpenApiDocument['security'];
+    securitySchemes: MergedSecuritySchemes;
+    selectedSecurity: SelectedSecurity | undefined;
+    server: ServerObject | null;
+    title: string;
+    /**  Any config options required for the OAuth2 flow */
+    options?: OAuth2Options;
+    /** Type of the document the schemes belong to, used to label the missing-type warning */
+    documentType?: 'openapi' | 'asyncapi';
+};
+declare const __VLS_export: import("vue").DefineComponent<__VLS_Props, {
+    authIndicator: import("vue").ComputedRef<{
+        icon: Icon;
+        text: string;
+    } | null>;
+    selectedSchemeOptions: import("vue").ComputedRef<SecuritySchemeOption[]>;
+    schemeOptions: import("vue").ComputedRef<SecuritySchemeOption[] | import("../../../../v2/blocks/scalar-auth-selector-block/helpers/security-scheme.js").SecuritySchemeGroup[]>;
+}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").PublicProps, Readonly<__VLS_Props> & Readonly<{}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;
+declare const _default: typeof __VLS_export;
+export default _default;
+//# sourceMappingURL=AuthSelector.vue.d.ts.map

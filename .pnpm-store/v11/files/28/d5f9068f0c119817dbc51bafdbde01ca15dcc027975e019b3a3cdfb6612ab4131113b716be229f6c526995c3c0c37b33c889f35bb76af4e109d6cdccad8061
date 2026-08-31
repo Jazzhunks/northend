@@ -1,0 +1,84 @@
+import type { ErrorResponse } from '@scalar/helpers/errors/normalize-error';
+import type { OAuthFlowsObjectSecret } from '@scalar/workspace-store/request-example';
+import type { ServerObject } from '@scalar/workspace-store/schemas/v3.1/strict/openapi-document';
+import type { CustomFetch } from '../../../../v2/blocks/operation-block/helpers/send-request.js';
+type ActiveServerBase = {
+    basePath: string;
+} | {
+    baseUrl: string;
+} | Record<string, never>;
+export type OAuth2Tokens = {
+    accessToken: string;
+    refreshToken?: string;
+};
+/**
+ * Captures the OAuth2 redirect for environments where the browser-popup polling
+ * approach cannot work (notably the Electron desktop app, where the renderer
+ * runs on `file://` and providers reject `file://` redirect URIs).
+ *
+ * The implementation opens the authorization URL in the system browser and
+ * resolves once the provider redirects back. Because the redirect target (for
+ * example an ephemeral loopback port) is only known to the host environment, the
+ * implementation appends the `redirect_uri` itself and reports back the exact
+ * value it used so the token exchange can send the matching `redirect_uri`.
+ */
+export type CaptureOAuth2Callback = (params: {
+    /** The fully built authorization URL, without a `redirect_uri` parameter. */
+    authorizationUrl: string;
+}) => Promise<ErrorResponse<{
+    /** The full callback URL the provider redirected to, including query and/or hash params. */
+    callbackUrl: string;
+    /** The `redirect_uri` the host environment used, so the token exchange can match it. */
+    redirectUri: string;
+}>>;
+/** Flow types that support token refresh (all except implicit) */
+type RefreshableFlows = Exclude<keyof OAuthFlowsObjectSecret, 'implicit'>;
+/**
+ * Resolves the active server URL using OpenAPI server variables first, then
+ * Scalar environment variables.
+ */
+export declare const getServerUrl: (activeServer: ServerObject | null, environmentVariables?: Record<string, string>) => string;
+/**
+ * Builds the base option used when OAuth URLs are relative to the active server.
+ *
+ * Relative server URLs become browser-only base paths because they need the
+ * current window location to resolve correctly.
+ */
+export declare const getActiveServerBase: (activeServer: ServerObject | null, environmentVariables?: Record<string, string>) => ActiveServerBase;
+/**
+ * Authorize oauth2 flow
+ *
+ * @returns the resolved oauth2 tokens
+ */
+export declare const authorizeOauth2: (flows: OAuthFlowsObjectSecret, type: keyof OAuthFlowsObjectSecret, selectedScopes: string[], 
+/** We use the active server to set a base for relative redirect uris */
+activeServer: ServerObject | null, 
+/** If we want to use the proxy */
+proxyUrl: string, 
+/** Flattened environment variables used to resolve server URL templates like `{protocol}` */
+environmentVariables?: Record<string, string>, 
+/** Fetch used for the token request; the desktop app passes an IPC-backed fetch (see {@link authorizeServers}). */
+customFetch?: CustomFetch, 
+/**
+ * Optional redirect capture for interactive flows (authorization code and implicit).
+ * When provided, the system browser plus a host-owned redirect target replaces the
+ * default popup-polling approach. Required for the Electron desktop app.
+ */
+captureCallback?: CaptureOAuth2Callback) => Promise<ErrorResponse<OAuth2Tokens>>;
+/**
+ * Exchange a refresh token for a new access token using the `grant_type=refresh_token` flow.
+ *
+ * Uses the stored refresh token, client credentials, and the token URL (or refreshUrl when available)
+ * to request fresh tokens from the authorization server per RFC 6749 Section 6.
+ */
+export declare const refreshOauth2Token: (flows: OAuthFlowsObjectSecret, type: RefreshableFlows, 
+/** If we want to use the proxy */
+proxyUrl: string, 
+/** We use the active server to set a base for relative URLs */
+activeServer: ServerObject | null, 
+/** Flattened environment variables used to resolve server URL templates */
+environmentVariables?: Record<string, string>, 
+/** Fetch used for the refresh request; the desktop app passes an IPC-backed fetch so it leaves the renderer's network stack. */
+customFetch?: CustomFetch) => Promise<ErrorResponse<OAuth2Tokens>>;
+export {};
+//# sourceMappingURL=oauth.d.ts.map

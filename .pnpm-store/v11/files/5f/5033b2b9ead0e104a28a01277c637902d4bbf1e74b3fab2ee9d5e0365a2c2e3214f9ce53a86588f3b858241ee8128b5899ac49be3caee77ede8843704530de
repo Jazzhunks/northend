@@ -1,0 +1,21 @@
+import type { EnvironmentEvents } from '../../events/definitions/environment.js';
+import type { HooksEvents } from '../../events/definitions/hooks.js';
+import type { TabEvents } from '../../events/definitions/tabs.js';
+import type { TagEvents } from '../../events/definitions/tag.js';
+import type { WorkspaceEvents } from '../../events/definitions/workspace.js';
+import type { AnalyticsEvents } from './analytics.js';
+import type { AuthEvents } from './auth.js';
+import type { CookieEvents } from './cookie.js';
+import type { DocumentEvents } from './document.js';
+import type { LogEvents } from './log.js';
+import type { MetaEvents } from './meta.js';
+import type { OperationEvents } from './operation.js';
+import type { ServerEvents } from './server.js';
+import type { UIEvents } from './ui.js';
+export type ApiReferenceEvents = AuthEvents & AnalyticsEvents & CookieEvents & WorkspaceEvents & DocumentEvents & EnvironmentEvents & MetaEvents & LogEvents & OperationEvents & ServerEvents & TabEvents & UIEvents & TagEvents & HooksEvents;
+export type { AuthMeta } from './auth.js';
+export type { CollectionType } from './common.js';
+export type { OperationEvents, OperationExampleMeta, OperationMeta } from './operation.js';
+export type { ServerMeta } from './server.js';
+export type { CommandPaletteAction, CommandPalettePayload, KeyboardEventPayload } from './ui.js';
+//# sourceMappingURL=index.d.ts.map

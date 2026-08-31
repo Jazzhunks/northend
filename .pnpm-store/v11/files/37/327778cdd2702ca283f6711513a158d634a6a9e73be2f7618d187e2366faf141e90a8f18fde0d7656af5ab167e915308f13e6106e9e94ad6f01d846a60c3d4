@@ -1,0 +1,22 @@
+import type { ScalarTooltipProps } from './types';
+/**
+ * Scalar tooltip component
+ *
+ * Adds a tooltip to an interactive element
+ *
+ * @example
+ * <ScalarTooltip content="This is a tooltip">
+ *   <ScalarButton>Hover Me</ScalarButton>
+ * </ScalarTooltip>
+ */
+declare const _default: typeof __VLS_export;
+export default _default;
+declare const __VLS_export: __VLS_WithSlots<import("vue").DefineComponent<ScalarTooltipProps, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").PublicProps, Readonly<ScalarTooltipProps> & Readonly<{}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>, {
+    default?: (props: {}) => any;
+}>;
+type __VLS_WithSlots<T, S> = T & {
+    new (): {
+        $slots: S;
+    };
+};
+//# sourceMappingURL=ScalarTooltip.vue.d.ts.map

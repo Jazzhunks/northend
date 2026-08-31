@@ -1,0 +1,146 @@
+import { useGlobalHotKeys } from "../../hooks/use-global-hot-keys.js";
+import Sidebar_default from "../../components/sidebar/Sidebar.vue.js";
+import SidebarToggle_default from "../../components/sidebar/SidebarToggle.vue.js";
+import ModalClientContainer_default from "../../components/modals/ModalClientContainer.vue.js";
+import { initializeModalEvents } from "./modal-events.js";
+import Operation_default from "../operation/Operation.vue.js";
+import { useScrollLock } from "../../hooks/use-scroll-lock.js";
+import { computed, createBlock, createElementBlock, createElementVNode, createVNode, defineComponent, onBeforeUnmount, openBlock, ref, unref, vShow, watch, withCtx, withDirectives } from "vue";
+import { getActiveEnvironment } from "@scalar/workspace-store/request-example";
+import { ScalarToasts } from "@scalar/use-toasts";
+//#region src/v2/features/modal/Modal.vue?vue&type=script&setup=true&lang.ts
+var _hoisted_1 = {
+	key: 0,
+	class: "relative flex h-full min-h-0 w-full flex-1"
+};
+var _hoisted_2 = {
+	key: 1,
+	class: "flex h-full w-full items-center justify-center"
+};
+var Modal_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	__name: "Modal",
+	props: {
+		workspaceStore: {},
+		document: {},
+		path: {},
+		eventBus: {},
+		method: {},
+		exampleName: {},
+		requestBodyCompositionSelection: {},
+		modalState: {},
+		sidebarState: {},
+		plugins: {},
+		options: {}
+	},
+	setup(__props, { expose: __expose }) {
+		const activeWorkspace = {
+			label: "default",
+			id: "default"
+		};
+		/** Controls the visibility of the sidebar. */
+		const isSidebarOpen = ref(false);
+		/** Initialize modal events */
+		initializeModalEvents({
+			eventBus: __props.eventBus,
+			isSidebarOpen,
+			requestBodyCompositionSelection: __props.requestBodyCompositionSelection,
+			sidebarState: __props.sidebarState,
+			modalState: __props.modalState,
+			store: __props.workspaceStore
+		});
+		/** Register global hotkeys for the app, passing the workspace event bus and layout state */
+		useGlobalHotKeys(__props.eventBus, "modal", () => !__props.modalState.open);
+		/** Clean up on close */
+		const cleanUp = () => {
+			__props.eventBus.emit("operation:cancel:request");
+		};
+		const isLocked = useScrollLock(() => {
+			if (typeof window !== "undefined") return window.document.body;
+			return null;
+		});
+		watch(() => __props.modalState.open, (open) => {
+			isLocked.value = open;
+			if (!open) cleanUp();
+		});
+		onBeforeUnmount(() => cleanUp());
+		/** Default sidebar width in pixels. */
+		const DEFAULT_SIDEBAR_WIDTH = 288;
+		/** Width of the sidebar, with fallback to default. */
+		const sidebarWidth = computed(() => __props.workspaceStore?.workspace?.["x-scalar-sidebar-width"] ?? DEFAULT_SIDEBAR_WIDTH);
+		/** Handler for sidebar width changes. */
+		const handleSidebarWidthUpdate = (width) => __props.workspaceStore?.update("x-scalar-sidebar-width", width);
+		/**
+		* Merged environment variables from workspace and document levels.
+		* Variables from both sources are combined, with document variables
+		* taking precedence in case of naming conflicts.
+		*/
+		const environment = computed(() => getActiveEnvironment(__props.workspaceStore, __props.document.value).environment);
+		__expose({
+			sidebarWidth,
+			environment
+		});
+		return (_ctx, _cache) => {
+			return openBlock(), createBlock(ModalClientContainer_default, { modalState: __props.modalState }, {
+				default: withCtx(() => [createVNode(unref(ScalarToasts)), __props.document.value && __props.path?.value && __props.method?.value ? (openBlock(), createElementBlock("main", _hoisted_1, [
+					createVNode(unref(SidebarToggle_default), {
+						modelValue: isSidebarOpen.value,
+						"onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => isSidebarOpen.value = $event),
+						class: "absolute top-2 left-4 z-10 max-md:top-4"
+					}, null, 8, ["modelValue"]),
+					withDirectives(createVNode(unref(Sidebar_default), {
+						sidebarWidth: sidebarWidth.value,
+						"onUpdate:sidebarWidth": [_cache[1] || (_cache[1] = ($event) => sidebarWidth.value = $event), handleSidebarWidthUpdate],
+						activeWorkspace,
+						class: "h-full max-md:absolute! max-md:z-5 max-md:w-full!",
+						documents: [__props.document.value],
+						eventBus: __props.eventBus,
+						isDroppable: () => false,
+						layout: "modal",
+						sidebarState: __props.sidebarState.state,
+						workspaces: [],
+						onSelectItem: __props.sidebarState.handleSelectItem
+					}, null, 8, [
+						"sidebarWidth",
+						"documents",
+						"eventBus",
+						"sidebarState",
+						"onSelectItem"
+					]), [[vShow, isSidebarOpen.value]]),
+					createVNode(Operation_default, {
+						activeWorkspace,
+						class: "flex-1",
+						document: __props.document.value,
+						documentSlug: __props.document.value["x-scalar-navigation"]?.name ?? "",
+						environment: environment.value,
+						eventBus: __props.eventBus,
+						exampleName: __props.exampleName?.value,
+						layout: "modal",
+						method: __props.method?.value,
+						options: __props.options,
+						path: __props.path?.value,
+						plugins: __props.plugins,
+						requestBodyCompositionSelection: __props.requestBodyCompositionSelection.value,
+						workspaceStore: __props.workspaceStore
+					}, null, 8, [
+						"document",
+						"documentSlug",
+						"environment",
+						"eventBus",
+						"exampleName",
+						"method",
+						"options",
+						"path",
+						"plugins",
+						"requestBodyCompositionSelection",
+						"workspaceStore"
+					])
+				])) : (openBlock(), createElementBlock("div", _hoisted_2, [..._cache[2] || (_cache[2] = [createElementVNode("span", { class: "text-c-3" }, "No document selected", -1)])]))]),
+				_: 1
+			}, 8, ["modalState"]);
+		};
+	}
+});
+//#endregion
+export { Modal_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=Modal.vue.script.js.map

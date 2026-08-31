@@ -1,0 +1,100 @@
+import { getResolvedRefDeep as e } from "@scalar/workspace-store/helpers/get-resolved-ref-deep";
+import { getResolvedRef as t } from "@scalar/workspace-store/helpers/get-resolved-ref";
+import { getExample as n, getExampleFromSchema as r, serializeFormPropertyWithEncoding as i } from "@scalar/workspace-store/request-example";
+import { json2xml as a } from "@scalar/helpers/file/json2xml";
+import { unpackProxyObject as o } from "@scalar/workspace-store/helpers/unpack-proxy";
+//#region src/code-example/helpers/operation-to-har/process-body.ts
+var s = (e, t, n, r = !1) => {
+	let a = [], c = Array.isArray(e) ? e.filter((e) => !e.isDisabled).map((e) => [String(e.name), e.value]) : Object.entries(e);
+	for (let [e, l] of c) {
+		if (l == null) continue;
+		let c = n ? void 0 : t?.[e], u = c && (c.style !== void 0 || c.explode !== void 0 || c.allowReserved !== void 0), d = u || !r ? void 0 : c?.contentType, f = n ? null : i(e, l, c);
+		if (f) for (let e of f) a.push({
+			name: e.key,
+			value: e.value
+		});
+		else if (l instanceof File) {
+			let t = o(l);
+			a.push({
+				name: e,
+				value: `@${t.name}`,
+				...d ? { contentType: d } : {}
+			});
+		} else if (d && typeof l == "object") a.push({
+			name: e,
+			value: JSON.stringify(o(l)),
+			contentType: d
+		});
+		else if (r && !n && !u && typeof l == "object" && !Array.isArray(l)) a.push({
+			name: e,
+			value: JSON.stringify(o(l)),
+			contentType: "application/json"
+		});
+		else if (Array.isArray(l)) for (let t of l) if (t instanceof File) {
+			let n = o(t);
+			a.push({
+				name: e,
+				value: `@${n.name}`
+			});
+		} else r && !n && !u && typeof t == "object" && t ? a.push({
+			name: e,
+			value: JSON.stringify(o(t)),
+			contentType: "application/json"
+		}) : a.push({
+			name: e,
+			value: String(t)
+		});
+		else if (typeof l == "object") {
+			let t = s(l, void 0, e);
+			for (let n of t) a.push({
+				name: `${e}.${n.name}`,
+				value: n.value
+			});
+		} else a.push({
+			name: e,
+			value: String(l),
+			...d ? { contentType: d } : {}
+		});
+	}
+	return a;
+}, c = ({ requestBody: i, contentType: c, example: l, requestBodyCompositionSelection: u }) => {
+	let d = c || Object.keys(i.content)[0] || "", f = d === "other" ? "" : d, p = (e) => `@${o(e).name || "filename"}`, m = i.content[d]?.encoding, h = d === "multipart/form-data" || d === "application/x-www-form-urlencoded", g = d === "application/xml", _ = n(i, l, c)?.value;
+	if (_ !== void 0) {
+		let e = typeof _ == "object" && _ ? o(_) : _;
+		return h && typeof e == "object" && e ? {
+			mimeType: f,
+			params: s(e, m, void 0, d === "multipart/form-data")
+		} : g && typeof e == "object" && e ? {
+			mimeType: f,
+			text: a(e)
+		} : e instanceof File ? {
+			mimeType: f,
+			text: p(e)
+		} : {
+			mimeType: f,
+			text: typeof e == "string" ? e : JSON.stringify(e)
+		};
+	}
+	let v = t(i.content[d]?.schema);
+	if (v !== void 0) {
+		let t = r(e(v), {
+			compositionSelection: u,
+			mode: "write",
+			xml: g
+		}, { schemaPath: ["requestBody"] });
+		if (t !== void 0) return h && typeof t == "object" && t ? {
+			mimeType: f,
+			params: s(t, m, void 0, d === "multipart/form-data")
+		} : g && typeof t == "object" && t ? {
+			mimeType: f,
+			text: a(t)
+		} : {
+			mimeType: f,
+			text: typeof t == "string" ? t : JSON.stringify(t)
+		};
+	}
+};
+//#endregion
+export { c as processBody };
+
+//# sourceMappingURL=process-body.js.map

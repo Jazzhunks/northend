@@ -1,0 +1,167 @@
+import type { WorkspaceStore } from '../client.js';
+import type { AuthEvents } from '../events/definitions/auth.js';
+import type { WorkspaceDocument } from '../schemas.js';
+import type { SecuritySchemeObject } from '../schemas/v3.1/strict/security-scheme.js';
+/**
+ * Updates the selected security schemes for either the entire document or a specific operation.
+ * - Adds newly created security schemes (if any) to the workspace document's components.
+ * - Ensures that each new scheme name is unique within the document by using `generateUniqueValue`.
+ * - Updates the `x-scalar-selected-security` property on the target (document or operation) to reflect the new set of selected security schemes.
+ * - Corrects and maintains the selected index so it points to a valid security scheme.
+ *
+ * @param document - The workspace OpenAPI document to mutate (can be null, in which case nothing happens)
+ * @param selectedSecuritySchemes - The current list of selected security scheme objects
+ * @param create - Array of new schemes to create, each with a name and a scheme definition
+ * @param meta - Location to update: whole document or a specific operation (`{ type: 'document' }` or `{ type: 'operation', path, method }`)
+ *
+ * Example usage:
+ * ```
+ * updateSelectedSecuritySchemes({
+ *   document,
+ *   selectedSecuritySchemes: [{ bearerAuth: [] }],
+ *   create: [
+ *     { name: 'ApiKeyAuth', scheme: { type: 'apiKey', in: 'header', name: 'X-API-Key' } }
+ *   ],
+ *   meta: { type: 'document' }
+ * })
+ * ```
+ */
+export declare const updateSelectedSecuritySchemes: (store: WorkspaceStore | null, document: WorkspaceDocument | null, { selectedRequirements, newSchemes, meta }: AuthEvents["auth:update:selected-security-schemes"]) => Promise<void>;
+/**
+ * Updates a security scheme in the OpenAPI document's components object.
+ * Handles updates for HTTP, API Key, and OAuth2 types, saving secret information and configuration for UI-auth flows.
+ *
+ * @param document - The OpenAPI workspace document (can be null)
+ * @param data - The update information, including type and payload
+ * @param name - The name of the security scheme in document.components.securitySchemes
+ *
+ * Example usage:
+ *
+ * updateSecurityScheme({
+ *   document,
+ *   data: {
+ *     type: 'http',
+ *     payload: {
+ *       username: 'user123',
+ *       password: 'pw123',
+ *       token: 'tokenval'
+ *     }
+ *   },
+ *   name: 'MyHttpAuth',
+ * })
+ */
+export declare const updateSecurityScheme: (document: WorkspaceDocument | null, { payload, name }: AuthEvents["auth:update:security-scheme"]) => SecuritySchemeObject | undefined;
+/**
+ * Sets the selected authentication tab (scheme) index for the given OpenAPI document or operation.
+ * - When on the document level, updates the 'selectedIndex' on the document's x-scalar-selected-security extension.
+ * - When on an operation (endpoint) level, updates the 'selectedIndex' for that operation's x-scalar-selected-security.
+ *
+ * Also initializes the x-scalar-selected-security extension if it does not exist.
+ *
+ * @param document The OpenAPI document object (may be null)
+ * @param index The index to set as selected
+ * @param meta Context where the selection applies ('document' or specific operation)
+ *
+ * @example
+ * // Document-level tab selection
+ * updateSelectedAuthTab({
+ *   document,
+ *   index: 1,
+ *   meta: { type: 'document' }
+ * });
+ *
+ * // Operation-level tab selection (e.g., GET /pets)
+ * updateSelectedAuthTab({
+ *   document,
+ *   index: 0,
+ *   meta: { type: 'operation', path: '/pets', method: 'get' }
+ * });
+ */
+export declare const updateSelectedAuthTab: (store: WorkspaceStore | null, document: WorkspaceDocument | null, { index, meta }: AuthEvents["auth:update:active-index"]) => void;
+/**
+ * Updates the scopes for a specific security requirement in the selected security schemes of
+ * a document or operation. This mutator only touches selection state; managing the scope
+ * definitions on the OAuth flow is handled by `upsertScope` and `deleteScope`.
+ *
+ * @param document - The OpenAPI WorkspaceDocument to update.
+ * @param id - An array of scheme names that uniquely identifies the target security requirement.
+ *             For example: ['OAuth', 'ApiKeyAuth']
+ * @param name - The security scheme name to update scopes for (e.g., 'OAuth').
+ * @param scopes - The new list of scopes to set. For example: ['read:pets', 'write:pets']
+ * @param meta - The context specifying whether the update is at the document-level or operation-level.
+ *
+ * Example usage:
+ * ```ts
+ * // Suppose your document (or operation) x-scalar-selected-security looks like:
+ * // "x-scalar-selected-security": {
+ * //   selectedIndex: 0,
+ * //   selectedSchemes: [
+ * //     { "OAuth": ["read:pets"] },
+ * //     { "ApiKeyAuth": [] }
+ * //   ]
+ * // }
+ *
+ * updateSelectedScopes({
+ *   document,
+ *   id: ["OAuth"],     // identifies the scheme object: { "OAuth": [...] }
+ *   name: "OAuth",     // scheme name to update within this security requirement
+ *   scopes: ["write:pets"], // new scopes array
+ *   meta: { type: "document" }
+ * })
+ * // After, the first scheme becomes: { "OAuth": ["write:pets"] }
+ * ```
+ */
+export declare const updateSelectedScopes: (store: WorkspaceStore | null, document: WorkspaceDocument | null, { id, name, scopes, meta }: AuthEvents["auth:update:selected-scopes"]) => void;
+/**
+ * Adds a new scope to an OAuth flow, or renames / updates the description of an existing one.
+ *
+ * When `oldScope` differs from `scope`, this mutator also rewrites every selection entry
+ * that references the matching security scheme so consumers do not need a follow-up
+ * `auth:update:selected-scopes`.
+ *
+ * When `enable` is true, the resulting `scope` is additionally appended to every selection
+ * requirement that already references this security scheme, enabling an "add and select"
+ * flow without a separate selection mutation.
+ */
+export declare const upsertScope: (store: WorkspaceStore | null, document: WorkspaceDocument | null, { name, flowType, scope, description, oldScope, enable }: AuthEvents["auth:upsert:scopes"]) => void;
+/**
+ * Removes a scope from an OAuth flow and strips it from any selection state that references
+ * the matching security scheme.
+ */
+export declare const deleteScope: (store: WorkspaceStore | null, document: WorkspaceDocument | null, { name, flowType, scope }: AuthEvents["auth:delete:scopes"]) => void;
+/**
+ * Deletes one or more security schemes from an OpenAPI WorkspaceDocument,
+ * and removes all references to those schemes from selected security, document-level security,
+ * and operation-level security/selected security (e.g., on paths).
+ *
+ * Example usage:
+ *
+ * ```ts
+ * deleteSecurityScheme({
+ *   document,                                // The OpenAPI document to update
+ *   names: ['ApiKeyAuth', 'BearerAuth'],     // The names of security schemes you want to delete
+ * });
+ * ```
+ *
+ * After running this function:
+ * - The named security schemes are removed from the components.securitySchemes section.
+ * - All document-level and operation-level security entries referencing those schemes are removed.
+ * - Any extended x-scalar-selected-security references to those schemes are also removed.
+ */
+export declare const deleteSecurityScheme: (store: WorkspaceStore | null, document: WorkspaceDocument | null, { names }: AuthEvents["auth:delete:security-scheme"]) => void;
+export declare const authMutatorsFactory: ({ document, store, }: {
+    document: WorkspaceDocument | null;
+    store: WorkspaceStore | null;
+}) => {
+    updateSelectedSecuritySchemes: (payload: AuthEvents["auth:update:selected-security-schemes"]) => Promise<void>;
+    clearSelectedSecuritySchemes: (payload: AuthEvents["auth:clear:selected-security-schemes"]) => void;
+    updateSecurityScheme: (payload: AuthEvents["auth:update:security-scheme"]) => SecuritySchemeObject | undefined;
+    updateSecuritySchemeSecrets: (payload: AuthEvents["auth:update:security-scheme-secrets"]) => void;
+    clearSecuritySchemeSecrets: (payload: AuthEvents["auth:clear:security-scheme-secrets"]) => void;
+    updateSelectedAuthTab: (payload: AuthEvents["auth:update:active-index"]) => void;
+    updateSelectedScopes: (payload: AuthEvents["auth:update:selected-scopes"]) => void;
+    upsertScope: (payload: AuthEvents["auth:upsert:scopes"]) => void;
+    deleteScope: (payload: AuthEvents["auth:delete:scopes"]) => void;
+    deleteSecurityScheme: (payload: AuthEvents["auth:delete:security-scheme"]) => void;
+};
+//# sourceMappingURL=auth.d.ts.map

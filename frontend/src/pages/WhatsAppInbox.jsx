@@ -46,10 +46,12 @@ export default function WhatsAppInbox() {
   const selected = threads.find(t => t.id === selectedId);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-0 h-[calc(100vh-14rem)] min-h-[520px] border border-white/10 rounded-2xl overflow-hidden bg-background/40" data-testid="wa-inbox">
+    // FIX: Adjusted grid constraints so it won't overflow smaller screens
+    <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-0 h-[calc(100vh-10rem)] min-h-[400px] border border-white/10 rounded-2xl overflow-hidden bg-background/40" data-testid="wa-inbox">
+      
       {/* Threads list */}
-      <div className={`${!showList && selectedId ? "hidden lg:flex" : "flex"} flex-col border-r border-white/10 bg-background/60`}>
-        <div className="p-3 border-b border-white/10">
+      <div className={`${!showList && selectedId ? "hidden lg:flex" : "flex"} flex-col h-full min-h-0 border-r border-white/10 bg-background/60`}>
+        <div className="flex-none p-3 border-b border-white/10">
           <div className="flex items-center gap-2 mb-3">
             <MessageCircle size={16} className="text-[#25D366]"/>
             <div className="text-sm font-medium">Conversations</div>
@@ -67,7 +69,7 @@ export default function WhatsAppInbox() {
             />
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto">
           {loadingThreads && filtered.length === 0 && (
             <div className="p-6 text-center text-xs text-muted-foreground">Loading…</div>
           )}
@@ -113,8 +115,8 @@ export default function WhatsAppInbox() {
         </div>
       </div>
 
-      {/* Chat pane */}
-      <div className={`${showList && !selectedId ? "hidden lg:flex" : "flex"} flex-col bg-background/40`}>
+      {/* FIX: Chat wrapper locked with h-full and min-h-0 */}
+      <div className={`${showList && !selectedId ? "hidden lg:flex" : "flex"} flex-col h-full min-h-0 overflow-hidden bg-background/40 relative`}>
         {!selected ? (
           <div className="flex-1 grid place-items-center text-center p-8 text-muted-foreground">
             <div>
@@ -151,7 +153,6 @@ function ChatPane({ thread, onBack, onSent }) {
       const { data } = await api.get(`/whatsapp/threads/${thread.id}/messages?limit=200`);
       setMessages(data.items || []);
       setContact(data.contact || null);
-      // mark read (best-effort)
       api.patch(`/whatsapp/threads/${thread.id}/read`).catch(() => {});
     } catch (e) {
       toast.error(formatError(e.response?.data?.detail) || "Failed to load messages");
@@ -160,7 +161,6 @@ function ChatPane({ thread, onBack, onSent }) {
 
   useEffect(() => { load(); }, [thread.id]);
   useEffect(() => {
-    // auto-scroll to bottom on new messages
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages.length]);
 
@@ -206,10 +206,13 @@ function ChatPane({ thread, onBack, onSent }) {
     } finally { setSending(false); }
   };
 
+  // FIX: Read linked info from EITHER the thread OR the contact.
+  const linkedApp = contact?.linked_application_no || thread?.linked_application_no;
+
   return (
     <>
-      {/* Chat header */}
-      <div className="px-4 py-3 border-b border-white/10 bg-background/70 flex items-center gap-3">
+      {/* FIX: Header locked with flex-none */}
+      <div className="flex-none px-4 py-3 border-b border-white/10 bg-background/70 flex items-center gap-3">
         <button onClick={onBack} className="lg:hidden p-1.5 rounded-lg hover:bg-white/5" data-testid="wa-back-btn">
           <ChevronLeft size={16}/>
         </button>
@@ -220,8 +223,8 @@ function ChatPane({ thread, onBack, onSent }) {
           <div className="text-sm font-medium truncate" data-testid="wa-chat-name">{thread.profile_name || thread.linked_name || thread.wa_id}</div>
           <div className="text-[10px] text-muted-foreground flex items-center gap-2 flex-wrap">
             <span className="inline-flex items-center gap-1"><Phone size={10}/>{thread.wa_id}</span>
-            {thread.linked_application_no && (
-              <span className="inline-flex items-center gap-1 text-accent"><GraduationCap size={10}/>App No <span className="font-mono font-bold">{thread.linked_application_no}</span></span>
+            {linkedApp && (
+              <span className="inline-flex items-center gap-1 text-accent"><GraduationCap size={10}/>App No <span className="font-mono font-bold">{linkedApp}</span></span>
             )}
           </div>
         </div>
@@ -230,15 +233,15 @@ function ChatPane({ thread, onBack, onSent }) {
         </button>
       </div>
 
-      {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-2 bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22><circle cx=%221%22 cy=%221%22 r=%221%22 fill=%22rgba(255,255,255,0.03)%22/></svg>')]">
+      {/* FIX: Message list isolated with flex-1 and min-h-0 so it perfectly scrolls inside the flex bounds */}
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2 bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22><circle cx=%221%22 cy=%221%22 r=%221%22 fill=%22rgba(255,255,255,0.03)%22/></svg>')]">
         {loading && messages.length === 0 && <div className="text-center text-xs text-muted-foreground py-6">Loading messages…</div>}
         {!loading && messages.length === 0 && <div className="text-center text-xs text-muted-foreground py-8">No messages yet in this conversation.</div>}
         {messages.map(m => <MessageBubble key={m.id} m={m}/>)}
       </div>
 
-      {/* Composer */}
-      <div className="p-3 border-t border-white/10 bg-background/70">
+      {/* FIX: Composer locked with flex-none so bubbles cannot push it offscreen */}
+      <div className="flex-none p-3 border-t border-white/10 bg-background/70">
         <div className="flex items-end gap-2">
           <button onClick={() => setShowTpl(true)} className="p-2 rounded-lg hover:bg-white/5 text-muted-foreground" title="Send template" data-testid="wa-tpl-btn">
             <FileText size={16}/>
@@ -264,7 +267,7 @@ function ChatPane({ thread, onBack, onSent }) {
           </button>
         </div>
         <div className="text-[10px] text-muted-foreground mt-2 flex items-center justify-between">
-          <span>{contact?.linked_application_no ? `Linked to WATH app #${contact.linked_application_no}` : "Not linked to any applicant"}</span>
+          <span>{linkedApp ? `Linked to WATH app #${linkedApp}` : "Not linked to any applicant"}</span>
           <span className="opacity-70">Free-form text works only within the 24-hour window · use templates otherwise</span>
         </div>
       </div>
@@ -277,14 +280,49 @@ function ChatPane({ thread, onBack, onSent }) {
 
 function MessageBubble({ m }) {
   const isOut = m.direction === "outbound";
+  
   const text = m.text || m.caption || m.body?.text?.body || previewFromBody(m);
+  const doc = m.body?.document;
+  const img = m.body?.image;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}
       className={`flex ${isOut ? "justify-end" : "justify-start"}`}
     >
       <div className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm ${isOut ? "bg-[#005c4b] text-white" : "bg-[#202c33] text-white"}`}>
-        <div className="whitespace-pre-wrap break-words">{text || <em className="opacity-60">[{m.type}]</em>}</div>
+        
+        {img && (
+          <div className="mb-2">
+            <img src={img.link} alt={img.caption || "Image attachment"} className="rounded-xl max-h-60 w-full object-cover" />
+          </div>
+        )}
+
+        {doc && (
+          <a 
+            href={doc.link} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 p-3 mb-2 rounded-xl bg-black/20 hover:bg-black/30 transition border border-white/5"
+          >
+            <div className="p-2 bg-white/10 rounded-lg shrink-0">
+              <FileText size={20} className="text-white/80" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium truncate">{doc.filename || "Document"}</div>
+              <div className="text-[10px] text-white/50 uppercase tracking-wider mt-0.5">Click to view / download</div>
+            </div>
+          </a>
+        )}
+
+        {text && (
+          <div className="whitespace-pre-wrap break-words">{text}</div>
+        )}
+        
+        {!text && !doc && !img && (
+          <div className="whitespace-pre-wrap break-words"><em className="opacity-60">[{m.type}]</em></div>
+        )}
+
         <div className="flex items-center justify-end gap-1 mt-1 text-[10px] opacity-70">
           <span>{fmtTime(m.wa_timestamp)}</span>
           {isOut && <StatusTick status={m.status}/>}

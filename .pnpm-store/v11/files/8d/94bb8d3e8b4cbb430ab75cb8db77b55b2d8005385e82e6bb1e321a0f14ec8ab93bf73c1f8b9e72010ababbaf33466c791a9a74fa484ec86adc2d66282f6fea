@@ -1,0 +1,31 @@
+import type { AsyncApiDocument } from '@scalar/types/asyncapi/3.1';
+import type { OpenApiDocument } from './v3.1/strict/openapi-document.js';
+/**
+ * Narrow a value to an OpenAPI document.
+ *
+ * Discriminated by the required `openapi` string field on OAS documents. Accepts `unknown`
+ * so it can narrow at any call site (e.g., workspace lookups typed as `WorkspaceDocument`,
+ * or broader contexts that mix documents with the workspace itself).
+ */
+export declare const isOpenApiDocument: (value: unknown) => value is OpenApiDocument;
+/**
+ * Narrow a value to an AsyncAPI document.
+ *
+ * Discriminated by the required `asyncapi` string field on AsyncAPI documents.
+ */
+export declare const isAsyncApiDocument: (value: unknown) => value is AsyncApiDocument;
+/**
+ * Identify the document type of a value.
+ *
+ * Returns `'openapi'` or `'asyncapi'` when the value matches one of the known
+ * document shapes, or `undefined` when it matches neither.
+ */
+export declare const getDocumentType: (value: unknown) => "openapi" | "asyncapi" | undefined;
+/**
+ * Human-readable label for a document type, e.g. for badges and warnings.
+ *
+ * Defaults to `'OpenAPI'` when the type is unknown, matching the OpenAPI-native surfaces that
+ * only distinguish AsyncAPI as the exception.
+ */
+export declare const getDocumentTypeLabel: (documentType: "openapi" | "asyncapi" | undefined) => string;
+//# sourceMappingURL=type-guards.d.ts.map

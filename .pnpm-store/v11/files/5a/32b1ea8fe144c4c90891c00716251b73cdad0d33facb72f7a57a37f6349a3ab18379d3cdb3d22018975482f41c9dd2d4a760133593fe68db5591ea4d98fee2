@@ -1,0 +1,448 @@
+import ViewLayout_default from "../../../components/ViewLayout/ViewLayout.vue.js";
+import ViewLayoutContent_default from "../../../components/ViewLayout/ViewLayoutContent.vue.js";
+import { sendRequest } from "./helpers/send-request.js";
+import { harToFetchRequest } from "./helpers/har-to-fetch-request.js";
+import { harToFetchResponse } from "./helpers/har-to-fetch-response.js";
+import { getCookieRequestUrl, getResponseCookieActions } from "./helpers/persist-response-cookies.js";
+import { getOperationExampleKey, isStreamingResponse, responseCache } from "./helpers/response-cache.js";
+import { validatePathParameters } from "./helpers/validate-path-parameters.js";
+import RequestBlock_default from "../request-block/RequestBlock.vue.js";
+import ResponseBlock_default from "../response-block/ResponseBlock.vue.js";
+import Header_default from "./components/Header.vue.js";
+import { computed, createElementBlock, createElementVNode, createVNode, defineComponent, onBeforeUnmount, onMounted, openBlock, ref, toValue, unref, watch, withCtx } from "vue";
+import { buildRequest, createVariablesStoreForRequest, getEnvironmentVariables, requestFactory, resolveExecutableRequestUrl } from "@scalar/workspace-store/request-example";
+import { ERRORS } from "@scalar/helpers/errors/normalize-error";
+import { isElectron } from "@scalar/helpers/general/is-electron";
+import { buildSafeBodyRequest } from "@scalar/helpers/http/can-method-have-body";
+import { generateClientOptions } from "@scalar/blocks/code-example";
+import { executeHook } from "@scalar/oas-utils/helpers";
+import { AVAILABLE_CLIENTS } from "@scalar/types/snippetz";
+import { useClipboard } from "@scalar/use-hooks/useClipboard";
+import { useToasts } from "@scalar/use-toasts";
+//#region src/v2/blocks/operation-block/OperationBlock.vue?vue&type=script&setup=true&lang.ts
+var _hoisted_1 = { class: "bg-b-1 flex h-full flex-col" };
+var _hoisted_2 = { class: "lg:min-h-header flex w-full flex-wrap items-center justify-center p-2 lg:p-0" };
+var OperationBlock_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	name: "OperationBlock",
+	props: {
+		eventBus: {},
+		appVersion: {},
+		document: {},
+		documentSlug: {},
+		workspaceCookies: { default: () => [] },
+		documentCookies: { default: () => [] },
+		path: {},
+		method: {},
+		httpClients: { default: () => AVAILABLE_CLIENTS },
+		history: { default: () => [] },
+		layout: {},
+		server: {},
+		selectedClient: {},
+		servers: {},
+		serverMeta: {},
+		hideClientButton: { type: Boolean },
+		integration: {},
+		documentUrl: {},
+		source: {},
+		operation: {},
+		exampleKey: {},
+		authMeta: {},
+		securitySchemes: {},
+		plugins: { default: () => [] },
+		environments: {},
+		activeEnvironment: {},
+		environment: {},
+		proxyUrl: {},
+		selectedSecurity: {},
+		selectedSecuritySchemes: {},
+		securityRequirements: {},
+		defaultHeaders: {},
+		requestBodyCompositionSelection: {},
+		options: {}
+	},
+	setup(__props) {
+		/** Hoist up client generation so it doesn't get re-generated on every operation */
+		const clientOptions = computed(() => generateClientOptions(__props.httpClients));
+		const { toast } = useToasts();
+		const { copyToClipboard } = useClipboard();
+		const abortController = ref(null);
+		const response = ref(null);
+		const requestPayload = ref(null);
+		/** Cancel the request */
+		const cancelRequest = () => abortController.value?.abort(ERRORS.REQUEST_ABORTED);
+		/**
+		* Persist server-set cookies from a response into the document cookie jar.
+		*
+		* Scalar keeps its own cookie jar because browsers hide `Set-Cookie` from `fetch`.
+		* Mirroring browser behavior, cookies are stored scoped to the request host and
+		* path and removed when the server expires them, so a value like a Django CSRF
+		* token stays available for later PUT/PATCH requests after a page reload.
+		*/
+		const persistResponseCookies = (sendResult) => {
+			const actions = getResponseCookieActions({
+				cookieHeaderKeys: sendResult.response.cookieHeaderKeys ?? [],
+				documentCookies: __props.documentCookies,
+				requestUrl: getCookieRequestUrl(String(sendResult.requestPayload[0]))
+			});
+			for (const action of actions) {
+				if (action.type === "delete") {
+					__props.eventBus.emit("cookie:delete:cookie", {
+						collectionType: "document",
+						cookieName: action.cookieName,
+						index: action.index
+					});
+					continue;
+				}
+				__props.eventBus.emit("cookie:upsert:cookie", {
+					collectionType: "document",
+					payload: action.cookie,
+					...action.index === void 0 ? {} : { index: action.index }
+				});
+			}
+		};
+		/**
+		* Copy the executable URL — same pipeline as Send (`requestFactory` +
+		* `resolveExecutableRequestUrl`), including security query params.
+		*/
+		const copyAddressBarUrl = async () => {
+			const { request } = requestFactory({
+				defaultHeaders: __props.defaultHeaders,
+				environment: __props.environment,
+				exampleName: __props.exampleKey,
+				globalCookies: [...__props.workspaceCookies, ...__props.documentCookies],
+				method: __props.method,
+				operation: __props.operation,
+				path: __props.path,
+				proxyUrl: __props.proxyUrl,
+				server: __props.server,
+				selectedSecuritySchemes: __props.selectedSecuritySchemes,
+				isElectron: isElectron(),
+				requestBodyCompositionSelection: __props.requestBodyCompositionSelection
+			});
+			await copyToClipboard(resolveExecutableRequestUrl(request, getEnvironmentVariables(__props.environment)));
+		};
+		/** Execute the current operation example */
+		const handleExecute = async () => {
+			__props.eventBus.flushDebouncedEmits?.();
+			if (validatePathParameters(__props.operation.parameters ?? [], __props.exampleKey).ok === false) {
+				toast("Path parameters must have values.", "error");
+				return;
+			}
+			const globalCookies = [...__props.workspaceCookies, ...__props.documentCookies];
+			const { request: requestBuilder } = requestFactory({
+				defaultHeaders: __props.defaultHeaders,
+				environment: __props.environment,
+				exampleName: __props.exampleKey,
+				globalCookies,
+				method: __props.method,
+				operation: __props.operation,
+				path: __props.path,
+				proxyUrl: __props.proxyUrl,
+				server: __props.server,
+				selectedSecuritySchemes: __props.selectedSecuritySchemes,
+				isElectron: isElectron(),
+				requestBodyCompositionSelection: __props.requestBodyCompositionSelection
+			});
+			if (response.value && "reader" in response.value) response.value.reader.cancel();
+			const variablesStore = createVariablesStoreForRequest();
+			await executeHook({
+				requestBuilder,
+				document: __props.document,
+				operation: __props.operation,
+				variablesStore
+			}, "beforeRequest", __props.plugins);
+			const built = buildRequest(requestBuilder, {
+				envVariables: {
+					...getEnvironmentVariables(__props.environment),
+					...variablesStore.getVariables()
+				},
+				allowMissingRequestServerBase: __props.layout === "modal"
+			});
+			if (!built.ok) {
+				toast(built.message ?? built.error, "error");
+				return;
+			}
+			abortController.value = built.data.controller;
+			const request = buildSafeBodyRequest(...built.data.requestPayload);
+			await executeHook({
+				request,
+				requestBuilder,
+				document: __props.document,
+				operation: __props.operation,
+				variablesStore
+			}, "requestBuilt", __props.plugins);
+			__props.eventBus.emit("hooks:on:request:sent", { meta: {
+				method: __props.method,
+				path: __props.path,
+				exampleKey: __props.exampleKey
+			} });
+			/** Execute the request */
+			const [sendError, sendResult] = await sendRequest({
+				isUsingProxy: built.data.isUsingProxy,
+				requestPayload: built.data.requestPayload,
+				request,
+				plugins: __props.plugins,
+				customFetch: toValue(__props.options)?.customFetch
+			});
+			if (sendResult) await executeHook({
+				response: sendResult.originalResponse.clone(),
+				requestBuilder,
+				request: buildSafeBodyRequest(...sendResult.requestPayload),
+				document: __props.document,
+				operation: __props.operation,
+				variablesStore
+			}, "responseReceived", __props.plugins);
+			__props.eventBus.emit("hooks:on:request:complete", {
+				payload: sendResult ? {
+					response: sendResult.originalResponse.clone(),
+					requestPayload: sendResult.requestPayload,
+					duration: sendResult.response.duration,
+					timestamp: sendResult.timestamp
+				} : void 0,
+				meta: {
+					method: __props.method,
+					path: __props.path,
+					exampleKey: __props.exampleKey
+				}
+			});
+			if (sendError) {
+				response.value = null;
+				requestPayload.value = null;
+				abortController.value = null;
+				toast(sendError.message, "error");
+				return;
+			}
+			response.value = sendResult.response;
+			requestPayload.value = sendResult.requestPayload;
+			persistResponseCookies(sendResult);
+			if (!isStreamingResponse(sendResult.response)) responseCache.set(getOperationExampleKey(__props.method, __props.path, __props.exampleKey), {
+				response: sendResult.response,
+				requestPayload: sendResult.requestPayload
+			});
+		};
+		onMounted(() => {
+			__props.eventBus.on("operation:send:request:hotkey", handleExecute);
+			__props.eventBus.on("operation:cancel:request", cancelRequest);
+			__props.eventBus.on("copy-url:address-bar", copyAddressBarUrl);
+			executeHook({
+				document: __props.document,
+				operation: __props.operation
+			}, "onRequestMount", __props.plugins);
+		});
+		onBeforeUnmount(() => {
+			__props.eventBus.off("operation:send:request:hotkey", handleExecute);
+			__props.eventBus.off("operation:cancel:request", cancelRequest);
+			__props.eventBus.off("copy-url:address-bar", copyAddressBarUrl);
+		});
+		const operationHistory = computed(() => __props.history.map((entry) => ({
+			method: entry.request.method,
+			path: entry.request.url,
+			duration: entry.time,
+			status: entry.response.status
+		})).reverse());
+		const handleSelectHistoryItem = ({ index }) => {
+			const transformedIndex = (__props.history.length ?? 0) - index - 1;
+			const historyItem = __props.history[transformedIndex];
+			if (!historyItem) return;
+			const navigate = () => __props.eventBus.emit("ui:navigate", {
+				page: "example",
+				method: __props.method,
+				path: __props.path,
+				exampleName: "draft",
+				callback: (status) => {
+					if (status !== "success") return;
+					const fetchResponse = harToFetchResponse({
+						harResponse: historyItem.response,
+						url: historyItem.request.url,
+						method: __props.method,
+						path: __props.path,
+						duration: historyItem.time
+					});
+					const fetchRequest = harToFetchRequest({ harRequest: historyItem.request });
+					response.value = fetchResponse;
+					requestPayload.value = fetchRequest;
+				}
+			});
+			__props.eventBus.emit("operation:reload:history", {
+				meta: {
+					path: __props.path,
+					method: __props.method
+				},
+				index: transformedIndex,
+				callback: navigate
+			});
+		};
+		const handleNavigateSettings = () => {
+			__props.eventBus.emit("ui:navigate", {
+				page: "operation",
+				path: "overview",
+				operationPath: __props.path,
+				method: __props.method
+			});
+		};
+		/**
+		* When the path, method, or example key changes, restore the response panel
+		* for the new operation from the best available source:
+		*
+		*   1. `responseCache` — in-memory, populated on every successful send.
+		*      Has the live response object (including streams) so it wins.
+		*   2. `history` — persisted in the workspace store. Used as a fallback when
+		*      the in-memory cache is empty (page reload, fresh app session, etc.)
+		*      so navigating to an operation that has been called before shows the
+		*      last response instead of an empty panel.
+		*   3. Otherwise clear.
+		*
+		* Only the response is restored from history — the user's request inputs are
+		* left alone, so we never silently overwrite an in-progress draft.
+		*/
+		watch([
+			() => __props.path,
+			() => __props.method,
+			() => __props.exampleKey
+		], ([newPath, newMethod, newExampleKey]) => {
+			const cached = responseCache.get(getOperationExampleKey(newMethod, newPath, newExampleKey));
+			if (cached) {
+				response.value = cached.response;
+				requestPayload.value = cached.requestPayload;
+			} else {
+				const latest = (() => {
+					for (let i = __props.history.length - 1; i >= 0; i--) {
+						const entry = __props.history[i];
+						if (entry?.meta.example === newExampleKey) return entry;
+					}
+				})();
+				if (latest) {
+					response.value = harToFetchResponse({
+						harResponse: latest.response,
+						url: latest.request.url,
+						method: newMethod,
+						path: newPath,
+						duration: latest.time
+					});
+					requestPayload.value = null;
+				} else {
+					response.value = null;
+					requestPayload.value = null;
+				}
+			}
+			cancelRequest();
+		}, { immediate: true });
+		onBeforeUnmount(() => {
+			cancelRequest();
+		});
+		return (_ctx, _cache) => {
+			return openBlock(), createElementBlock("div", _hoisted_1, [createElementVNode("div", _hoisted_2, [createVNode(Header_default, {
+				activeEnvironment: __props.activeEnvironment,
+				documentSlug: __props.documentSlug,
+				documentUrl: __props.documentUrl,
+				environment: __props.environment,
+				environments: __props.environments,
+				eventBus: __props.eventBus,
+				exampleKey: __props.exampleKey,
+				hideClientButton: __props.hideClientButton,
+				history: operationHistory.value,
+				integration: __props.integration,
+				layout: __props.layout,
+				method: __props.method,
+				path: __props.path,
+				server: __props.server,
+				serverMeta: __props.serverMeta,
+				servers: __props.servers,
+				source: __props.source,
+				onExecute: handleExecute,
+				"onNavigate:settings": handleNavigateSettings,
+				"onSelect:history:item": handleSelectHistoryItem
+			}, null, 8, [
+				"activeEnvironment",
+				"documentSlug",
+				"documentUrl",
+				"environment",
+				"environments",
+				"eventBus",
+				"exampleKey",
+				"hideClientButton",
+				"history",
+				"integration",
+				"layout",
+				"method",
+				"path",
+				"server",
+				"serverMeta",
+				"servers",
+				"source"
+			])]), createVNode(ViewLayout_default, { class: "border-t" }, {
+				default: withCtx(() => [createVNode(ViewLayoutContent_default, { class: "flex-1" }, {
+					default: withCtx(() => [createVNode(unref(RequestBlock_default), {
+						authMeta: __props.authMeta,
+						clientOptions: clientOptions.value,
+						defaultHeaders: __props.defaultHeaders,
+						documentCookies: __props.documentCookies,
+						environment: __props.environment,
+						eventBus: __props.eventBus,
+						exampleKey: __props.exampleKey,
+						layout: __props.layout,
+						method: __props.method,
+						operation: __props.operation,
+						options: toValue(__props.options),
+						path: __props.path,
+						plugins: __props.plugins,
+						proxyUrl: __props.proxyUrl,
+						requestBodyCompositionSelection: __props.requestBodyCompositionSelection,
+						securityRequirements: __props.securityRequirements,
+						securitySchemes: __props.securitySchemes,
+						selectedClient: __props.selectedClient,
+						selectedSecurity: __props.selectedSecurity,
+						selectedSecuritySchemes: __props.selectedSecuritySchemes,
+						server: __props.server,
+						workspaceCookies: __props.workspaceCookies
+					}, null, 8, [
+						"authMeta",
+						"clientOptions",
+						"defaultHeaders",
+						"documentCookies",
+						"environment",
+						"eventBus",
+						"exampleKey",
+						"layout",
+						"method",
+						"operation",
+						"options",
+						"path",
+						"plugins",
+						"proxyUrl",
+						"requestBodyCompositionSelection",
+						"securityRequirements",
+						"securitySchemes",
+						"selectedClient",
+						"selectedSecurity",
+						"selectedSecuritySchemes",
+						"server",
+						"workspaceCookies"
+					]), createVNode(unref(ResponseBlock_default), {
+						appVersion: __props.appVersion,
+						eventBus: __props.eventBus,
+						layout: __props.layout,
+						plugins: __props.plugins,
+						requestPayload: requestPayload.value,
+						response: response.value,
+						totalPerformedRequests: operationHistory.value.length
+					}, null, 8, [
+						"appVersion",
+						"eventBus",
+						"layout",
+						"plugins",
+						"requestPayload",
+						"response",
+						"totalPerformedRequests"
+					])]),
+					_: 1
+				})]),
+				_: 1
+			})]);
+		};
+	}
+});
+//#endregion
+export { OperationBlock_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=OperationBlock.vue.script.js.map

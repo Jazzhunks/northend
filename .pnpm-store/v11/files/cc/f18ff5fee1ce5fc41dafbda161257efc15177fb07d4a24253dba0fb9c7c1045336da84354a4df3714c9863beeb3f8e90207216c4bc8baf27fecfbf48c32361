@@ -1,0 +1,51 @@
+import { o as ReactElementLike, r as Node, s as RgbaImage } from "./types-Bfi8SERZ.mjs";
+import { CSSProperties, ComponentProps, JSX, ReactElement, ReactNode } from "react";
+//#region src/jsx/style-presets.d.ts
+declare const defaultStylePresets: Partial<Record<keyof JSX.IntrinsicElements, CSSProperties>>;
+//#endregion
+//#region src/jsx/metadata.d.ts
+type HtmlProps = {
+  className?: string;
+  class?: string;
+  id?: string;
+  style?: string | CSSProperties;
+  dir?: string;
+  lang?: string;
+  [key: string]: unknown;
+};
+//#endregion
+//#region src/jsx/index.d.ts
+declare module "react" {
+  interface DOMAttributes<T> {
+    tw?: string;
+  }
+}
+type BitmapProps = RgbaImage & Omit<ComponentProps<"img">, "src" | "width" | "height">;
+type BitmapImgProps = Omit<BitmapProps, keyof RgbaImage> & {
+  src: RgbaImage;
+};
+/** An `<img>` fed by raw RGBA pixels instead of an encoded file. */
+declare function Bitmap({ width, height, data, premultiplied, ...props }: BitmapProps): ReactElement<BitmapImgProps, "img">;
+interface FromJsxOptions {
+  /**
+   * Override or disable the default Chromium style presets.
+   *
+   * If an object is provided, all the default style presets will be overridden.
+   *
+   * If `false` is provided explicitly, no default style presets will be used.
+   */
+  defaultStyles?: typeof defaultStylePresets | false;
+  /**
+   * The JSX prop name used to pass Tailwind classes.
+   *
+   * @default "tw"
+   */
+  tailwindClassesProperty?: string;
+}
+interface FromJsxResult {
+  node: Node;
+  stylesheets: string[];
+}
+declare function fromJsx(element: ReactNode | ReactElementLike, options?: FromJsxOptions): Promise<FromJsxResult>;
+//#endregion
+export { Bitmap, BitmapProps, FromJsxOptions, FromJsxResult, type HtmlProps, defaultStylePresets, fromJsx };

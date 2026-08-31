@@ -1,0 +1,37 @@
+import { isObject } from '@scalar/helpers/object/is-object';
+/**
+ * Narrow a value to an OpenAPI document.
+ *
+ * Discriminated by the required `openapi` string field on OAS documents. Accepts `unknown`
+ * so it can narrow at any call site (e.g., workspace lookups typed as `WorkspaceDocument`,
+ * or broader contexts that mix documents with the workspace itself).
+ */
+export const isOpenApiDocument = (value) => isObject(value) && 'openapi' in value && typeof value.openapi === 'string';
+/**
+ * Narrow a value to an AsyncAPI document.
+ *
+ * Discriminated by the required `asyncapi` string field on AsyncAPI documents.
+ */
+export const isAsyncApiDocument = (value) => isObject(value) && 'asyncapi' in value && typeof value.asyncapi === 'string';
+/**
+ * Identify the document type of a value.
+ *
+ * Returns `'openapi'` or `'asyncapi'` when the value matches one of the known
+ * document shapes, or `undefined` when it matches neither.
+ */
+export const getDocumentType = (value) => {
+    if (isOpenApiDocument(value)) {
+        return 'openapi';
+    }
+    if (isAsyncApiDocument(value)) {
+        return 'asyncapi';
+    }
+    return undefined;
+};
+/**
+ * Human-readable label for a document type, e.g. for badges and warnings.
+ *
+ * Defaults to `'OpenAPI'` when the type is unknown, matching the OpenAPI-native surfaces that
+ * only distinguish AsyncAPI as the exception.
+ */
+export const getDocumentTypeLabel = (documentType) => documentType === 'asyncapi' ? 'AsyncAPI' : 'OpenAPI';

@@ -1,0 +1,11 @@
+import type { FuseResult } from 'fuse.js';
+import type { FuseData } from '../../../../v2/features/search/types';
+type __VLS_Props = {
+    id: string;
+    isSelected: boolean;
+    result: FuseResult<FuseData>;
+};
+declare const __VLS_export: import("vue").DefineComponent<__VLS_Props, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").PublicProps, Readonly<__VLS_Props> & Readonly<{}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;
+declare const _default: typeof __VLS_export;
+export default _default;
+//# sourceMappingURL=SearchResult.vue.d.ts.map

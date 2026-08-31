@@ -1,0 +1,17 @@
+import { p as IndexFilePluginOptions, r as CoreOptions } from "../core-BmvJhZxm.js";
+import { t as MacroPluginOption } from "../options-aB6xV-d7.js";
+import { NextConfig } from "next";
+//#region src/next/index.d.ts
+interface CreateMDXOptions extends Pick<CoreOptions, 'configPath' | 'outDir'> {
+  /**
+   * Configure the macro API (`fumadocs-mdx/macro`), or `false` to disable it.
+   *
+   * `macro.include` is a list of glob patterns.
+   */
+  macro?: MacroPluginOption;
+  index?: IndexFilePluginOptions | false;
+}
+declare function createMDX(options?: CreateMDXOptions): (nextConfig?: NextConfig) => NextConfig;
+declare function postInstall(options?: CreateMDXOptions): Promise<void>;
+//#endregion
+export { CreateMDXOptions, createMDX, postInstall };

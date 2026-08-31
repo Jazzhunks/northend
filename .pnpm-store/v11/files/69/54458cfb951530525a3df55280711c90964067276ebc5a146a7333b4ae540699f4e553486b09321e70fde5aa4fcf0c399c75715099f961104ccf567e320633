@@ -1,0 +1,2 @@
+import { t as indexFile } from "../index-file-pX-fCn8l.js";
+export { indexFile as default };

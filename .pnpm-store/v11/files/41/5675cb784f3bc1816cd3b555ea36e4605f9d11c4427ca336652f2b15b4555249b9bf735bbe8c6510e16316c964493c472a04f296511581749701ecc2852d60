@@ -1,0 +1,1 @@
+{"version":3,"file":"create-document-name.js","names":[],"sources":["../../src/registry/create-document-name.ts"],"sourcesContent":["export function createDocumentName(namespace: string, slug: string) {\n  return `${namespace}/${slug}`\n}\n"],"mappings":";AAAA,SAAgB,mBAAmB,WAAmB,MAAc;AAClE,QAAO,GAAG,UAAU,GAAG"}

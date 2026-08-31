@@ -1,0 +1,41 @@
+import type { ClientOptionGroup } from '@scalar/blocks/code-example';
+import type { HttpMethod } from '@scalar/helpers/http/http-methods';
+import type { ClientPlugin } from '@scalar/oas-utils/helpers';
+import type { WorkspaceStore } from '@scalar/workspace-store/client';
+import type { SelectedSecurity } from '@scalar/workspace-store/entities/auth';
+import type { AuthMeta, WorkspaceEventBus } from '@scalar/workspace-store/events';
+import { type MergedSecuritySchemes, type SecuritySchemeObjectSecret } from '@scalar/workspace-store/request-example';
+import type { XScalarEnvironment } from '@scalar/workspace-store/schemas/extensions/document/x-scalar-environments';
+import type { XScalarCookie } from '@scalar/workspace-store/schemas/extensions/general/x-scalar-cookies';
+import type { OpenApiDocument, OperationObject, ServerObject } from '@scalar/workspace-store/schemas/v3.1/strict/openapi-document';
+import type { OAuth2Options } from '../../../v2/blocks/scalar-auth-selector-block/components/OAuth2.vue.js';
+import type { ClientLayout } from '../../../v2/types/layout';
+export type RequestBlockProps = {
+    authMeta: AuthMeta;
+    clientOptions: ClientOptionGroup[];
+    environment: XScalarEnvironment;
+    eventBus: WorkspaceEventBus;
+    exampleKey: string;
+    workspaceCookies: XScalarCookie[];
+    documentCookies: XScalarCookie[];
+    layout: ClientLayout;
+    method: HttpMethod;
+    operation: OperationObject;
+    path: string;
+    plugins: ClientPlugin[];
+    proxyUrl: string;
+    securityRequirements: OpenApiDocument['security'];
+    securitySchemes: MergedSecuritySchemes;
+    requestBodyCompositionSelection?: Record<string, number>;
+    selectedClient: WorkspaceStore['workspace']['x-scalar-default-client'];
+    selectedSecurity: SelectedSecurity;
+    selectedSecuritySchemes: SecuritySchemeObjectSecret[];
+    server: ServerObject | null;
+    defaultHeaders: Record<string, string>;
+    /**  Any config options required for the OAuth2 flow */
+    options?: OAuth2Options;
+};
+declare const __VLS_export: import("vue").DefineComponent<RequestBlockProps, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").PublicProps, Readonly<RequestBlockProps> & Readonly<{}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;
+declare const _default: typeof __VLS_export;
+export default _default;
+//# sourceMappingURL=RequestBlock.vue.d.ts.map

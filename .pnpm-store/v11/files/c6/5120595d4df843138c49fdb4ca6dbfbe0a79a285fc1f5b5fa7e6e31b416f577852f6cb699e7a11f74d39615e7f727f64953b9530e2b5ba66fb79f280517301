@@ -1,0 +1,1 @@
+{"version":3,"file":"SidebarItemLabel.vue.d.ts","sourceRoot":"","sources":["../../src/components/SidebarItemLabel.vue"],"names":[],"mappings":"AAkCA,OAAO,KAAK,EAAE,IAAI,EAAE,MAAM,SAAS,CAAA;AAEnC,KAAK,WAAW,GAAG;IACjB;;OAEG;IACH,IAAI,EAAE,IAAI,CAAA;IACV;;OAEG;IACH,oBAAoB,CAAC,EAAE,MAAM,GAAG,SAAS,CAAA;CAC1C,CAAC;AAgEF,QAAA,MAAM,YAAY,kSAEhB,CAAC;wBACkB,OAAO,YAAY;AAAxC,wBAAyC"}

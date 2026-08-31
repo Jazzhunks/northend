@@ -1,0 +1,48 @@
+import { URLS } from "../consts/urls.js";
+import { useState } from "../state/state.js";
+import PromptForm_default from "./PromptForm.vue.js";
+import Logo_default from "../components/Logo.vue.js";
+import { Fragment, createElementBlock, createElementVNode, createTextVNode, createVNode, defineComponent, openBlock, unref } from "vue";
+//#region src/views/Start.vue?vue&type=script&setup=true&lang.ts
+var _hoisted_1 = { class: "startContainer" };
+var _hoisted_2 = { class: "disclaimerText" };
+var _hoisted_3 = ["href"];
+var _hoisted_4 = ["href"];
+var Start_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	__name: "Start",
+	emits: ["submit", "uploadApi"],
+	setup(__props, { emit: __emit }) {
+		const emit = __emit;
+		const { mode } = useState();
+		return (_ctx, _cache) => {
+			return openBlock(), createElementBlock("div", _hoisted_1, [
+				createVNode(Logo_default, { class: "agentLogo" }),
+				_cache[4] || (_cache[4] = createElementVNode("p", { class: "promptText" }, "How can I help you today?", -1)),
+				createVNode(PromptForm_default, {
+					ref: "promptFormField",
+					onSubmit: _cache[0] || (_cache[0] = ($event) => emit("submit")),
+					onUploadApi: _cache[1] || (_cache[1] = ($event) => emit("uploadApi"))
+				}, null, 512),
+				createElementVNode("p", _hoisted_2, [
+					unref(mode) === "preview" ? (openBlock(), createElementBlock(Fragment, { key: 0 }, [createTextVNode(" By messaging Agent Scalar your OpenAPI document will be temporarily uploaded to Scalar's servers. You must agree to our ")], 64)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [createTextVNode("By messaging Agent Scalar you agree to our ")], 64)),
+					createElementVNode("a", {
+						class: "disclaimerLink",
+						href: unref(URLS).TERMS_AND_CONDITIONS,
+						target: "_blank"
+					}, "Terms", 8, _hoisted_3),
+					_cache[2] || (_cache[2] = createTextVNode(" and ", -1)),
+					createElementVNode("a", {
+						class: "disclaimerLink",
+						href: unref(URLS).PRIVACY_POLICY,
+						target: "_blank"
+					}, "Privacy Policy", 8, _hoisted_4),
+					_cache[3] || (_cache[3] = createTextVNode(". ", -1))
+				])
+			]);
+		};
+	}
+});
+//#endregion
+export { Start_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=Start.vue.script.js.map

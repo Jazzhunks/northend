@@ -1,0 +1,24 @@
+import type { WorkspaceEventBus } from '@scalar/workspace-store/events';
+import type { XScalarEnvironment } from '@scalar/workspace-store/schemas/extensions/document/x-scalar-environments';
+import { type OpenIdConnectObject } from '@scalar/workspace-store/schemas/v3.1/strict/openapi-document';
+import type { CustomFetch } from '../../../../v2/blocks/operation-block/helpers/send-request.js';
+type __VLS_Props = {
+    /** Current environment configuration */
+    environment: XScalarEnvironment;
+    /** Event bus for authentication updates */
+    eventBus: WorkspaceEventBus;
+    /** Get the static border class */
+    getStaticBorderClass: () => string | false;
+    /** Name of the security scheme */
+    name: string;
+    /** Proxy URL */
+    proxyUrl: string;
+    /** OpenID Connect scheme */
+    scheme: OpenIdConnectObject;
+    /** Optional fetch override (IPC-backed on desktop) used for discovery requests */
+    customFetch?: CustomFetch;
+};
+declare const __VLS_export: import("vue").DefineComponent<__VLS_Props, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").PublicProps, Readonly<__VLS_Props> & Readonly<{}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;
+declare const _default: typeof __VLS_export;
+export default _default;
+//# sourceMappingURL=OpenIDConnect.vue.d.ts.map

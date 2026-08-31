@@ -1,0 +1,223 @@
+import { filterClientsByQuery as e } from "../helpers/filter-clients-by-query.js";
+import { findClient as t } from "../helpers/find-client.js";
+import { operationToHar as n } from "../helpers/operation-to-har/operation-to-har.js";
+import { generateCodeSnippet as r } from "../helpers/generate-code-snippet.js";
+import { getCustomCodeSamples as i } from "../helpers/get-custom-code-samples.js";
+import { getClients as a } from "../helpers/get-clients.js";
+import { getSecrets as o } from "../helpers/get-secrets.js";
+import s from "./ExamplePicker.vue.js";
+import c from "./HttpMethod.vue.js";
+import { computed as l, createBlock as u, createCommentVNode as d, createElementBlock as f, createElementVNode as p, createSlots as m, createTextVNode as h, createVNode as g, defineComponent as _, onBeforeMount as ee, openBlock as v, ref as y, renderSlot as b, toDisplayString as x, unref as S, useId as C, watch as w, watchEffect as T, withCtx as E } from "vue";
+import { ScalarButton as D } from "@scalar/components/button";
+import { ScalarCard as O, ScalarCardFooter as te, ScalarCardHeader as ne, ScalarCardSection as k } from "@scalar/components/card";
+import { ScalarCodeBlock as A } from "@scalar/components/code-block";
+import { ScalarCombobox as j } from "@scalar/components/combobox";
+import { ScalarVirtualText as M } from "@scalar/components/virtual-text";
+import { freezeElement as N } from "@scalar/helpers/dom/freeze-element";
+import { ScalarIconCaretDown as P } from "@scalar/icons";
+import { getResolvedRef as F } from "@scalar/workspace-store/helpers/get-resolved-ref";
+//#region src/code-example/components/CodeExample.vue?vue&type=script&setup=true&lang.ts
+var I = ["innerHTML"], L = {
+	key: 1,
+	class: "text-c-2 flex h-full w-fit items-center px-0.5 py-0 text-base font-normal",
+	"data-testid": "client-picker"
+}, R = ["id"], z = {
+	key: 0,
+	class: "request-card-footer-addon"
+}, B = { class: "request-header" }, V = /* @__PURE__ */ _({
+	__name: "CodeExample",
+	props: {
+		integration: {},
+		clientOptions: {},
+		selectedClient: {},
+		selectedServer: { default: null },
+		selectedContentType: {},
+		selectedExample: {},
+		eventBus: {},
+		securitySchemes: { default: () => [] },
+		method: {},
+		path: {},
+		operation: {},
+		fallback: { type: Boolean },
+		generateLabel: { type: Function },
+		isWebhook: { type: Boolean },
+		globalCookies: {},
+		requestBodyCompositionSelection: {}
+	},
+	emits: ["update:exampleKey"],
+	setup(_, { emit: V }) {
+		let H = V, U = l(() => {
+			let e = F(_.operation.requestBody)?.content ?? {}, t = _.selectedContentType || Object.keys(e)[0];
+			return t ? e[t]?.examples ?? {} : {};
+		}), W = y(""), G = (e) => {
+			let t = Object.keys(U.value);
+			return e && t.includes(e) ? e : W.value && t.includes(W.value) ? W.value : t[0] ?? "";
+		};
+		ee(() => {
+			W.value = G(_.selectedExample);
+		}), w(() => _.selectedExample, (e) => {
+			W.value = G(e);
+		}), w(() => _.selectedContentType, () => {
+			Object.keys(U.value).includes(W.value) || (W.value = G(_.selectedExample));
+		}), T(() => {
+			H("update:exampleKey", W.value);
+		});
+		let K = (e) => {
+			W.value = e, _.eventBus.emit("workspace:update:selected-example", e);
+		}, q = l(() => i(_.operation)), J = l(() => a(q.value.samples, _.clientOptions, q.value.label)), Y = l(() => J.value.reduce((e, t) => e + t.options.length, 0)), X = y(t(J.value, _.selectedClient));
+		w([() => _.selectedClient, J], ([e]) => {
+			let n = t(J.value, e);
+			n && (X.value = n);
+		});
+		let Z = l(() => {
+			if (!_.isWebhook) return null;
+			try {
+				return n({
+					operation: _.operation,
+					method: _.method,
+					path: _.path,
+					example: W.value,
+					requestBodyCompositionSelection: _.requestBodyCompositionSelection,
+					defaultDisabledParameters: !0
+				});
+			} catch (e) {
+				return console.error("[webhookHar]", e), null;
+			}
+		}), Q = l(() => _.isWebhook ? Z.value?.postData?.text ?? "" : r({
+			defaultDisabledParameters: !0,
+			includeDefaultHeaders: _.integration === "client",
+			clientId: X.value?.id,
+			customCodeSamples: q.value.samples,
+			operation: _.operation,
+			method: _.method,
+			path: _.path,
+			contentType: _.selectedContentType,
+			server: _.selectedServer,
+			securitySchemes: _.securitySchemes,
+			example: W.value,
+			globalCookies: _.globalCookies,
+			requestBodyCompositionSelection: _.requestBodyCompositionSelection
+		})), re = l(() => _.isWebhook ? ie.value : X.value?.lang), ie = l(() => {
+			if (!Z.value?.postData) return "json";
+			let e = Z.value.postData.mimeType;
+			return e?.includes("json") ? "json" : e?.includes("xml") ? "xml" : e?.includes("yaml") || e?.includes("yml") ? "yaml" : e?.includes("text/plain") ? "text" : "json";
+		}), ae = l(() => o(_.securitySchemes)), $ = y(null), oe = (e) => {
+			if ($.value) {
+				let e = N($.value.$el);
+				setTimeout(() => {
+					e();
+				}, 300);
+			}
+			X.value = e, e && _.eventBus.emit("workspace:update:selected-client", e.id);
+		}, se = l(() => (Q.value.length ?? 0) > 2e4), ce = C();
+		return (t, n) => Q.value ? (v(), u(S(O), {
+			key: 0,
+			ref_key: "elem",
+			ref: $,
+			class: "request-card dark-mode"
+		}, {
+			default: E(() => [
+				g(S(ne), { class: "pr-2.5" }, m({
+					default: E(() => [
+						n[1] ||= p("span", { class: "sr-only" }, "Request Example for", -1),
+						g(c, {
+							as: "span",
+							class: "request-method",
+							method: _.method
+						}, null, 8, ["method"]),
+						_.generateLabel ? (v(), f("span", {
+							key: 0,
+							innerHTML: _.generateLabel()
+						}, null, 8, I)) : d("", !0),
+						b(t.$slots, "header", {}, void 0, !0)
+					]),
+					_: 2
+				}, [!_.isWebhook && Y.value ? {
+					name: "actions",
+					fn: E(() => [Y.value > 1 ? (v(), u(S(j), {
+						key: 0,
+						class: "max-h-80",
+						filterFn: S(e),
+						modelValue: X.value,
+						options: J.value,
+						placement: "bottom-end",
+						teleport: "",
+						"onUpdate:modelValue": n[0] ||= (e) => oe(e)
+					}, {
+						default: E(() => [g(S(D), {
+							class: "text-c-2 hover:text-c-1 flex h-full w-fit gap-1.5 px-0.5 py-0 text-base font-normal",
+							"data-testid": "client-picker",
+							variant: "ghost"
+						}, {
+							default: E(() => [h(x(X.value?.title) + " ", 1), g(S(P), {
+								class: "ui-open:rotate-180 mt-px size-3 transition-transform duration-100",
+								weight: "bold"
+							})]),
+							_: 1
+						})]),
+						_: 1
+					}, 8, [
+						"filterFn",
+						"modelValue",
+						"options"
+					])) : (v(), f("span", L, x(X.value?.title), 1))]),
+					key: "0"
+				} : void 0]), 1024),
+				g(S(k), { class: "request-editor-section custom-scroll p-0" }, {
+					default: E(() => [p("div", {
+						id: `${S(ce)}-example`,
+						class: "code-snippet"
+					}, [se.value ? (v(), u(S(M), {
+						key: 1,
+						containerClass: "custom-scroll scalar-code-block border rounded-b flex flex-1 max-h-screen",
+						contentClass: "language-plaintext whitespace-pre font-code text-base p-2",
+						lineHeight: 20,
+						text: Q.value
+					}, null, 8, ["text"])) : (v(), u(S(A), {
+						key: 0,
+						class: "bg-b-2 h-full",
+						content: Q.value,
+						hideCredentials: ae.value,
+						lang: re.value,
+						lineNumbers: ""
+					}, null, 8, [
+						"content",
+						"hideCredentials",
+						"lang"
+					]))], 8, R)]),
+					_: 1
+				}),
+				Object.keys(U.value).length > 1 || t.$slots.footer ? (v(), u(S(te), {
+					key: 0,
+					class: "request-card-footer bg-b-3"
+				}, {
+					default: E(() => [Object.keys(U.value).length > 1 ? (v(), f("div", z, [Object.keys(U.value).length ? (v(), u(s, {
+						key: 0,
+						examples: U.value,
+						modelValue: W.value,
+						"onUpdate:modelValue": K
+					}, null, 8, ["examples", "modelValue"])) : d("", !0)])) : d("", !0), b(t.$slots, "footer", { exampleName: W.value }, void 0, !0)]),
+					_: 3
+				})) : d("", !0)
+			]),
+			_: 3
+		}, 512)) : _.fallback ? (v(), u(S(O), {
+			key: 1,
+			class: "request-card dark-mode"
+		}, {
+			default: E(() => [g(S(k), { class: "request-card-simple" }, {
+				default: E(() => [p("div", B, [g(c, {
+					as: "span",
+					class: "request-method",
+					method: _.method
+				}, null, 8, ["method"]), b(t.$slots, "header", {}, void 0, !0)]), b(t.$slots, "footer", { exampleName: W.value }, void 0, !0)]),
+				_: 3
+			})]),
+			_: 3
+		})) : d("", !0);
+	}
+});
+//#endregion
+export { V as default };
+
+//# sourceMappingURL=CodeExample.vue.script.js.map

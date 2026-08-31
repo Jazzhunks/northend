@@ -1,0 +1,355 @@
+import DataTableCell_default from "../../../components/data-table/DataTableCell.vue.js";
+import DataTableRow_default from "../../../components/data-table/DataTableRow.vue.js";
+import RequestAuthDataTableInput_default from "./RequestAuthDataTableInput.vue.js";
+import OAuth2_default from "./OAuth2.vue.js";
+import OpenIDConnect_default from "./OpenIDConnect.vue.js";
+import { Fragment, capitalize, computed, createBlock, createCommentVNode, createElementBlock, createElementVNode, createTextVNode, createVNode, defineComponent, normalizeClass, openBlock, ref, renderList, toDisplayString, unref, withCtx } from "vue";
+import { getResolvedRef } from "@scalar/workspace-store/helpers/get-resolved-ref";
+import { ScalarMarkdownSummary } from "@scalar/components/markdown";
+import { getDocumentTypeLabel } from "@scalar/workspace-store/schemas/type-guards";
+//#region src/v2/blocks/scalar-auth-selector-block/components/RequestAuthTab.vue?vue&type=script&setup=true&lang.ts
+var _hoisted_1 = { class: "bg-b-1 min-w-0 flex-1 px-3 py-1.25" };
+var _hoisted_2 = { class: "text-c-1 leading-5.5 font-medium" };
+var _hoisted_3 = { class: "flex min-h-8 border-t text-base" };
+var _hoisted_4 = { class: "flex h-8 max-w-full gap-2.5 overflow-x-auto px-3" };
+var _hoisted_5 = ["onClick"];
+var _hoisted_6 = { class: "relative z-10" };
+var _hoisted_7 = {
+	key: 5,
+	class: "text-c-3 flex items-center justify-center border-t p-4 px-4 text-center text-xs text-balance"
+};
+var _hoisted_8 = {
+	key: 6,
+	class: "text-c-3 flex items-center justify-center border-t p-4 px-4 text-center text-xs text-balance"
+};
+var RequestAuthTab_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	__name: "RequestAuthTab",
+	props: {
+		environment: {},
+		isStatic: { type: Boolean },
+		proxyUrl: {},
+		selectedSecuritySchemas: {},
+		securitySchemes: {},
+		server: {},
+		eventBus: {},
+		options: {},
+		documentType: { default: "openapi" }
+	},
+	emits: [
+		"update:selectedScopes",
+		"upsert:scope",
+		"delete:scope"
+	],
+	setup(__props, { emit: __emit }) {
+		/**
+		* Human-readable name of the document type.
+		* Used in the missing-type warning so it points at the correct document
+		* (e.g. "AsyncAPI") instead of always naming OpenAPI.
+		*/
+		const documentTypeLabel = computed(() => getDocumentTypeLabel(__props.documentType));
+		const emits = __emit;
+		/**
+		* Resolves security schemes from the OpenAPI document and combines them with their selected scopes.
+		* Each item includes the scheme definition, name, and associated scopes.
+		*/
+		const security = computed(() => Object.entries(__props.selectedSecuritySchemas).map(([name, scopes = []]) => ({
+			scheme: getResolvedRef(__props.securitySchemes[name]),
+			name,
+			scopes
+		})));
+		/** Tracks which OAuth2 flow is currently active when multiple flows are available. */
+		const activeFlow = ref("");
+		/** Keeps the selected flow in sync with currently available flow keys. */
+		const selectedFlow = computed(() => {
+			return security.value.flatMap(({ scheme }) => {
+				if (scheme?.type !== "oauth2" && scheme?.type !== "openIdConnect") return [];
+				return Object.keys(scheme.flows ?? {});
+			}).includes(activeFlow.value) ? activeFlow.value : "";
+		});
+		const setActiveFlow = (flow) => {
+			activeFlow.value = flow;
+		};
+		/** Determines if multiple auth schemes are configured, which affects the UI layout. */
+		const hasMultipleSchemes = computed(() => security.value.length > 1);
+		/**
+		* Generates a human-readable label for the security scheme.
+		* Intentionally omits the description here — it is rendered separately as
+		* rich text via ScalarMarkdownSummary so markdown formatting is preserved.
+		*/
+		const generateLabel = (name, scheme) => {
+			const capitalizedName = capitalize(name);
+			switch (scheme.type) {
+				case "apiKey": return `${capitalizedName}: ${scheme.in}`;
+				case "openIdConnect":
+				case "oauth2": {
+					const firstFlow = Object.keys(scheme.flows ?? {})[0];
+					const currentFlow = selectedFlow.value || firstFlow;
+					if (!currentFlow) return capitalizedName;
+					return `${capitalizedName}: ${currentFlow}`;
+				}
+				case "http": return `${capitalizedName}: ${scheme.scheme}`;
+				default: return capitalizedName;
+			}
+		};
+		/**
+		* Whether an API key scheme exposes an editable parameter name.
+		*
+		* OpenAPI `apiKey` and AsyncAPI `httpApiKey` (normalized to `apiKey`) name a query/header/cookie
+		* parameter, so the Name input is shown. AsyncAPI `apiKey` places the key in the broker `user` or
+		* `password` slot and has no parameter name, so the Name input is hidden and only the value is asked for.
+		*/
+		const apiKeyHasName = (scheme) => scheme.in !== "user" && scheme.in !== "password";
+		/**
+		* The scheme's type when it is one we do not render inputs for (e.g. AsyncAPI broker types like
+		* `userPassword` or `scramSha256`). Read through a helper so the fallback template branch, where
+		* the scheme type is narrowed to `never` after the supported cases, can still surface the type.
+		*/
+		const getUnsupportedSchemeType = (scheme) => scheme?.type;
+		/**
+		* Determines if an OAuth2 flow tab should be active.
+		* The first flow is active by default if no flow is explicitly selected.
+		*/
+		const isFlowActive = (flowKey, index) => selectedFlow.value === flowKey || index === 0 && !selectedFlow.value;
+		/** Computes the container class for static display mode. */
+		const getStaticBorderClass = () => __props.isStatic && "border-t";
+		const handleHttpSecretsUpdate = (payload, name) => __props.eventBus.emit("auth:update:security-scheme-secrets", {
+			payload: {
+				type: "http",
+				...payload
+			},
+			name
+		});
+		const handleApiKeySecretsUpdate = (payload, name) => __props.eventBus.emit("auth:update:security-scheme-secrets", {
+			payload: {
+				type: "apiKey",
+				...payload
+			},
+			name
+		});
+		const handleApiKeySecuritySchemeUpdate = (payload, name) => __props.eventBus.emit("auth:update:security-scheme", {
+			payload: {
+				type: "apiKey",
+				...payload
+			},
+			name
+		});
+		/** Handles scope selection updates for OAuth2 */
+		const handleScopesUpdate = (name, event) => {
+			emits("update:selectedScopes", {
+				id: Object.keys(__props.selectedSecuritySchemas),
+				name,
+				...event
+			});
+		};
+		/** Handles scope-definition upserts (add / rename / description change) */
+		const handleScopeUpsert = (name, event) => {
+			emits("upsert:scope", {
+				...event,
+				name
+			});
+		};
+		/** Handles scope-definition deletes */
+		const handleScopeDelete = (name, event) => {
+			emits("delete:scope", {
+				...event,
+				name
+			});
+		};
+		/**
+		* Computes dynamic classes for OAuth2 flow tabs based on active state.
+		*/
+		const getFlowTabClasses = (flowKey, index) => {
+			const baseClasses = "floating-bg text-c-3 relative cursor-pointer border-b border-transparent py-1 text-base font-medium";
+			return isFlowActive(flowKey, index) ? `${baseClasses} !text-c-1 !rounded-none border-b !border-current ${__props.isStatic ? "opacity-100" : ""}` : baseClasses;
+		};
+		return (_ctx, _cache) => {
+			return openBlock(true), createElementBlock(Fragment, null, renderList(security.value, ({ scheme, name, scopes }) => {
+				return openBlock(), createElementBlock(Fragment, { key: name }, [
+					hasMultipleSchemes.value && scheme ? (openBlock(), createBlock(unref(DataTableRow_default), { key: 0 }, {
+						default: withCtx(() => [createVNode(unref(DataTableCell_default), {
+							"aria-label": generateLabel(name, scheme),
+							class: "max-h-[auto]"
+						}, {
+							default: withCtx(() => [createElementVNode("div", _hoisted_1, [createElementVNode("p", _hoisted_2, toDisplayString(generateLabel(name, scheme)), 1), scheme.description ? (openBlock(), createBlock(unref(ScalarMarkdownSummary), {
+								key: 0,
+								class: "auth-description text-c-2 w-full",
+								value: scheme.description
+							}, null, 8, ["value"])) : createCommentVNode("", true)])]),
+							_: 2
+						}, 1032, ["aria-label"])]),
+						_: 2
+					}, 1024)) : createCommentVNode("", true),
+					scheme?.description && !hasMultipleSchemes.value ? (openBlock(), createBlock(unref(DataTableRow_default), { key: 1 }, {
+						default: withCtx(() => [createVNode(unref(DataTableCell_default), {
+							"aria-label": scheme.description,
+							class: "max-h-[auto]"
+						}, {
+							default: withCtx(() => [createVNode(unref(ScalarMarkdownSummary), {
+								class: "auth-description bg-b-1 text-c-2 min-w-0 flex-1 px-3 py-1.25",
+								value: scheme.description
+							}, null, 8, ["value"])]),
+							_: 2
+						}, 1032, ["aria-label"])]),
+						_: 2
+					}, 1024)) : createCommentVNode("", true),
+					scheme?.type === "http" ? (openBlock(), createElementBlock(Fragment, { key: 2 }, [scheme.scheme === "bearer" ? (openBlock(), createBlock(unref(DataTableRow_default), { key: 0 }, {
+						default: withCtx(() => [createVNode(RequestAuthDataTableInput_default, {
+							containerClass: getStaticBorderClass(),
+							environment: __props.environment,
+							modelValue: scheme["x-scalar-secret-token"],
+							placeholder: "Token",
+							type: "password",
+							"onUpdate:modelValue": (v) => handleHttpSecretsUpdate({ "x-scalar-secret-token": v }, name)
+						}, {
+							default: withCtx(() => [..._cache[0] || (_cache[0] = [createTextVNode(" Bearer Token ", -1)])]),
+							_: 1
+						}, 8, [
+							"containerClass",
+							"environment",
+							"modelValue",
+							"onUpdate:modelValue"
+						])]),
+						_: 2
+					}, 1024)) : scheme?.scheme === "basic" ? (openBlock(), createElementBlock(Fragment, { key: 1 }, [createVNode(unref(DataTableRow_default), null, {
+						default: withCtx(() => [createVNode(RequestAuthDataTableInput_default, {
+							class: "text-c-2",
+							environment: __props.environment,
+							modelValue: scheme["x-scalar-secret-username"],
+							placeholder: "janedoe",
+							required: "",
+							"onUpdate:modelValue": (v) => handleHttpSecretsUpdate({ "x-scalar-secret-username": v }, name)
+						}, {
+							default: withCtx(() => [..._cache[1] || (_cache[1] = [createTextVNode(" Username ", -1)])]),
+							_: 1
+						}, 8, [
+							"environment",
+							"modelValue",
+							"onUpdate:modelValue"
+						])]),
+						_: 2
+					}, 1024), createVNode(unref(DataTableRow_default), null, {
+						default: withCtx(() => [createVNode(RequestAuthDataTableInput_default, {
+							environment: __props.environment,
+							modelValue: scheme["x-scalar-secret-password"],
+							placeholder: "********",
+							type: "password",
+							"onUpdate:modelValue": (v) => handleHttpSecretsUpdate({ "x-scalar-secret-password": v }, name)
+						}, {
+							default: withCtx(() => [..._cache[2] || (_cache[2] = [createTextVNode(" Password ", -1)])]),
+							_: 1
+						}, 8, [
+							"environment",
+							"modelValue",
+							"onUpdate:modelValue"
+						])]),
+						_: 2
+					}, 1024)], 64)) : createCommentVNode("", true)], 64)) : scheme?.type === "apiKey" ? (openBlock(), createElementBlock(Fragment, { key: 3 }, [apiKeyHasName(scheme) ? (openBlock(), createBlock(unref(DataTableRow_default), { key: 0 }, {
+						default: withCtx(() => [createVNode(RequestAuthDataTableInput_default, {
+							containerClass: getStaticBorderClass(),
+							environment: __props.environment,
+							modelValue: scheme.name,
+							placeholder: "api-key",
+							"onUpdate:modelValue": (v) => handleApiKeySecuritySchemeUpdate({ name: v }, name)
+						}, {
+							default: withCtx(() => [..._cache[3] || (_cache[3] = [createTextVNode(" Name ", -1)])]),
+							_: 1
+						}, 8, [
+							"containerClass",
+							"environment",
+							"modelValue",
+							"onUpdate:modelValue"
+						])]),
+						_: 2
+					}, 1024)) : createCommentVNode("", true), createVNode(unref(DataTableRow_default), null, {
+						default: withCtx(() => [createVNode(RequestAuthDataTableInput_default, {
+							containerClass: apiKeyHasName(scheme) ? void 0 : getStaticBorderClass(),
+							environment: __props.environment,
+							modelValue: scheme["x-scalar-secret-token"],
+							placeholder: "QUxMIFlPVVIgQkFTRSBBUkUgQkVMT05HIFRPIFVT",
+							type: "password",
+							"onUpdate:modelValue": (v) => handleApiKeySecretsUpdate({ "x-scalar-secret-token": v }, name)
+						}, {
+							default: withCtx(() => [..._cache[4] || (_cache[4] = [createTextVNode(" Value ", -1)])]),
+							_: 1
+						}, 8, [
+							"containerClass",
+							"environment",
+							"modelValue",
+							"onUpdate:modelValue"
+						])]),
+						_: 2
+					}, 1024)], 64)) : scheme?.type === "oauth2" || scheme?.type === "openIdConnect" ? (openBlock(), createElementBlock(Fragment, { key: 4 }, [
+						scheme?.type === "openIdConnect" && !Object.keys(scheme.flows ?? {}).length ? (openBlock(), createBlock(OpenIDConnect_default, {
+							key: 0,
+							customFetch: __props.options?.customFetch,
+							environment: __props.environment,
+							eventBus: __props.eventBus,
+							getStaticBorderClass,
+							name,
+							proxyUrl: __props.proxyUrl,
+							scheme
+						}, null, 8, [
+							"customFetch",
+							"environment",
+							"eventBus",
+							"name",
+							"proxyUrl",
+							"scheme"
+						])) : createCommentVNode("", true),
+						Object.keys(scheme.flows ?? {}).length > 1 ? (openBlock(), createBlock(unref(DataTableRow_default), { key: 1 }, {
+							default: withCtx(() => [createElementVNode("div", _hoisted_3, [createElementVNode("div", _hoisted_4, [(openBlock(true), createElementBlock(Fragment, null, renderList(scheme.flows, (_, key, ind) => {
+								return openBlock(), createElementBlock("button", {
+									key,
+									class: normalizeClass(getFlowTabClasses(key, ind)),
+									type: "button",
+									onClick: ($event) => setActiveFlow(key)
+								}, [createElementVNode("span", _hoisted_6, toDisplayString(key), 1)], 10, _hoisted_5);
+							}), 128))])])]),
+							_: 2
+						}, 1024)) : createCommentVNode("", true),
+						(openBlock(true), createElementBlock(Fragment, null, renderList(scheme.flows, (_flow, key, ind) => {
+							return openBlock(), createElementBlock(Fragment, { key }, [scheme.flows && isFlowActive(key, ind) ? (openBlock(), createBlock(OAuth2_default, {
+								key: 0,
+								environment: __props.environment,
+								eventBus: __props.eventBus,
+								flows: scheme.flows,
+								name,
+								options: __props.options,
+								proxyUrl: __props.proxyUrl,
+								scheme,
+								selectedScopes: scopes,
+								server: __props.server,
+								type: key,
+								"onDelete:scope": (event) => handleScopeDelete(name, event),
+								"onUpdate:selectedScopes": (event) => handleScopesUpdate(name, event),
+								"onUpsert:scope": (event) => handleScopeUpsert(name, event)
+							}, null, 8, [
+								"environment",
+								"eventBus",
+								"flows",
+								"name",
+								"options",
+								"proxyUrl",
+								"scheme",
+								"selectedScopes",
+								"server",
+								"type",
+								"onDelete:scope",
+								"onUpdate:selectedScopes",
+								"onUpsert:scope"
+							])) : createCommentVNode("", true)], 64);
+						}), 128))
+					], 64)) : getUnsupportedSchemeType(scheme) ? (openBlock(), createElementBlock("div", _hoisted_7, [
+						_cache[5] || (_cache[5] = createTextVNode(" The ", -1)),
+						createElementVNode("code", null, toDisplayString(getUnsupportedSchemeType(scheme)), 1),
+						_cache[6] || (_cache[6] = createTextVNode(" security scheme type is not supported yet. ", -1))
+					])) : (openBlock(), createElementBlock("div", _hoisted_8, " The security scheme is missing a type, please double check your " + toDisplayString(documentTypeLabel.value) + " document or Authentication Configuration ", 1))
+				], 64);
+			}), 128);
+		};
+	}
+});
+//#endregion
+export { RequestAuthTab_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=RequestAuthTab.vue.script.js.map

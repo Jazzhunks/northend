@@ -1,0 +1,15 @@
+/**
+ *    _____ _________    __    ___    ____
+ *   / ___// ____/   |  / /   /   |  / __ \
+ *   \__ \/ /   / /| | / /   / /| | / /_/ /
+ *  ___/ / /___/ ___ |/ /___/ ___ |/ _, _/
+ * /____/\____/_/  |_/_____/_/  |_/_/ |_|
+ *
+ * @scalar/api-reference 1.63.0
+ *
+ * Website: https://scalar.com
+ * GitHub:  https://github.com/scalar/scalar
+ * License: https://github.com/scalar/scalar/blob/main/LICENSE
+**/
+
+import"./vendor-BqFs9NIb.js";import{t as e}from"./modal-WJ4Gcv8N.js";export{e as createApiClientModal};

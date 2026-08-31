@@ -1,0 +1,35 @@
+import { capitalize as e } from "vue";
+import { AVAILABLE_CLIENTS as t, snippetz as n } from "@scalar/snippetz";
+//#region src/code-example/helpers/generate-client-options.ts
+var r = (e) => {
+	let t = /* @__PURE__ */ new Map();
+	return e.map((e) => {
+		let n = (e.lang || "plaintext").toLowerCase(), r = t.get(n) ?? 0;
+		return t.set(n, r + 1), r === 0 ? `custom/${n}` : `custom/${n}/${r}`;
+	});
+}, i = (r = t) => {
+	let i = new Set(r);
+	return n().clients().flatMap((t) => {
+		let n = t.clients.flatMap((n) => {
+			let r = `${t.key}/${n.client}`;
+			return i.has(r) ? {
+				id: r,
+				lang: n.client === "curl" ? "curl" : t.key,
+				title: `${e(t.title)} ${n.title}`,
+				label: n.title,
+				targetKey: t.key,
+				targetTitle: t.title,
+				clientKey: n.client
+			} : [];
+		});
+		return n.length === 0 ? [] : {
+			label: t.title,
+			key: t.key,
+			options: n
+		};
+	});
+};
+//#endregion
+export { i as generateClientOptions, r as getCustomClientIds };
+
+//# sourceMappingURL=generate-client-options.js.map

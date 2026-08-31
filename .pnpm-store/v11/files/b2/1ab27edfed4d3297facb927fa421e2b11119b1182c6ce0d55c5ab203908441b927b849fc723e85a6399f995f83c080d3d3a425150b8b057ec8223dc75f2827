@@ -1,0 +1,264 @@
+import { getOAuthCallbackData } from "./oauth-callback.js";
+import { getServerVariables } from "@scalar/workspace-store/request-example";
+import { makeUrlAbsolute } from "@scalar/helpers/url/make-url-absolute";
+import { replaceEnvVariables, replacePathVariables } from "@scalar/helpers/regex/replace-variables";
+import { isRelativePath } from "@scalar/helpers/url/is-relative-path";
+import { shouldUseProxy } from "@scalar/helpers/url/redirect-to-proxy";
+import { encode, fromUint8Array } from "js-base64";
+//#region src/v2/blocks/scalar-auth-selector-block/helpers/oauth.ts
+var authorizationCodeUsesPkcePublicClient = (flowType, flow) => {
+	if (flowType !== "authorizationCode") return false;
+	const authCode = flow;
+	if (!authCode) return false;
+	const pkceMode = authCode["x-usePkce"];
+	return pkceMode === "SHA-256" || pkceMode === "plain";
+};
+/**
+* Resolves the active server URL using OpenAPI server variables first, then
+* Scalar environment variables.
+*/
+var getServerUrl = (activeServer, environmentVariables = {}) => replaceEnvVariables(replacePathVariables(activeServer?.url ?? "", getServerVariables(activeServer)), environmentVariables);
+/**
+* Builds the base option used when OAuth URLs are relative to the active server.
+*
+* Relative server URLs become browser-only base paths because they need the
+* current window location to resolve correctly.
+*/
+var getActiveServerBase = (activeServer, environmentVariables = {}) => {
+	const serverUrl = getServerUrl(activeServer, environmentVariables);
+	if (!serverUrl) return {};
+	if (isRelativePath(serverUrl)) return typeof window === "undefined" ? {} : { basePath: serverUrl };
+	return { baseUrl: serverUrl };
+};
+/**
+* Generates a random string for PKCE code verifier
+*
+* @see https://www.rfc-editor.org/rfc/rfc7636#page-8
+*/
+var generateCodeVerifier = () => {
+	const buffer = new Uint8Array(32);
+	crypto.getRandomValues(buffer);
+	return fromUint8Array(buffer, true);
+};
+/**
+* Creates a code challenge from the code verifier
+*/
+var generateCodeChallenge = async (verifier, encoding) => {
+	if (encoding === "plain") return verifier;
+	if (typeof crypto?.subtle?.digest !== "function") {
+		console.warn("SHA-256 is only supported when using https, using a plain text code challenge instead.");
+		return verifier;
+	}
+	const data = new TextEncoder().encode(verifier);
+	const digest = await crypto.subtle.digest("SHA-256", data);
+	return fromUint8Array(new Uint8Array(digest), true);
+};
+/**
+* Authorize oauth2 flow
+*
+* @returns the resolved oauth2 tokens
+*/
+var authorizeOauth2 = async (flows, type, selectedScopes, activeServer, proxyUrl, environmentVariables = {}, customFetch, captureCallback) => {
+	const flow = flows[type];
+	try {
+		if (!flow) return [/* @__PURE__ */ new Error("Flow not found"), null];
+		const scopes = selectedScopes.join(" ");
+		if (type === "clientCredentials" || type === "password") return authorizeServers(flows, type, scopes, {
+			proxyUrl,
+			customFetch
+		}, activeServer, environmentVariables);
+		const state = (Math.random() + 1).toString(36).substring(2, 10);
+		const authorizationUrl = makeUrlAbsolute(flows[type]["x-scalar-secret-auth-url"] ?? flows[type].authorizationUrl, getActiveServerBase(activeServer, environmentVariables));
+		const url = new URL(authorizationUrl);
+		/** Special PKCE state */
+		let pkce = null;
+		if (type === "implicit") url.searchParams.set("response_type", "token");
+		else if (type === "authorizationCode") {
+			const typedFlow = flows[type];
+			url.searchParams.set("response_type", "code");
+			if (typedFlow["x-usePkce"] !== "no") {
+				const codeVerifier = generateCodeVerifier();
+				const codeChallenge = await generateCodeChallenge(codeVerifier, typedFlow["x-usePkce"]);
+				pkce = {
+					codeVerifier,
+					codeChallenge,
+					codeChallengeMethod: typedFlow["x-usePkce"] === "SHA-256" ? "S256" : "plain"
+				};
+				url.searchParams.set("code_challenge", codeChallenge);
+				url.searchParams.set("code_challenge_method", pkce.codeChallengeMethod);
+			}
+		}
+		const typedFlow = flows[type];
+		if (!captureCallback) if (typedFlow["x-scalar-secret-redirect-uri"].startsWith("/")) {
+			const baseUrl = getServerUrl(activeServer, environmentVariables) || window.location.origin + window.location.pathname;
+			const redirectUri = new URL(typedFlow["x-scalar-secret-redirect-uri"], baseUrl).toString();
+			url.searchParams.set("redirect_uri", redirectUri);
+		} else url.searchParams.set("redirect_uri", typedFlow["x-scalar-secret-redirect-uri"]);
+		if (flow["x-scalar-security-query"]) Object.keys(flow["x-scalar-security-query"]).forEach((key) => {
+			const value = flow["x-scalar-security-query"]?.[key];
+			if (!value) return;
+			url.searchParams.set(key, value);
+		});
+		url.searchParams.set("client_id", flow["x-scalar-secret-client-id"]);
+		url.searchParams.set("state", state);
+		if (scopes) url.searchParams.set("scope", scopes);
+		if (captureCallback) {
+			const [captureError, capture] = await captureCallback({ authorizationUrl: url.toString() });
+			if (captureError || !capture) return [captureError ?? /* @__PURE__ */ new Error("Failed to capture the OAuth2 redirect"), null];
+			const { accessToken, accessTokenParams, code, codeParams, error, errorDescription, refreshToken } = getOAuthCallbackData(() => capture.callbackUrl, flow["x-tokenName"] || "access_token");
+			if (error) return [/* @__PURE__ */ new Error(`OAuth error: ${error}${errorDescription ? ` (${errorDescription})` : ""}`), null];
+			if (accessToken) {
+				if ((accessTokenParams?.get("state") ?? null) !== state) return [/* @__PURE__ */ new Error("State mismatch"), null];
+				return [null, {
+					accessToken,
+					...refreshToken ? { refreshToken } : {}
+				}];
+			}
+			if (code && type === "authorizationCode") {
+				if ((codeParams?.get("state") ?? null) !== state) return [/* @__PURE__ */ new Error("State mismatch"), null];
+				return authorizeServers(flows, type, scopes, {
+					code,
+					pkce,
+					proxyUrl,
+					customFetch,
+					redirectUri: capture.redirectUri
+				}, activeServer, environmentVariables);
+			}
+			return [/* @__PURE__ */ new Error("No authorization code or access token was returned"), null];
+		}
+		const authWindow = window.open(url, "openAuth2Window", "left=100,top=100,width=800,height=600");
+		if (authWindow) return new Promise((resolve) => {
+			const checkWindowClosed = setInterval(() => {
+				const { accessToken, accessTokenParams, code, codeParams, error, errorDescription, refreshToken } = getOAuthCallbackData(() => authWindow.location.href, flow["x-tokenName"] || "access_token");
+				if (authWindow.closed || accessToken || code || error) {
+					clearInterval(checkWindowClosed);
+					authWindow.close();
+					if (error) {
+						resolve([/* @__PURE__ */ new Error(`OAuth error: ${error}${errorDescription ? ` (${errorDescription})` : ""}`), null]);
+						return;
+					}
+					if (accessToken) {
+						if ((accessTokenParams?.get("state") ?? null) === state) resolve([null, {
+							accessToken,
+							...refreshToken ? { refreshToken } : {}
+						}]);
+						else resolve([/* @__PURE__ */ new Error("State mismatch"), null]);
+						return;
+					}
+					if (code && type === "authorizationCode") {
+						if ((codeParams?.get("state") ?? null) === state) authorizeServers(flows, type, scopes, {
+							code,
+							pkce,
+							proxyUrl,
+							customFetch
+						}, activeServer, environmentVariables).then(resolve).catch((error) => {
+							resolve([error instanceof Error ? error : new Error("Failed to get an access token", { cause: error }), null]);
+						});
+						else resolve([/* @__PURE__ */ new Error("State mismatch"), null]);
+						return;
+					}
+					resolve([/* @__PURE__ */ new Error("Window was closed without granting authorization"), null]);
+				}
+			}, 200);
+		});
+		return [/* @__PURE__ */ new Error("Failed to open auth window"), null];
+	} catch (error) {
+		return [error instanceof Error ? error : new Error("Failed to authorize oauth2 flow", { cause: error }), null];
+	}
+};
+/**
+* Makes the BE authorization call to grab the token server to server
+* Used for clientCredentials and authorizationCode
+*/
+var authorizeServers = async (flows, type, scopes, { code, pkce, proxyUrl, customFetch = fetch, redirectUri } = {}, activeServer, environmentVariables = {}) => {
+	const flow = flows[type];
+	if (!flow) return [/* @__PURE__ */ new Error("OAuth2 flow was not defined"), null];
+	const formData = new URLSearchParams();
+	if (scopes && (type === "clientCredentials" || type === "password")) formData.set("scope", scopes);
+	/** Where to add the credentials */
+	const addCredentialsToBody = flow["x-scalar-credentials-location"] === "body";
+	const pkcePublicClient = authorizationCodeUsesPkcePublicClient(type, flow);
+	const hasClientSecret = Boolean(flow["x-scalar-secret-client-secret"]) && !pkcePublicClient;
+	if (addCredentialsToBody || type === "authorizationCode" && !hasClientSecret) formData.set("client_id", flow["x-scalar-secret-client-id"]);
+	if (addCredentialsToBody && hasClientSecret) formData.set("client_secret", flow["x-scalar-secret-client-secret"]);
+	if (redirectUri) formData.set("redirect_uri", redirectUri);
+	else if ("x-scalar-secret-redirect-uri" in flow && flow["x-scalar-secret-redirect-uri"]) formData.set("redirect_uri", flow["x-scalar-secret-redirect-uri"]);
+	if (code) {
+		formData.set("code", code);
+		formData.set("grant_type", "authorization_code");
+		if (pkce) formData.set("code_verifier", pkce.codeVerifier);
+	} else if (type === "password") {
+		const typedFlow = flows[type];
+		formData.set("grant_type", "password");
+		formData.set("username", typedFlow["x-scalar-secret-username"]);
+		formData.set("password", typedFlow["x-scalar-secret-password"]);
+	} else formData.set("grant_type", "client_credentials");
+	if (flow["x-scalar-security-body"]) Object.entries(flow["x-scalar-security-body"]).forEach(([key, value]) => {
+		if (value !== void 0 && value !== null) formData.set(key, String(value));
+	});
+	try {
+		const headers = { "Content-Type": "application/x-www-form-urlencoded" };
+		if (!addCredentialsToBody && hasClientSecret) headers.Authorization = `Basic ${encode(`${flow["x-scalar-secret-client-id"]}:${flow["x-scalar-secret-client-secret"]}`)}`;
+		const tokenUrl = makeUrlAbsolute(flow["x-scalar-secret-token-url"] ?? flow.tokenUrl, getActiveServerBase(activeServer, environmentVariables));
+		const responseData = await (await customFetch(shouldUseProxy(proxyUrl, tokenUrl) ? `${proxyUrl}?${new URLSearchParams([["scalar_url", tokenUrl]]).toString()}` : tokenUrl, {
+			method: "POST",
+			headers,
+			body: formData
+		})).json();
+		const accessToken = responseData[flow["x-tokenName"] || "access_token"];
+		const refreshToken = responseData.refresh_token;
+		if (!accessToken) return [new Error(responseData.error_description ?? responseData.error ?? "Failed to get an access token"), null];
+		return [null, {
+			accessToken,
+			...typeof refreshToken === "string" ? { refreshToken } : {}
+		}];
+	} catch (error) {
+		return [error instanceof Error ? error : new Error("Failed to get an access token. Please check your credentials.", { cause: error }), null];
+	}
+};
+/**
+* Exchange a refresh token for a new access token using the `grant_type=refresh_token` flow.
+*
+* Uses the stored refresh token, client credentials, and the token URL (or refreshUrl when available)
+* to request fresh tokens from the authorization server per RFC 6749 Section 6.
+*/
+var refreshOauth2Token = async (flows, type, proxyUrl, activeServer, environmentVariables = {}, customFetch = fetch) => {
+	const flow = flows[type];
+	if (!flow) return [/* @__PURE__ */ new Error("OAuth2 flow was not defined"), null];
+	const refreshToken = flow["x-scalar-secret-refresh-token"];
+	if (!refreshToken) return [/* @__PURE__ */ new Error("No refresh token available"), null];
+	const formData = new URLSearchParams();
+	formData.set("grant_type", "refresh_token");
+	formData.set("refresh_token", refreshToken);
+	const addCredentialsToBody = flow["x-scalar-credentials-location"] === "body";
+	const pkcePublicClient = authorizationCodeUsesPkcePublicClient(type, flow);
+	const hasClientSecret = Boolean(flow["x-scalar-secret-client-secret"]) && !pkcePublicClient;
+	if (addCredentialsToBody || type === "authorizationCode" && !hasClientSecret) formData.set("client_id", flow["x-scalar-secret-client-id"]);
+	if (addCredentialsToBody && hasClientSecret) formData.set("client_secret", flow["x-scalar-secret-client-secret"]);
+	if (flow["x-scalar-security-body"]) Object.entries(flow["x-scalar-security-body"]).forEach(([key, value]) => {
+		if (value !== void 0 && value !== null) formData.set(key, String(value));
+	});
+	try {
+		const headers = { "Content-Type": "application/x-www-form-urlencoded" };
+		if (!addCredentialsToBody && hasClientSecret) headers.Authorization = `Basic ${encode(`${flow["x-scalar-secret-client-id"]}:${flow["x-scalar-secret-client-secret"]}`)}`;
+		const absoluteRefreshUrl = makeUrlAbsolute(flow.refreshUrl || flow["x-scalar-secret-token-url"] || flow.tokenUrl, getActiveServerBase(activeServer, environmentVariables));
+		const responseData = await (await customFetch(shouldUseProxy(proxyUrl, absoluteRefreshUrl) ? `${proxyUrl}?${new URLSearchParams([["scalar_url", absoluteRefreshUrl]]).toString()}` : absoluteRefreshUrl, {
+			method: "POST",
+			headers,
+			body: formData
+		})).json();
+		const accessToken = responseData[flow["x-tokenName"] || "access_token"];
+		const newRefreshToken = responseData.refresh_token;
+		if (!accessToken) return [new Error(responseData.error_description ?? responseData.error ?? "Token refresh failed"), null];
+		return [null, {
+			accessToken,
+			...typeof newRefreshToken === "string" ? { refreshToken: newRefreshToken } : { refreshToken }
+		}];
+	} catch (error) {
+		return [error instanceof Error ? error : new Error("Failed to refresh the access token. Please re-authorize.", { cause: error }), null];
+	}
+};
+//#endregion
+export { authorizeOauth2, refreshOauth2Token };
+
+//# sourceMappingURL=oauth.js.map

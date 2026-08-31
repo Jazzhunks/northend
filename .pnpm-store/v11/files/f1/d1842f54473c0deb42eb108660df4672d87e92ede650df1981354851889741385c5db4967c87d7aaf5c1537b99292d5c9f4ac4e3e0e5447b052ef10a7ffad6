@@ -1,0 +1,71 @@
+import { server, toFumadocsSource } from "./server.js";
+//#region src/runtime/macro.ts
+function create() {
+	return server();
+}
+function normalize(file) {
+	file = file.replaceAll("\\", "/");
+	return file.startsWith("./") ? file.slice(2) : file;
+}
+function accessor(entries) {
+	return {
+		entries,
+		get(path) {
+			path = normalize(path);
+			return entries.find((entry) => entry.info.path === path);
+		}
+	};
+}
+async function doc(args) {
+	const entries = await create().doc("doc", args.base, args.entries);
+	return {
+		...accessor(entries),
+		toFumadocsSource(options) {
+			return toFumadocsSource(entries, [], options);
+		}
+	};
+}
+async function docAsync(args) {
+	const entries = await create().docLazy("doc", args.base, args.head, args.body);
+	return {
+		...accessor(entries),
+		toFumadocsSource(options) {
+			return toFumadocsSource(entries, [], options);
+		}
+	};
+}
+async function meta(args) {
+	return accessor(await create().meta("meta", args.base, args.entries));
+}
+async function docs(args) {
+	const instance = create();
+	const [docEntries, metaEntries] = await Promise.all([instance.doc("doc", args.base, args.entries), instance.meta("meta", args.base, args.meta)]);
+	const getDoc = accessor(docEntries);
+	const getMeta = accessor(metaEntries);
+	return {
+		docs: docEntries,
+		meta: metaEntries,
+		getPage: getDoc.get,
+		getMeta: getMeta.get,
+		toFumadocsSource(options) {
+			return toFumadocsSource(docEntries, metaEntries, options);
+		}
+	};
+}
+async function docsAsync(args) {
+	const instance = create();
+	const [docEntries, metaEntries] = await Promise.all([instance.docLazy("doc", args.base, args.head, args.body), instance.meta("meta", args.base, args.meta)]);
+	const getDoc = accessor(docEntries);
+	const getMeta = accessor(metaEntries);
+	return {
+		docs: docEntries,
+		meta: metaEntries,
+		getPage: getDoc.get,
+		getMeta: getMeta.get,
+		toFumadocsSource(options) {
+			return toFumadocsSource(docEntries, metaEntries, options);
+		}
+	};
+}
+//#endregion
+export { doc, docAsync, docs, docsAsync, meta };

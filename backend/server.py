@@ -1,16 +1,26 @@
 # 1. LOAD ENVIRONMENT VARIABLES FIRST
+import os
 from dotenv import load_dotenv
 from pathlib import Path
+from openai import OpenAI
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
+# NVIDIA API Configuration dynamically loaded from environment
+NVIDIA_BASE_URL = os.getenv("NVIDIA_BASE_URL")
+NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
+NVIDIA_MODEL = os.getenv("NVIDIA_MODEL", "nvidia/nemotron-3.5-lightning-30b-a3b")
+
 # 2. STANDARD LIBRARY IMPORTS
-import os
 import io
 import uuid
 import random
 import logging
 import asyncio
+import inspect
+import tempfile
+import shutil
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Literal, Dict, Any
 
@@ -23,6 +33,7 @@ from fastapi.responses import StreamingResponse
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, EmailStr
+from openai import OpenAI
 
 # 4. INTERNAL CLIENTS (Loaded after environment is populated)
 from storage_client import init_storage, put_object, get_object, aclose as storage_aclose, APP_NAME
@@ -35,6 +46,7 @@ from pdf_client import admit_card_pdf, result_card_pdf
 from whatsapp_client import send_whatsapp_admit_card
 from whatsapp_notifier import broadcast_scholarship_details
 
+
 # ---------- Constants & Helpers ----------
 ALLOWED_UPLOAD_TYPES = {
     "application/pdf": "pdf",
@@ -43,22 +55,34 @@ ALLOWED_UPLOAD_TYPES = {
 }
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 
-ALLOWED_VENUES = {"Anantnag", "Sopore", "Zakura", "Parraypora", "90 ft", "90 FT"}
-
 def _sanitize_venue(venue: Optional[str]) -> str:
-    """Ensure venue is strictly one of the allowed locations."""
-    if venue and venue.strip().title() in ALLOWED_VENUES:
-        return venue.strip().title()
-    if venue:
-        for allowed in ALLOWED_VENUES:
-            if allowed.lower() in venue.strip().lower():
-                return allowed
-    return "Srinagar"
+    """Sanitize standard venues or preserve custom school venue names. Merges Srinagar/90FT"""
+    if not venue:
+        return "90 FT"
+    v_clean = venue.strip()
+    v_lower = v_clean.lower()
+    
+    # Merge variations of 90 FT and Srinagar
+    if v_lower in ("90 ft", "90ft", "srinagar"):
+        return "90 FT"
+        
+    for allowed in ["Anantnag", "Sopore", "Zakura", "Parraypora"]:
+        if allowed.lower() == v_lower:
+            return allowed
+            
+    return v_clean
 
-async def _safe_send_whatsapp_admit_card(*args, **kwargs) -> None:
-    """Wrapper to safely log and handle exceptions from background WhatsApp dispatches."""
+async def _run_maybe_async(func, *args, **kwargs):
+    """Run either an async or synchronous client function safely."""
+    if inspect.iscoroutinefunction(func):
+        return await func(*args, **kwargs)
+    return await asyncio.to_thread(func, *args, **kwargs)
+
+
+def _safe_send_whatsapp_admit_card(*args, **kwargs) -> None:
+    """Sync wrapper for FastAPI BackgroundTasks; supports sync or async WhatsApp clients."""
     try:
-        await send_whatsapp_admit_card(*args, **kwargs)
+        asyncio.run(_run_maybe_async(send_whatsapp_admit_card, *args, **kwargs))
     except Exception as e:
         logging.error(f"Background WhatsApp task failed: {e}")
 
@@ -92,6 +116,12 @@ try:
         raise ValueError("no default database in MONGO_URL")
 except Exception:
     db = client[os.environ['DB_NAME']]
+
+# Initialize OpenAI Client dynamically using Environment Variables
+nvidia_openai_client = OpenAI(
+    base_url=NVIDIA_BASE_URL,
+    api_key=NVIDIA_API_KEY
+)
 
 app = FastAPI(title="Unacademy Offline Centre API")
 api = APIRouter(prefix="/api")
@@ -160,12 +190,48 @@ async def require_admin(user: dict = Depends(get_current_user)) -> dict:
     return user
 
 async def require_super_admin(user: dict = Depends(get_current_user)) -> dict:
-    # Super admin = the main "admin" role in this app.
-    # (ERP has additional "super_admin" role; accept both.)
     if user.get("role") not in ("admin", "super_admin"):
         raise HTTPException(403, "Super admin access required")
     return user
 
+# ---------- Completion ----------
+def run_completion():
+    # Initialize OpenAI client targeting your custom base URL
+    client = OpenAI(
+        base_url=base_url,
+        api_key=api_key
+    )
+
+    # Make the streaming chat completion request
+    completion = client.chat.completions.create(
+        model=model,
+        messages=[{"role": "user", "content": "Write a limerick about the wonders of GPU computing."}],
+        temperature=1,
+        top_p=0.95,
+        max_tokens=16384,
+        extra_body={
+            "chat_template_kwargs": {"enable_thinking": True},
+            "reasoning_budget": 16384
+        },
+        stream=True
+    )
+
+    # Process stream output
+    for chunk in completion:
+        if not chunk.choices:
+            continue
+        
+        # Output reasoning content if supported by host
+        reasoning = getattr(chunk.choices[0].delta, "reasoning_content", None)
+        if reasoning:
+            print(reasoning, end="", flush=True)
+            
+        # Output response text
+        if chunk.choices[0].delta.content is not None:
+            print(chunk.choices[0].delta.content, end="", flush=True)
+
+if __name__ == "__main__":
+    run_completion()
 # ---------- Models ----------
 class RegisterIn(BaseModel):
     name: str
@@ -216,6 +282,17 @@ class ScholarshipApplicationIn(BaseModel):
     city: str
     scholarship_id: str
     venue: Optional[str] = None
+
+class ScholarshipApplicationUpdateIn(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    school: Optional[str] = None
+    standard: Optional[str] = None
+    target_exam: Optional[str] = None
+    city: Optional[str] = None
+    venue: Optional[str] = None
+    status: Optional[str] = None
 
 class ScholarshipResultIn(BaseModel):
     marks_obtained: float
@@ -507,7 +584,6 @@ async def apply_scholarship(payload: ScholarshipApplicationIn, background: Backg
     if not campaign.get("active"):
         raise HTTPException(400, "Scholarship campaign is closed")
 
-    # Prevent Duplicate Registrations
     clean_email = payload.email.lower().strip()
     clean_phone = payload.phone.strip()
 
@@ -521,9 +597,6 @@ async def apply_scholarship(payload: ScholarshipApplicationIn, background: Backg
         raise HTTPException(status_code=400, detail=msg)
 
     selected_venue = _sanitize_venue(payload.venue)
-    avail = campaign.get("available_venues") or []
-    if avail and selected_venue not in [_sanitize_venue(v) for v in avail]:
-        raise HTTPException(400, "Selected venue is not available for this campaign")
 
     doc = payload.model_dump()
     doc["id"] = new_id()
@@ -547,7 +620,6 @@ async def apply_scholarship(payload: ScholarshipApplicationIn, background: Backg
     doc.pop("_id", None)
     doc["whatsapp_community_url"] = campaign.get("whatsapp_community_url")
 
-    # Generate Admit Card PDF safely
     admit_pdf_bytes = None
     try:
         admit_pdf_bytes = admit_card_pdf(
@@ -561,7 +633,6 @@ async def apply_scholarship(payload: ScholarshipApplicationIn, background: Backg
     except Exception as e:
         logging.error(f"Failed to generate Admit Card PDF: {e}")
 
-    # Enqueue Email Tasks
     background.add_task(
         email_scholarship_received, payload.email, payload.name, doc["application_no"], payload.target_exam, admit_pdf_bytes
     )
@@ -570,27 +641,65 @@ async def apply_scholarship(payload: ScholarshipApplicationIn, background: Backg
         f"<p><b>{payload.name}</b> from {payload.school} ({payload.standard}) applied for <b>{campaign.get('title','')}</b> at <b>{doc['venue']}</b>.<br/>App No: {doc['application_no']}<br/>Phone: {payload.phone}</p>"
     )
 
-    # Enqueue WhatsApp Task
     if admit_pdf_bytes:
         background.add_task(
             _safe_send_whatsapp_admit_card,
-            phone=payload.phone, name=payload.name, application_no=doc["application_no"],
-            scholarship_title=campaign.get("title", payload.target_exam),
-            exam_date=campaign.get("exam_date", "TBA"), venue=selected_venue,
+            phone=payload.phone,
+            name=payload.name,
+            application_no=doc["application_no"],
+            scholarship_title=campaign.get("title") or payload.target_exam,
+            standard=payload.standard,                       
+            exam_date=campaign.get("exam_date", "TBA"),
+            exam_time=campaign.get("exam_time", "10:00 AM"), 
+            venue=selected_venue,
             pdf_bytes=admit_pdf_bytes
         )
 
     return doc
 
+@api.put("/scholarship-applications/{application_no}")
+async def update_scholarship_application(
+    application_no: str,
+    payload: ScholarshipApplicationUpdateIn,
+    _admin = Depends(require_admin)
+):
+    """Update applicant details, including school venues and contact details."""
+    existing_app = await db.scholarship_applications.find_one({"application_no": application_no.strip()})
+    if not existing_app:
+        existing_app = await db.scholarship_applications.find_one({"id": application_no.strip()})
+        if not existing_app:
+            raise HTTPException(status_code=404, detail="Scholarship application not found")
+
+    update_data = {k: v for k, v in payload.model_dump().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields provided to update")
+
+    if "email" in update_data:
+        update_data["email"] = update_data["email"].lower().strip()
+    if "phone" in update_data:
+        update_data["phone"] = update_data["phone"].strip()
+    if "venue" in update_data:
+        update_data["venue"] = _sanitize_venue(update_data["venue"])
+
+    update_data["updated_at"] = now_iso()
+
+    await db.scholarship_applications.update_one(
+        {"_id": existing_app["_id"]},
+        {"$set": update_data}
+    )
+
+    updated_doc = await db.scholarship_applications.find_one({"_id": existing_app["_id"]}, {"_id": 0})
+    return updated_doc
+
 @api.get("/scholarship-applications")
 async def list_scholarship_apps(_admin = Depends(require_admin)):
-    return await db.scholarship_applications.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    # Limit removed so the frontend matrix counts represent the entire applicant pool
+    return await db.scholarship_applications.find({}, {"_id": 0}).sort("created_at", -1).to_list(None)
 
 @api.post("/admin/scholarships/{scholarship_id}/notify-applicants")
 async def notify_scholarship_applicants(
     scholarship_id: str, background: BackgroundTasks, _admin = Depends(require_admin)
 ):
-    """Admin endpoint to trigger the WhatsApp notification broadcast."""
     campaign = await db.scholarships.find_one({"id": scholarship_id}, {"_id": 0})
     if not campaign:
         raise HTTPException(status_code=404, detail="Scholarship campaign not found")
@@ -599,18 +708,31 @@ async def notify_scholarship_applicants(
     if total_applicants == 0:
         raise HTTPException(status_code=400, detail="No applicants found for this scholarship")
 
-    background.add_task(broadcast_scholarship_details, scholarship_id)
+    job_id = new_id()
+    await db.bulk_jobs.insert_one({
+        "id": job_id,
+        "scholarship_id": scholarship_id,
+        "status": "initializing",
+        "total_rows": total_applicants,
+        "processed": 0,
+        "success": 0,
+        "errors": 0,
+        "recent_logs": [f"🚀 Starting WhatsApp broadcast for {total_applicants} applicants..."],
+        "created_at": now_iso()
+    })
+
+    background.add_task(broadcast_scholarship_details, scholarship_id, job_id)
 
     return {
-        "status": "success",
+        "status": "accepted",
         "message": f"Notification broadcast started for {total_applicants} applicants.",
         "scholarship_id": scholarship_id,
+        "job_id": job_id
     }
 
 # ---------- Per-campaign Registrations Dashboard ----------
 @api.get("/scholarships/{sid}/stats")
-async def scholarship_stats(sid: str, _admin = Depends(require_admin)):
-    """Aggregated registration stats for a single scholarship campaign."""
+async def scholarship_stats(sid: str, token: str | None = None):
     camp = await db.scholarships.find_one({"id": sid}, {"_id": 0})
     if not camp:
         raise HTTPException(404, "Campaign not found")
@@ -622,7 +744,7 @@ async def scholarship_stats(sid: str, _admin = Depends(require_admin)):
 
     apps = await db.scholarship_applications.find(
         {"scholarship_id": sid}, {"_id": 0, "venue": 1, "created_at": 1}
-    ).to_list(50000)
+    ).to_list(None)
 
     def _parse(ts):
         if not ts:
@@ -681,7 +803,7 @@ async def my_scholarship_applications(user: dict = Depends(get_current_user)):
     q = {"$or": [{"email": user.get("email")}]}
     if user.get("phone"):
         q["$or"].append({"phone": user["phone"]})
-    apps = await db.scholarship_applications.find(q, {"_id": 0}).sort("created_at", -1).to_list(50)
+    apps = await db.scholarship_applications.find(q, {"_id": 0}).sort("created_at", -1).to_list(None)
     for a in apps:
         if not a.get("result_published"):
             for k in ("result_marks_obtained", "result_total_marks", "result_rank", "result_percentile", "result_scholarship_percentage", "result_remarks"):
@@ -691,7 +813,6 @@ async def my_scholarship_applications(user: dict = Depends(get_current_user)):
 
 @api.get("/scholarship-applications/{application_no}")
 async def get_scholarship_app_by_no(application_no: str, phone: Optional[str] = Query(None)):
-    # Require phone verification for public lookup — prevents PII enumeration by app_no.
     if not phone:
         raise HTTPException(400, "Phone number is required to view this application")
     app_doc = await db.scholarship_applications.find_one(
@@ -781,9 +902,9 @@ async def attendance_applications(token: str = Query(...), venue: Optional[str] 
     camp = await _campaign_by_token(token)
     q = {"scholarship_id": camp["id"]}
     if venue: q["venue"] = _sanitize_venue(venue)
-    apps = await db.scholarship_applications.find(q, {"_id": 0}).sort("name", 1).to_list(2000)
+    apps = await db.scholarship_applications.find(q, {"_id": 0}).sort("name", 1).to_list(None)
     appno_set = [a["application_no"] for a in apps]
-    att_rows = await db.attendance.find({"scholarship_id": camp["id"], "application_no": {"$in": appno_set}}, {"_id": 0}).to_list(2000)
+    att_rows = await db.attendance.find({"scholarship_id": camp["id"], "application_no": {"$in": appno_set}}, {"_id": 0}).to_list(None)
     att_by = {a["application_no"]: a for a in att_rows}
     out = []
     for a in apps:
@@ -825,22 +946,34 @@ async def attendance_export(sid: str, _admin = Depends(require_admin)):
     camp = await db.scholarships.find_one({"id": sid}, {"_id": 0})
     if not camp:
         raise HTTPException(404, "Campaign not found")
-    apps = await db.scholarship_applications.find({"scholarship_id": sid}, {"_id": 0}).to_list(5000)
-    att = {a["application_no"]: a for a in await db.attendance.find({"scholarship_id": sid}, {"_id": 0}).to_list(5000)}
-    rows = []
-    for a in apps:
-        rec = att.get(a["application_no"]) or {}
-        rows.append({
-            "application_no": a.get("application_no"),
-            "name": a.get("name"),
-            "phone": a.get("phone"),
-            "school": a.get("school"),
-            "standard": a.get("standard"),
-            "venue": _sanitize_venue(a.get("venue")),
-            "status": rec.get("status") or "absent",
-            "marked_at": rec.get("marked_at") or "",
-        })
-    return export_excel(rows, "Attendance", f"attendance-{sid}.xlsx")
+        
+    total_count = await db.scholarship_applications.count_documents({"scholarship_id": sid})
+    if total_count == 0:
+        raise HTTPException(404, "No scholarship applications found for this campaign")
+
+    projection = {"application_no": 1, "name": 1, "phone": 1, "school": 1, "standard": 1, "venue": 1, "_id": 0}
+    apps = await db.scholarship_applications.find({"scholarship_id": sid}, projection).to_list(None)
+    
+    att_rows = await db.attendance.find({"scholarship_id": sid}, {"_id": 0}).to_list(None)
+    att = {a["application_no"]: a for a in att_rows}
+
+    def _generate_attendance_excel():
+        rows = []
+        for a in apps:
+            rec = att.get(a.get("application_no")) or {}
+            rows.append({
+                "application_no": str(a.get("application_no", "")),
+                "name": str(a.get("name", "")),
+                "phone": str(a.get("phone", "")),
+                "school": str(a.get("school", "")),
+                "standard": str(a.get("standard", "")),
+                "venue": _sanitize_venue(a.get("venue")),
+                "status": str(rec.get("status") or "absent"),
+                "marked_at": str(rec.get("marked_at") or ""),
+            })
+        return export_excel(rows, "Attendance", f"attendance-{sid}.xlsx")
+
+    return await asyncio.to_thread(_generate_attendance_excel)
 
 # ---------- Scholarship results: template + bulk upload ----------
 RESULT_HEADERS = ["application_no", "name", "school", "standard",
@@ -849,26 +982,51 @@ RESULT_HEADERS = ["application_no", "name", "school", "standard",
 
 @api.get("/admin/scholarships/{sid}/results-template")
 async def results_template(sid: str, _admin = Depends(require_admin)):
-    camp = await db.scholarships.find_one({"id": sid}, {"_id": 0})
+    camp = await db.scholarships.find_one({"id": sid}, {"_id": 0, "total_marks": 1, "title": 1})
     if not camp:
         raise HTTPException(404, "Campaign not found")
-    apps = await db.scholarship_applications.find({"scholarship_id": sid}, {"_id": 0}).sort("name", 1).to_list(5000)
-    wb = openpyxl.Workbook(); ws = wb.active; ws.title = "Results"
-    ws.append(RESULT_HEADERS)
-    total_marks_default = camp.get("total_marks") or 100
-    for a in apps:
-        ws.append([
-            a.get("application_no", ""), a.get("name", ""),
-            a.get("school", ""), a.get("standard", ""),
-            "", total_marks_default, "", "", "", "", "no",
-        ])
-    for cell in ws[1]:
-        cell.font = openpyxl.styles.Font(bold=True)
-    buf = io.BytesIO(); wb.save(buf); buf.seek(0)
-    return StreamingResponse(buf,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="results-template-{sid}.xlsx"'})
+        
+    total_count = await db.scholarship_applications.count_documents({"scholarship_id": sid})
+    if total_count == 0:
+        raise HTTPException(404, "No scholarship applications found for this campaign")
 
+    projection = {"application_no": 1, "name": 1, "school": 1, "standard": 1, "_id": 0}
+    apps = await db.scholarship_applications.find({"scholarship_id": sid}, projection).sort("name", 1).to_list(None)
+    total_marks_default = camp.get("total_marks") or 100
+
+    def _generate_excel():
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Results"
+        ws.append(RESULT_HEADERS)
+        for cell in ws[1]:
+            cell.font = openpyxl.styles.Font(bold=True)
+            
+        for a in apps:
+            ws.append([
+                str(a.get("application_no", "")),
+                str(a.get("name", "")),
+                str(a.get("school", "")),
+                str(a.get("standard", "")),
+                "", total_marks_default, "", "", "", "", "no",
+            ])
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        return buf
+
+    buf = await asyncio.to_thread(_generate_excel)
+    file_size = buf.getbuffer().nbytes
+
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f'attachment; filename="results-template-{sid}.xlsx"',
+            "Content-Length": str(file_size)
+        }
+    )
+    
 @api.post("/admin/scholarships/{sid}/bulk-results")
 async def bulk_results(sid: str, background: BackgroundTasks,
                        file: UploadFile = File(...), _admin = Depends(require_admin)):
@@ -956,7 +1114,6 @@ BULK_SCHOLARSHIP_HEADERS = [
 
 @api.get("/admin/scholarships/{sid}/bulk-register-template")
 async def bulk_register_template(sid: str, _admin = Depends(require_admin)):
-    """Download an Excel template pre-filled with correct headers + a sample row."""
     camp = await db.scholarships.find_one({"id": sid}, {"_id": 0})
     if not camp:
         raise HTTPException(404, "Campaign not found")
@@ -981,168 +1138,197 @@ async def bulk_register_template(sid: str, _admin = Depends(require_admin)):
     )
 
 
-async def _register_one_bulk_row(
-    sid: str,
-    campaign: Dict[str, Any],
-    row: tuple,
-    header_map: Dict[str, int],
-    background: BackgroundTasks,
-) -> Dict[str, Any]:
-    """Insert a single bulk row + enqueue email/whatsapp. Returns per-row outcome."""
-    def _cell(key: str, default: str = "") -> str:
-        idx = header_map.get(key)
-        if idx is None or idx >= len(row) or row[idx] is None:
-            return default
-        return str(row[idx]).strip()
+# ---------- BULK UPLOAD ASYNC WORKER ----------
 
-    name = _cell("name")
-    email = _cell("email").lower()
-    phone = _cell("phone")
-    standard = _cell("standard", "General")
-    school = _cell("school", "N/A")
-    raw_venue = _cell("venue") or None
-    venue = _sanitize_venue(raw_venue)
-
-    if not name or not email or not phone:
-        return {"ok": False, "reason": "missing_required", "name": name, "email": email}
-
-    existing = await db.scholarship_applications.find_one({
-        "scholarship_id": sid,
-        "$or": [{"email": email}, {"phone": phone}],
-    })
-    if existing:
-        return {"ok": False, "reason": "duplicate", "name": name, "email": email,
-                "application_no": existing.get("application_no")}
-
-    # Unique 8-digit numeric application_no
-    app_no = None
-    for _ in range(10):
-        candidate = str(random.randint(10000000, 99999999))
-        if not await db.scholarship_applications.find_one({"application_no": candidate}):
-            app_no = candidate
-            break
-    if not app_no:
-        app_no = str(int(datetime.now(timezone.utc).timestamp() * 1000))[-8:]
-
-    doc = {
-        "id": new_id(),
-        "application_no": app_no,
-        "scholarship_id": sid,
-        "scholarship_title": campaign.get("title", "Scholarship Test"),
-        "name": name, "email": email, "phone": phone,
-        "standard": standard, "school": school,
-        "target_exam": standard, "city": venue, "venue": venue,
-        "status": "approved",
-        "created_at": now_iso(),
-    }
-    await db.scholarship_applications.insert_one(doc)
-
-    # PDF (sync — needed for email/whatsapp attachments)
-    admit_pdf_bytes = None
+async def _process_bulk_file_bg(job_id: str, sid: str, file_path: str):
     try:
-        admit_pdf_bytes = admit_card_pdf(
-            application_no=app_no, name=name, phone=phone, school=school,
-            standard=standard, target_exam=standard,
-            exam_date=campaign.get("exam_date", "TBA"), venue=venue,
-            exam_time=campaign.get("exam_time", "10:00 AM"),
-            scholarship_title=campaign.get("title", "Scholarship Test"),
+        campaign = await db.scholarships.find_one({"id": sid}, {"_id": 0})
+        if not campaign:
+            raise Exception("Campaign not found during processing.")
+
+        wb = openpyxl.load_workbook(file_path, read_only=True, data_only=True)
+        ws = wb.active
+        rows = list(ws.iter_rows(values_only=True))
+        
+        if not rows or len(rows) < 2:
+            raise Exception("Sheet is empty or missing data rows.")
+
+        raw_headers = [str(h or "").strip().lower().replace(" ", "_").replace("/", "_") for h in rows[0]]
+        header_map = {}
+        for idx, h in enumerate(raw_headers):
+            if "name" in h and "school" not in h and "institute" not in h: header_map["name"] = idx
+            elif "email" in h: header_map["email"] = idx
+            elif "phone" in h or "mobile" in h or "contact" in h: header_map["phone"] = idx
+            elif "class" in h or "standard" in h or "grade" in h: header_map["standard"] = idx
+            elif "school" in h or "institute" in h: header_map["school"] = idx
+            elif "venue" in h or "location" in h or "center" in h: header_map["venue"] = idx
+
+        for req in ("name", "email", "phone"):
+            if req not in header_map:
+                raise Exception(f"Missing required column: {req}")
+
+        valid_rows = [r for r in rows[1:] if any(c is not None and str(c).strip() != "" for c in r)]
+        total_rows = len(valid_rows)
+
+        await db.bulk_jobs.update_one(
+            {"id": job_id}, 
+            {"$set": {"status": "processing", "total_rows": total_rows}}
         )
+
+        for row_no, row in enumerate(valid_rows, start=2):
+            try:
+                def _cell(key: str, default: str = "") -> str:
+                    idx = header_map.get(key)
+                    if idx is None or idx >= len(row) or row[idx] is None: return default
+                    return str(row[idx]).strip()
+
+                name = _cell("name")
+                email = _cell("email").lower()
+                phone_raw = _cell("phone")
+                phone = str(phone_raw).split(".")[0].strip() if phone_raw else ""
+                standard = _cell("standard", "General")
+                school = _cell("school", "N/A")
+                venue = _sanitize_venue(_cell("venue"))
+
+                if not name or not email or not phone:
+                    raise ValueError(f"Missing required data for Name: {name}")
+
+                existing = await db.scholarship_applications.find_one({
+                    "scholarship_id": sid,
+                    "$or": [{"email": email}, {"phone": phone}],
+                })
+                
+                if existing:
+                    log_msg = f"⚠️ Skipped {name} (Row {row_no}): Already registered."
+                    await db.bulk_jobs.update_one({"id": job_id}, {
+                        "$inc": {"processed": 1, "errors": 1},
+                        "$push": {"recent_logs": {"$each": [log_msg], "$slice": -15}}
+                    })
+                    continue
+
+                for _ in range(10):
+                    candidate = str(random.randint(10000000, 99999999))
+                    if not await db.scholarship_applications.find_one({"application_no": candidate}):
+                        app_no = candidate
+                        break
+                else:
+                    app_no = str(int(datetime.now(timezone.utc).timestamp() * 1000))[-8:]
+                
+                doc = {
+                    "id": new_id(),
+                    "application_no": app_no,
+                    "scholarship_id": sid,
+                    "scholarship_title": campaign.get("title", "Scholarship Test"),
+                    "name": name, "email": email, "phone": phone,
+                    "standard": standard, "school": school,
+                    "target_exam": standard, "city": venue, "venue": venue,
+                    "status": "approved",
+                    "created_at": now_iso(),
+                }
+                await db.scholarship_applications.insert_one(doc)
+
+                admit_pdf_bytes = None
+                try:
+                    admit_pdf_bytes = admit_card_pdf(
+                        application_no=app_no, name=name, phone=phone, school=school,
+                        standard=standard, target_exam=standard,
+                        exam_date=campaign.get("exam_date", "TBA"), venue=venue,
+                        exam_time=campaign.get("exam_time", "10:00 AM"),
+                        scholarship_title=campaign.get("title", "Scholarship Test"),
+                    )
+                except Exception as e:
+                    logging.error(f"PDF gen failed for {app_no}: {e}")
+
+                asyncio.create_task(
+                    _run_maybe_async(
+                        email_scholarship_received,
+                        email, name, app_no, standard, admit_pdf_bytes
+                    )
+                )
+
+                if admit_pdf_bytes:
+                    asyncio.create_task(
+                        _run_maybe_async(
+                            send_whatsapp_admit_card,
+                            phone=phone,
+                            name=name,
+                            application_no=app_no,
+                            scholarship_title=campaign.get("title") or standard,
+                            standard=standard,
+                            exam_date=campaign.get("exam_date") or "TBA",
+                            exam_time=campaign.get("exam_time", "10:00 AM"),
+                            venue=venue,
+                            pdf_bytes=admit_pdf_bytes,
+                        )
+                    )
+                        
+                log_msg = f"✅ Success: {name} - Registered & WhatsApp Queued"
+                await db.bulk_jobs.update_one({"id": job_id}, {
+                    "$inc": {"processed": 1, "success": 1},
+                    "$push": {"recent_logs": {"$each": [log_msg], "$slice": -15}}
+                })
+                
+                await asyncio.sleep(0.01)
+
+            except Exception as row_err:
+                log_msg = f"❌ Error row {row_no} ({name if 'name' in locals() else 'Unknown'}): {str(row_err)}"
+                await db.bulk_jobs.update_one({"id": job_id}, {
+                    "$inc": {"processed": 1, "errors": 1},
+                    "$push": {"recent_logs": {"$each": [log_msg], "$slice": -15}}
+                })
+
+        await db.bulk_jobs.update_one({"id": job_id}, {"$set": {"status": "completed"}})
+
     except Exception as e:
-        logging.error(f"PDF gen failed for {app_no}: {e}")
-
-    # Email + WhatsApp — background so we don't block the whole request
-    background.add_task(
-        email_scholarship_received, email, name, app_no, standard, admit_pdf_bytes,
-    )
-    if admit_pdf_bytes:
-        background.add_task(
-            _safe_send_whatsapp_admit_card,
-            phone=phone, name=name, application_no=app_no,
-            scholarship_title=campaign.get("title", standard),
-            exam_date=campaign.get("exam_date", "TBA"), venue=venue,
-            pdf_bytes=admit_pdf_bytes,
-        )
-
-    return {"ok": True, "application_no": app_no, "name": name, "email": email}
+        await db.bulk_jobs.update_one({"id": job_id}, {
+            "$set": {"status": "failed"}, 
+            "$push": {"recent_logs": {"$each": [f"💥 FATAL ERROR: {str(e)}"], "$slice": -15}}
+        })
+    finally:
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
 
 @api.post("/admin/scholarships/{sid}/bulk-register")
-async def bulk_register_scholarship(
+async def bulk_register_scholarship_async(
     sid: str,
     background: BackgroundTasks,
     file: UploadFile = File(...),
     _admin = Depends(require_admin),
 ):
-    """Synchronously registers each row + generates PDF, enqueues email/WhatsApp.
-    Returns exact counts so the admin UI can display them."""
     campaign = await db.scholarships.find_one({"id": sid}, {"_id": 0})
     if not campaign:
-        raise HTTPException(404, "Scholarship campaign not found")
-    if not campaign.get("active"):
-        raise HTTPException(400, "Scholarship campaign is inactive")
+        raise HTTPException(404, "Campaign not found")
 
-    data = await file.read()
-    if not data:
-        raise HTTPException(400, "Empty file provided")
+    job_id = new_id()
+    
+    tmp_path = os.path.join(tempfile.gettempdir(), f"bulk_{job_id}.xlsx")
+    with open(tmp_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
 
-    try:
-        wb = openpyxl.load_workbook(io.BytesIO(data), read_only=True, data_only=True)
-        ws = wb.active
-    except Exception as e:
-        raise HTTPException(400, f"Could not read Excel: {e}")
+    await db.bulk_jobs.insert_one({
+        "id": job_id,
+        "scholarship_id": sid,
+        "status": "initializing",
+        "total_rows": 0,
+        "processed": 0,
+        "success": 0,
+        "errors": 0,
+        "recent_logs": [f"🚀 File uploaded successfully. Initializing parser..."],
+        "created_at": now_iso()
+    })
 
-    rows = list(ws.iter_rows(values_only=True))
-    if not rows or len(rows) < 2:
-        raise HTTPException(400, "Sheet is empty or has no data rows")
+    background.add_task(_process_bulk_file_bg, job_id, sid, tmp_path)
 
-    raw_headers = [str(h or "").strip().lower().replace(" ", "_").replace("/", "_") for h in rows[0]]
-    header_map: Dict[str, int] = {}
-    for idx, h in enumerate(raw_headers):
-        if "name" in h and "school" not in h and "institute" not in h:
-            header_map["name"] = idx
-        elif "email" in h:
-            header_map["email"] = idx
-        elif "phone" in h or "mobile" in h or "contact" in h:
-            header_map["phone"] = idx
-        elif "class" in h or "standard" in h or "grade" in h:
-            header_map["standard"] = idx
-        elif "school" in h or "institute" in h:
-            header_map["school"] = idx
-        elif "venue" in h or "location" in h or "center" in h:
-            header_map["venue"] = idx
+    return {"status": "accepted", "job_id": job_id}
 
-    for req in ("name", "email", "phone"):
-        if req not in header_map:
-            raise HTTPException(400, f"Missing required column: {req}")
 
-    registered = 0
-    skipped = 0
-    empty_rows = 0
-    errors: List[Dict[str, Any]] = []
-    for row_no, row in enumerate(rows[1:], start=2):
-        # Skip completely empty / blank rows (openpyxl often reports trailing empties)
-        if not any((c is not None and str(c).strip() != "") for c in row):
-            empty_rows += 1
-            continue
-        try:
-            result = await _register_one_bulk_row(sid, campaign, row, header_map, background)
-            if result.get("ok"):
-                registered += 1
-            else:
-                skipped += 1
-                errors.append({"row": row_no, **{k: v for k, v in result.items() if k != "ok"}})
-        except Exception as e:
-            logging.error(f"bulk-register row {row_no} crashed: {e}")
-            skipped += 1
-            errors.append({"row": row_no, "error": str(e)})
-
-    return {
-        "status": "success",
-        "registered": registered,
-        "skipped": skipped,
-        "total_rows": (len(rows) - 1) - empty_rows,
-        "errors": errors[:50],  # cap so payload stays small
-    }
+@api.get("/admin/bulk-jobs/{job_id}")
+async def get_bulk_job_status(job_id: str, _admin = Depends(require_admin)):
+    job = await db.bulk_jobs.find_one({"id": job_id}, {"_id": 0})
+    if not job:
+        raise HTTPException(404, "Job not found")
+    return job
 
 # ---------- Enrollments ----------
 @api.post("/enrollments")
@@ -1169,11 +1355,11 @@ async def create_enrollment(payload: EnrollmentIn, request: Request, background:
 
 @api.get("/enrollments")
 async def list_enrollments(_admin = Depends(require_admin)):
-    return await db.enrollments.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return await db.enrollments.find({}, {"_id": 0}).sort("created_at", -1).to_list(None)
 
 @api.get("/enrollments/mine")
 async def my_enrollments(user: dict = Depends(get_current_user)):
-    return await db.enrollments.find({"user_id": user["id"]}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return await db.enrollments.find({"user_id": user["id"]}, {"_id": 0}).sort("created_at", -1).to_list(None)
 
 @api.put("/enrollments/{eid}/status")
 async def update_enrollment_status(eid: str, status: str = Query(...), _admin = Depends(require_admin)):
@@ -1185,11 +1371,11 @@ async def update_enrollment_status(eid: str, status: str = Query(...), _admin = 
 # ---------- Jobs ----------
 @api.get("/jobs")
 async def list_jobs():
-    return await db.jobs.find({"active": True}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return await db.jobs.find({"active": True}, {"_id": 0}).sort("created_at", -1).to_list(None)
 
 @api.get("/jobs/all")
 async def list_all_jobs(_admin = Depends(require_admin)):
-    return await db.jobs.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return await db.jobs.find({}, {"_id": 0}).sort("created_at", -1).to_list(None)
 
 @api.post("/jobs")
 async def create_job(payload: JobIn, _admin = Depends(require_admin)):
@@ -1233,7 +1419,7 @@ async def apply_job(payload: JobApplicationIn, background: BackgroundTasks):
 
 @api.get("/job-applications")
 async def list_job_apps(_admin = Depends(require_admin)):
-    return await db.job_applications.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return await db.job_applications.find({}, {"_id": 0}).sort("created_at", -1).to_list(None)
 
 @api.put("/job-applications/{aid}/status")
 async def update_job_app_status(aid: str, status: str = Query(...), _admin = Depends(require_admin)):
@@ -1404,22 +1590,9 @@ async def upload(file: UploadFile = File(...)):
     record["url"] = f"/api/files/{file_id}"
     return record
 
-@api.get("/files/{file_id}")
-async def download_file(file_id: str):
-    rec = await db.files.find_one({"id": file_id, "is_deleted": False}, {"_id": 0})
-    if not rec:
-        raise HTTPException(404, "File not found")
-    try:
-        data, ctype = await get_object(rec["storage_path"])
-    except Exception as e:
-        raise HTTPException(500, f"Storage error: {e}")
-    return Response(content=data, media_type=rec.get("content_type") or ctype,
-                    headers={"Content-Disposition": f'inline; filename="{rec["original_filename"]}"'})
-
 # ---------- Scholarship admit card PDF ----------
 @api.get("/scholarship-applications/{application_no}/admit-card")
 async def admit_card(application_no: str, phone: Optional[str] = Query(None), request: Request = None):
-    # Access allowed if: (a) admin token, OR (b) matching phone number provided.
     is_admin = False
     try:
         user = await get_current_user(request) if request else None
@@ -1502,7 +1675,7 @@ async def export(kind: str, _admin = Depends(require_admin)):
         raise HTTPException(404, "Unknown export kind")
     coll, name = mapping[kind]
     q = {"role": "student"} if kind == "students" else {}
-    rows = await db[coll].find(q, {"_id": 0, "password_hash": 0}).to_list(5000)
+    rows = await db[coll].find(q, {"_id": 0, "password_hash": 0}).to_list(None)
     return export_excel(rows, name, f"{kind}.xlsx")
 
 # ---------- Seed ----------
@@ -1548,7 +1721,6 @@ async def seed():
     async for sc in db.scholarships.find({"examiner_token": {"$exists": False}}, {"_id": 0, "id": 1}):
         await db.scholarships.update_one({"id": sc["id"]}, {"$set": {"examiner_token": uuid.uuid4().hex}})
 
-    # Create Mongo indexes for quick application lookups and unique constraint enforcing
     await db.scholarship_applications.create_index(
         [("scholarship_id", 1), ("email", 1)]
     )
@@ -1669,11 +1841,11 @@ async def _run_initial_seed():
     })
 
 # ---------- App wiring ----------
-from erp_routes import build_erp_router, erp_seed  # noqa: E402
+from erp_routes import build_erp_router, erp_seed
 erp_router = build_erp_router(db, get_current_user, hash_password, verify_password, require_admin)
 api.include_router(erp_router)
-# WhatsApp Inbox (Super Admin only)
-from whatsapp_inbox import build_whatsapp_router  # noqa: E402
+
+from whatsapp_inbox import build_whatsapp_router
 api.include_router(build_whatsapp_router(db, require_super_admin))
 app.include_router(api)
 
@@ -1702,9 +1874,6 @@ app.add_middleware(
 
 logging.basicConfig(level=logging.INFO)
 
-# Health check endpoints — MUST be mounted directly on `app` (not the /api router)
-# so the k8s readiness probe at "GET /health" passes immediately, without waiting
-# for seed / storage init to complete.
 @app.get("/health")
 async def health():
     return {"status": "ok"}
@@ -1714,7 +1883,6 @@ async def root():
     return {"status": "ok", "service": "Unacademy Offline Centre API"}
 
 async def _run_boot_tasks():
-    """Non-blocking startup: seed DB + init storage without holding readiness."""
     try:
         await seed()
     except Exception as e:
@@ -1731,7 +1899,6 @@ async def _run_boot_tasks():
 
 @app.on_event("startup")
 async def on_start():
-    # Fire boot tasks in the background so uvicorn reports READY immediately.
     asyncio.create_task(_run_boot_tasks())
 
 @app.on_event("shutdown")

@@ -1,0 +1,123 @@
+import { resolveRouteParameters } from "./resolve-route-parameters.js";
+import { useModalSidebar } from "../hooks/use-modal-sidebar.js";
+import Modal_default from "../Modal.vue.js";
+import { computed, createApp, isRef, reactive, ref, toValue, watch } from "vue";
+import { useModal } from "@scalar/components/modal";
+import { subscribePluginEvents } from "@scalar/oas-utils/helpers";
+import { isOpenApiDocument } from "@scalar/workspace-store/schemas/type-guards";
+import { createWorkspaceEventBus } from "@scalar/workspace-store/events";
+//#region src/v2/features/modal/helpers/create-api-client-modal.ts
+/**
+* Monotonic counter used to give every modal Vue app a unique `idPrefix`.
+*
+* Vue derives `useId()` values (and therefore our teleport target ids) from the app's
+* `idPrefix`. When more than one client app mounts on the same page — for example, the
+* API reference embeds this modal alongside another client instance — a shared prefix
+* makes both apps emit identical ids. A teleported popover then resolves to the first
+* matching target in the DOM, which can be a hidden app, so the popover never appears.
+* A per-app suffix keeps the ids unique across instances.
+*/
+var modalAppCount = 0;
+/**
+* Creates the API Client Modal.
+*
+* The modal does not require a router. Instead, navigation is handled by setting
+* active entities directly through the returned `route` function.
+*/
+var createApiClientModal = ({ el, eventBus = createWorkspaceEventBus({ debug: false }), mountOnInitialize = true, plugins = [], workspaceStore, options = {} }) => {
+	const requestBodyCompositionSelection = ref({});
+	/** This is to ensure that the options are a ref if they are not already, useful for react */
+	const optionsRef = isRef(options) ? options : ref(toValue(options));
+	const defaultEntities = {
+		path: "default",
+		method: "default",
+		example: "default",
+		documentSlug: workspaceStore.workspace["x-scalar-active-document"] || "default"
+	};
+	const parameters = reactive({ ...defaultEntities });
+	/** Navigate to the specified path, method, and example. */
+	const route = (payload) => {
+		Object.assign(parameters, defaultEntities, payload);
+	};
+	/** Resolved parameters from the workspace store. */
+	const resolvedParameters = computed(() => resolveRouteParameters(workspaceStore, parameters));
+	const documentSlug = computed(() => resolvedParameters.value.documentSlug);
+	const path = computed(() => resolvedParameters.value.path);
+	const method = computed(() => resolvedParameters.value.method);
+	const exampleName = computed(() => resolvedParameters.value.example);
+	/** The document from the workspace store. Modal is OpenAPI-only; AsyncAPI docs surface as null. */
+	const document = computed(() => {
+		const doc = workspaceStore.workspace.documents[documentSlug.value ?? ""];
+		return isOpenApiDocument(doc) ? doc : null;
+	});
+	/** Sidebar state and selection handling. */
+	const sidebarState = useModalSidebar({
+		workspaceStore,
+		documentSlug,
+		path,
+		method,
+		exampleName,
+		route
+	});
+	const modalState = useModal();
+	const app = createApp(Modal_default, {
+		document,
+		eventBus,
+		exampleName,
+		method,
+		modalState,
+		path,
+		plugins,
+		requestBodyCompositionSelection,
+		sidebarState,
+		workspaceStore,
+		options: optionsRef
+	});
+	/** Restore the workspace store when the modal is closed. */
+	const handleModalClose = () => {
+		requestBodyCompositionSelection.value = {};
+	};
+	/** Initialize plugins and subscribe to event bus events */
+	const pluginUnsubscribes = [];
+	for (const plugin of plugins) {
+		plugin.lifecycle?.onInit?.();
+		pluginUnsubscribes.push(subscribePluginEvents(eventBus, plugin));
+	}
+	/** Clean up plugin lifecycle and event bus subscriptions when the app is unmounted */
+	app.onUnmount(() => {
+		for (const unsub of pluginUnsubscribes) unsub();
+		for (const plugin of plugins) plugin.lifecycle?.onDestroy?.();
+	});
+	watch(() => modalState.open, (open) => open ? null : handleModalClose());
+	watch(() => toValue(optionsRef).proxyUrl, (newProxyUrl) => workspaceStore.update("x-scalar-active-proxy", newProxyUrl), { immediate: true });
+	app.config.idPrefix = `scalar-client-${modalAppCount++}`;
+	/** Mount the modal to a given element. */
+	const mount = (mountingEl = el) => {
+		if (!mountingEl) {
+			console.error("[@scalar/api-client] Could not create the API client Modal.", "Invalid HTML element provided.", "Read more: https://github.com/scalar/scalar/tree/main/packages/api-client");
+			return;
+		}
+		app.mount(mountingEl);
+	};
+	if (mountOnInitialize) mount();
+	return {
+		app,
+		open: (payload) => {
+			modalState.open = true;
+			if (payload) route(payload);
+		},
+		mount,
+		route,
+		modalState,
+		updateOptions: (newOptions, overwrite = false) => {
+			optionsRef.value = overwrite ? newOptions : {
+				...optionsRef.value,
+				...newOptions
+			};
+		}
+	};
+};
+//#endregion
+export { createApiClientModal };
+
+//# sourceMappingURL=create-api-client-modal.js.map

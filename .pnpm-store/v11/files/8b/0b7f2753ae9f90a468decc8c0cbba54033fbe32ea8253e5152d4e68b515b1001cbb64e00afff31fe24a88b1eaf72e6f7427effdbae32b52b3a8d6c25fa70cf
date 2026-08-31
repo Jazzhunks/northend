@@ -1,0 +1,48 @@
+import { computed as e, createBlock as t, createElementVNode as n, createVNode as r, defineComponent as i, mergeModels as a, mergeProps as o, openBlock as s, toDisplayString as c, unref as l, useModel as u, withCtx as d } from "vue";
+import { ScalarButton as f } from "@scalar/components/button";
+import { ScalarIconCaretDown as p } from "@scalar/icons";
+import { ScalarListbox as m } from "@scalar/components/listbox";
+//#region src/code-example/components/ExamplePicker.vue?vue&type=script&setup=true&lang.ts
+var h = { class: "min-w-0 flex-1 truncate" }, g = /* @__PURE__ */ i({
+	inheritAttrs: !1,
+	__name: "ExamplePicker",
+	props: /* @__PURE__ */ a({ examples: { default: () => ({}) } }, {
+		modelValue: { required: !0 },
+		modelModifiers: {}
+	}),
+	emits: ["update:modelValue"],
+	setup(i) {
+		let a = u(i, "modelValue"), g = e(() => Object.entries(i.examples).map(([e, t]) => ({
+			id: e,
+			label: t?.summary ?? e
+		}))), _ = e({
+			get: () => g.value.find(({ id: e }) => e === a.value),
+			set: (e) => a.value = e?.id ?? ""
+		});
+		return (e, i) => (s(), t(l(m), {
+			modelValue: _.value,
+			"onUpdate:modelValue": i[0] ||= (e) => _.value = e,
+			class: "w-fit min-w-32",
+			options: g.value,
+			placement: "bottom-start",
+			teleport: ""
+		}, {
+			default: d(() => [r(l(f), o({
+				class: "text-c-2 hover:text-c-1 flex h-full w-fit min-w-0 gap-1.5 px-1.5 py-0.75 text-base font-normal",
+				"data-testid": "example-picker",
+				variant: "ghost"
+			}, e.$attrs), {
+				default: d(() => [n("div", h, c(_.value?.label ?? "Select an example"), 1), r(l(p), {
+					class: "ui-open:rotate-180 mt-0.25 size-3 transition-transform duration-100",
+					weight: "bold"
+				})]),
+				_: 1
+			}, 16)]),
+			_: 1
+		}, 8, ["modelValue", "options"]));
+	}
+});
+//#endregion
+export { g as default };
+
+//# sourceMappingURL=ExamplePicker.vue.script.js.map

@@ -1,0 +1,45 @@
+import ScalarFormInputGroup_default from "../ScalarForm/ScalarFormInputGroup.vue.js";
+import ScalarTristateToggleInput_default from "./ScalarTristateToggleInput.vue.js";
+import { Fragment, createBlock, createElementBlock, createTextVNode, defineComponent, mergeModels, openBlock, renderList, toDisplayString, unref, useModel, withCtx } from "vue";
+var ScalarTristateToggleGroup_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	__name: "ScalarTristateToggleGroup",
+	props: /* @__PURE__ */ mergeModels({ options: { default: () => [] } }, {
+		"modelValue": { default: [] },
+		"modelModifiers": {}
+	}),
+	emits: ["update:modelValue"],
+	setup(__props) {
+		const model = useModel(__props, "modelValue");
+		/** Looks up an option's current tristate value; undefined if it has no entry in the model. */
+		function getValue(option) {
+			return model.value.find((entry) => entry.value === option.value)?.checked;
+		}
+		/** Upserts or removes an option's entry in the model based on its new tristate value. */
+		function setValue(option, checked) {
+			const rest = model.value.filter((entry) => entry.value !== option.value);
+			model.value = checked === void 0 ? rest : [...rest, {
+				...option,
+				checked
+			}];
+		}
+		return (_ctx, _cache) => {
+			return openBlock(), createBlock(unref(ScalarFormInputGroup_default), null, {
+				default: withCtx(() => [(openBlock(true), createElementBlock(Fragment, null, renderList(__props.options, (option) => {
+					return openBlock(), createBlock(ScalarTristateToggleInput_default, {
+						key: option.value,
+						modelValue: getValue(option),
+						"onUpdate:modelValue": (checked) => setValue(option, checked)
+					}, {
+						default: withCtx(() => [createTextVNode(toDisplayString(option.label), 1)]),
+						_: 2
+					}, 1032, ["modelValue", "onUpdate:modelValue"]);
+				}), 128))]),
+				_: 1
+			});
+		};
+	}
+});
+//#endregion
+export { ScalarTristateToggleGroup_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=ScalarTristateToggleGroup.vue.script.js.map

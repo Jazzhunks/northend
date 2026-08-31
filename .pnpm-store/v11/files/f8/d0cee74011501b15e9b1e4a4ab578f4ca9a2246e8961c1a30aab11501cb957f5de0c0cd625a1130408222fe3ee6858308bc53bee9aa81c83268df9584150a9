@@ -1,0 +1,8 @@
+export default class ProcessQueue<QueueItem> {
+    #private;
+    constructor(targetSize: number, factory: () => Promise<QueueItem>, destroy: (process: Promise<QueueItem>) => void);
+    get hits(): number;
+    get misses(): number;
+    acquire(): Promise<QueueItem>;
+    destroy(): Promise<void>;
+}

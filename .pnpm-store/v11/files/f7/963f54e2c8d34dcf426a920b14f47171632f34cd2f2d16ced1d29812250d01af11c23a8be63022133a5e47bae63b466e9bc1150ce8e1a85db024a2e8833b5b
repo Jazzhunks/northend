@@ -1,0 +1,30 @@
+import { snippetz as e } from "@scalar/snippetz";
+//#region src/code-example/helpers/get-snippet.ts
+var t = "ws://replace.me", n = (n, r, i) => {
+	try {
+		if (!i.url) return [/* @__PURE__ */ Error("Please enter a URL to see a code snippet"), null];
+		let a = i.url.startsWith("/") ? "" : "/";
+		try {
+			new URL(i.url);
+		} catch {
+			i.url = `${t}${a}${i.url}`;
+		}
+		if (i.postData?.mimeType === "application/json") try {
+			JSON.parse(i.postData.text || "{}");
+		} catch (e) {
+			return console.error("[getSnippet] Invalid JSON body", e), [/* @__PURE__ */ Error("Invalid JSON body"), null];
+		}
+		let o = n.replace("javascript", "js");
+		if (e().hasPlugin(o, r)) {
+			let n = e().print(o, r, i);
+			return n ? [null, n.replace(`${t}${a}`, "")] : [/* @__PURE__ */ Error("Error generating snippet"), null];
+		}
+	} catch (e) {
+		return console.error("[getSnippet] Error generating snippet", e), [/* @__PURE__ */ Error("Error generating snippet"), null];
+	}
+	return [/* @__PURE__ */ Error("No snippet found"), null];
+};
+//#endregion
+export { n as getSnippet };
+
+//# sourceMappingURL=get-snippet.js.map

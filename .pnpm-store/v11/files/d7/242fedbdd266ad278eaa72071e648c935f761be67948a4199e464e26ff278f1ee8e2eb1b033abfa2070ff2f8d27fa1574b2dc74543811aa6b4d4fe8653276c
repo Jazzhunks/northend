@@ -1,0 +1,80 @@
+{
+  "name": "@scalar/blocks",
+  "description": "Render blocks for your OpenAPI documentation",
+  "license": "MIT",
+  "author": "Scalar (https://github.com/scalar)",
+  "homepage": "https://github.com/scalar/scalar",
+  "bugs": "https://github.com/scalar/scalar/issues/new/choose",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/scalar/scalar.git",
+    "directory": "packages/blocks"
+  },
+  "keywords": [
+    "scalar",
+    "openapi",
+    "swagger",
+    "blocks",
+    "docs"
+  ],
+  "version": "0.1.8",
+  "engines": {
+    "node": ">=22"
+  },
+  "type": "module",
+  "exports": {
+    "./style.css": "./dist/style.css",
+    "./tailwind.config.css": "./dist/styles/tailwind.config.css",
+    "./*.css": {
+      "import": "./dist/*.css",
+      "require": "./dist/*.css",
+      "default": "./dist/*.css"
+    },
+    "./css/*.css": {
+      "import": "./dist/css/*.css",
+      "require": "./dist/css/*.css",
+      "default": "./dist/css/*.css"
+    },
+    "./code-example": {
+      "import": "./dist/code-example/index.js",
+      "types": "./dist/code-example/index.d.ts",
+      "default": "./dist/code-example/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "CHANGELOG.md"
+  ],
+  "dependencies": {
+    "@types/har-format": "^1.2.16",
+    "js-base64": "^3.7.8",
+    "vue": "^3.5.30",
+    "@scalar/components": "0.27.9",
+    "@scalar/helpers": "0.9.2",
+    "@scalar/icons": "0.7.5",
+    "@scalar/snippetz": "0.9.23",
+    "@scalar/themes": "0.17.1",
+    "@scalar/types": "0.16.4",
+    "@scalar/workspace-store": "0.55.6"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.2.4",
+    "@tailwindcss/vite": "^4.2.0",
+    "@vitejs/plugin-vue": "^6.0.3",
+    "@vue/test-utils": "2.4.6",
+    "@vueuse/core": "13.9.0",
+    "jsdom": "27.4.0",
+    "tailwindcss": "^4.1.18",
+    "vite": "8.0.0",
+    "vitest": "4.1.0",
+    "vue-router": "5.0.4",
+    "vue-tsc": "^3.2.4"
+  },
+  "scripts": {
+    "build": "vite build && pnpm build:styles && vue-tsc -p tsconfig.build.json",
+    "build:styles": "shx cp -r src/styles dist && tailwindcss --optimize -i src/style.css -o dist/style.css && cat dist/vue-styles.css >> dist/style.css",
+    "dev": "vite --config playground/vite.config.ts",
+    "test": "vitest",
+    "types:check": "vue-tsc --noEmit"
+  }
+}
