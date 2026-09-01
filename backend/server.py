@@ -108,14 +108,26 @@ def export_excel(rows: list, sheet_name: str, filename: str):
     )
 
 # ---------- Setup ----------
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-try:
-    db = client.get_default_database()
-    if db is None:
-        raise ValueError("no default database in MONGO_URL")
-except Exception:
-    db = client[os.environ['DB_NAME']]
+mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
+use_mock = os.environ.get('USE_MOCK_MONGO', '').strip().lower() in ('1', 'true', 'yes')
+
+if use_mock:
+    from mongomock_motor import AsyncMongoMockClient
+    client = AsyncMongoMockClient()
+    db = client[os.environ.get('DB_NAME', 'northend_db')]
+else:
+    try:
+        client = AsyncIOMotorClient(mongo_url)
+        try:
+            db = client.get_default_database()
+            if db is None:
+                raise ValueError("no default database in MONGO_URL")
+        except Exception:
+            db = client[os.environ.get('DB_NAME', 'northend_db')]
+    except Exception:
+        from mongomock_motor import AsyncMongoMockClient
+        client = AsyncMongoMockClient()
+        db = client[os.environ.get('DB_NAME', 'northend_db')]
 
 # Initialize OpenAI Client dynamically using Environment Variables
 nvidia_openai_client = OpenAI(
@@ -1558,7 +1570,7 @@ async def admin_summary(_admin = Depends(require_admin)):
         "total_jobs": await db.jobs.count_documents({}),
     }
 
-# ---------- File Upload ----------
+# ---------- File Upload & Download ----------
 @api.post("/upload")
 async def upload(file: UploadFile = File(...)):
     ctype = file.content_type or "application/octet-stream"
@@ -1589,6 +1601,22 @@ async def upload(file: UploadFile = File(...)):
     record.pop("_id", None)
     record["url"] = f"/api/files/{file_id}"
     return record
+
+@api.get("/files/{file_id}")
+async def get_file(file_id: str):
+    record = await db.files.find_one({"id": file_id, "is_deleted": False}, {"_id": 0})
+    if not record:
+        raise HTTPException(404, "File not found")
+    try:
+        data, ctype = await get_object(record["storage_path"])
+        filename = record.get("original_filename", f"{file_id}.bin")
+        return Response(
+            content=data,
+            media_type=ctype,
+            headers={"Content-Disposition": f'inline; filename="{filename}"'}
+        )
+    except Exception as e:
+        raise HTTPException(404, f"File retrieval failed: {e}")
 
 # ---------- Scholarship admit card PDF ----------
 @api.get("/scholarship-applications/{application_no}/admit-card")
@@ -1772,7 +1800,8 @@ async def _run_initial_seed():
          ["Small batches of 30", "Olympiad-grade problem sets", "All-India test ranking", "Doubt sessions 6 days a week"]),
         ("Foundation 8th–10th", "Foundation", "12 months", 35000, "Strong academic foundation with Olympiad training.", False, "https://images.pexels.com/photos/6147219/pexels-photo-6147219.jpeg?w=800",
          ["Maths Foundation", "Science Foundation", "English", "Mental Ability", "Olympiad Prep"],
-         ["Ms. M. Khan", "Mr. T. Rather"]),
+         ["Ms. M. Khan", "Mr. T. Rather"],
+         ["Maths & Science foundation", "Olympiad level preparation", "Mental ability modules", "Small interactive batches"]),
         ("CBSE Class 11–12 Sciences", "CBSE", "24 months", 40000, "CBSE-aligned programme for PCM / PCB streams with Boards-grade rigor.", True, "https://images.unsplash.com/photo-1555967522-37949fc21dcb?w=800",
          ["NCERT Mastery", "Sample Paper Drills", "Practical Lab Notes", "Pre-Board Tests"],
          ["Mr. F. Lone", "Dr. A. Wani", "Ms. S. Kaur"],
