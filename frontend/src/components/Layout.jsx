@@ -244,7 +244,7 @@ export default function Layout() {
 
   if (isAdminPath) {
     return (
-      <div className="min-h-screen bg-white text-foreground overflow-x-hidden">
+      <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
         <Helmet>
           <link rel="canonical" href={canonicalUrl} />
         </Helmet>
@@ -258,7 +258,7 @@ export default function Layout() {
       <Helmet>
         <link rel="canonical" href={canonicalUrl} />
       </Helmet>
-      <div className="min-h-screen flex flex-col bg-white text-foreground">
+      <div className="min-h-screen flex flex-col bg-background text-foreground">
         <Navbar />
         <main className="flex-1 pt-16">
           <Outlet />

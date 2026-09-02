@@ -31,8 +31,8 @@ export default function StudentDashboard() {
 
   return (
     <div className="relative min-h-[calc(100vh-64px)]" data-testid="student-dashboard">
-      <div className="ambient-orb ambient-orb--primary drift" style={{ width: 600, height: 600, top: "-200px", right: "-150px" }} />
-      <div className="ambient-orb ambient-orb--accent" style={{ width: 380, height: 380, top: "30%", left: "-150px", opacity: 0.3 }} />
+      <div className="ambient-orb ambient-orb--primary drift pointer-events-none" style={{ width: 'min(90vw, 600px)', height: 'min(90vw, 600px)', top: "-200px", right: "-150px" }} />
+      <div className="ambient-orb ambient-orb--accent pointer-events-none" style={{ width: 'min(90vw, 380px)', height: 'min(90vw, 380px)', top: "30%", left: "-150px", opacity: 0.3 }} />
       <div className="absolute inset-0 bg-grid opacity-20" />
 
       <div className="relative max-w-7xl mx-auto px-4 lg:px-8 pt-12 lg:pt-20 pb-24">

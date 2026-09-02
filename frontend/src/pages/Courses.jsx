@@ -105,7 +105,10 @@ export default function Courses() {
             </AnimatePresence>
 
             {filtered.length === 0 && (
-              <div className="text-center py-24 text-muted-foreground">No programmes in this category yet.</div>
+              <div className="text-center py-24 glass border border-border rounded-2xl text-muted-foreground" data-testid="courses-empty">
+                <div className="text-4xl mb-4">📚</div>
+                <p className="text-sm">No programmes in this category yet.</p>
+              </div>
             )}
           </div>
         </section>

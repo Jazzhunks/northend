@@ -60,13 +60,13 @@ export default function WhatsAppInbox() {
             <MessageCircle size={16} className="text-[#25D366]"/>
             <div className="text-sm font-medium">Conversations</div>
             <div className="ml-auto flex items-center gap-1">
-              <button onClick={() => setShowBroadcast(true)} title="SaaS Broadcast Campaign" className="p-1.5 rounded-lg hover:bg-white/5 text-accent" data-testid="wa-broadcast-btn">
+              <button onClick={() => setShowBroadcast(true)} title="SaaS Broadcast Campaign" className="p-1.5 rounded-lg hover:bg-muted/50 text-accent cursor-pointer" data-testid="wa-broadcast-btn">
                 <Megaphone size={14}/>
               </button>
-              <button onClick={() => setShowNewTemplate(true)} title="Create Template" className="p-1.5 rounded-lg hover:bg-white/5 text-muted-foreground" data-testid="wa-new-tpl-btn">
+              <button onClick={() => setShowNewTemplate(true)} title="Create Template" className="p-1.5 rounded-lg hover:bg-muted/50 text-muted-foreground cursor-pointer" data-testid="wa-new-tpl-btn">
                 <PlusCircle size={14}/>
               </button>
-              <button onClick={loadThreads} className="p-1.5 rounded-lg hover:bg-white/5" data-testid="wa-refresh">
+              <button onClick={loadThreads} className="p-1.5 rounded-lg hover:bg-muted/50 cursor-pointer" data-testid="wa-refresh">
                 <RefreshCw size={13} className={loadingThreads ? "animate-spin" : ""}/>
               </button>
             </div>
@@ -228,7 +228,7 @@ function ChatPane({ thread, onBack, onSent }) {
     <>
       {/* FIX: Header locked with flex-none */}
       <div className="flex-none px-4 py-3 border-b border-border bg-background/70 flex items-center gap-3">
-        <button onClick={onBack} className="lg:hidden p-1.5 rounded-lg hover:bg-white/5" data-testid="wa-back-btn">
+        <button onClick={onBack} className="lg:hidden p-1.5 rounded-lg cursor-pointer" data-testid="wa-back-btn">
           <ChevronLeft size={16}/>
         </button>
         <div className="h-10 w-10 rounded-full bg-[#25D366]/15 grid place-items-center">
@@ -243,7 +243,7 @@ function ChatPane({ thread, onBack, onSent }) {
             )}
           </div>
         </div>
-        <button onClick={load} className="p-1.5 rounded-lg hover:bg-white/5" data-testid="wa-chat-refresh">
+        <button onClick={load} className="p-1.5 rounded-lg cursor-pointer" data-testid="wa-chat-refresh">
           <RefreshCw size={13} className={loading ? "animate-spin" : ""}/>
         </button>
       </div>
@@ -258,10 +258,10 @@ function ChatPane({ thread, onBack, onSent }) {
       {/* FIX: Composer locked with flex-none so bubbles cannot push it offscreen */}
       <div className="flex-none p-3 border-t border-border bg-background/70">
         <div className="flex items-end gap-2">
-          <button onClick={() => setShowTpl(true)} className="p-2 rounded-lg hover:bg-white/5 text-muted-foreground" title="Send template" data-testid="wa-tpl-btn">
+          <button onClick={() => setShowTpl(true)} className="p-2 rounded-lg cursor-pointer text-muted-foreground" title="Send template" data-testid="wa-tpl-btn">
             <FileText size={16}/>
           </button>
-          <button onClick={() => setShowMedia(true)} className="p-2 rounded-lg hover:bg-white/5 text-muted-foreground" title="Send media" data-testid="wa-media-btn">
+          <button onClick={() => setShowMedia(true)} className="p-2 rounded-lg cursor-pointer text-muted-foreground" title="Send media" data-testid="wa-media-btn">
             <Paperclip size={16}/>
           </button>
           <textarea
@@ -321,7 +321,7 @@ function BroadcastModal({ onClose }) {
           <div className="flex items-center gap-2 font-medium text-accent">
             <Megaphone size={16}/> Broadcast Campaign Launcher
           </div>
-          <button type="button" onClick={onClose} className="p-1 hover:bg-white/5 rounded-lg"><X size={16}/></button>
+          <button type="button" onClick={onClose} className="p-1 cursor-pointer rounded-lg"><X size={16}/></button>
         </div>
         <div className="space-y-3 text-xs">
           <div>
@@ -369,7 +369,7 @@ function CreateTemplateModal({ onClose }) {
           <div className="flex items-center gap-2 font-medium text-accent">
             <PlusCircle size={16}/> Submit Meta Template
           </div>
-          <button type="button" onClick={onClose} className="p-1 hover:bg-white/5 rounded-lg"><X size={16}/></button>
+          <button type="button" onClick={onClose} className="p-1 cursor-pointer rounded-lg"><X size={16}/></button>
         </div>
         <div className="space-y-3 text-xs">
           <div>
@@ -491,7 +491,7 @@ function TemplatePicker({ onClose, onSend }) {
       <div className="w-full max-w-lg bg-background border border-border rounded-2xl overflow-hidden" onClick={e => e.stopPropagation()} data-testid="wa-tpl-modal">
         <div className="px-5 py-4 border-b border-border flex items-center justify-between">
           <div className="font-medium">Send Approved Template</div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/5"><X size={16}/></button>
+          <button onClick={onClose} className="p-1.5 rounded-lg cursor-pointer"><X size={16}/></button>
         </div>
         <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
           {loading && <div className="text-center text-xs text-muted-foreground py-6">Loading templates…</div>}
@@ -545,7 +545,7 @@ function MediaPicker({ onClose, onSend }) {
       <div className="w-full max-w-md bg-background border border-border rounded-2xl overflow-hidden" onClick={e => e.stopPropagation()} data-testid="wa-media-modal">
         <div className="px-5 py-4 border-b border-border flex items-center justify-between">
           <div className="font-medium">Send Media</div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/5"><X size={16}/></button>
+          <button onClick={onClose} className="p-1.5 rounded-lg cursor-pointer"><X size={16}/></button>
         </div>
         <div className="p-5 space-y-3">
           <div className="grid grid-cols-4 gap-2">
