@@ -382,7 +382,7 @@ function TimelineSection({ campaign }) {
                   <span className="text-[9px] font-bold text-accent-foreground">{s.n}</span>
                 </div>
                 <h3 className="font-display text-2xl font-medium">{s.t}</h3>
-                <p className="text-sm text-muted-foreground mt-2 leading-relaxed max-w-md" dangerouslySetInnerHTML={{ __html: s.d }} />
+                <p className="text-sm text-muted-foreground mt-2 leading-relaxed max-w-md">{s.d}</p>
               </div>
             </Reveal>
           ))}
