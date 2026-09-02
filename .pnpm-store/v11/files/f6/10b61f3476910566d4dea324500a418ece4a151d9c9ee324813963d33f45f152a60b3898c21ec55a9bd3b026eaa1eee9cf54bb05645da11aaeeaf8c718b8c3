@@ -1,0 +1,53 @@
+import type { XScalarCookie } from '@scalar/workspace-store/schemas/extensions/general/x-scalar-cookies';
+/**
+ * A single change to apply to the persisted document cookie jar in response to a
+ * server's `Set-Cookie` headers. This mirrors how a browser stores server-set
+ * cookies so that values like a Django CSRF token survive a page reload and get
+ * replayed on the next request.
+ */
+type ResponseCookieAction = {
+    type: 'upsert';
+    /** The cookie fields to store. Merged over the existing cookie when `index` is set. */
+    cookie: Pick<XScalarCookie, 'name' | 'value' | 'domain' | 'path'>;
+    /** Index of the existing cookie to update, or undefined to add a new one. */
+    index?: number;
+} | {
+    type: 'delete';
+    cookieName: string;
+    /** Index of the existing cookie to remove. */
+    index: number;
+};
+/**
+ * Resolve the real target URL a request was sent to, so cookies are scoped to
+ * the API host rather than the proxy. When a request is proxied, the target URL
+ * is carried in the `scalar_url` query parameter; otherwise the URL is used as-is.
+ */
+export declare const getCookieRequestUrl: (payloadUrl: string) => string;
+/**
+ * Translate a response's `Set-Cookie` headers into a list of changes for the
+ * document cookie jar.
+ *
+ * Scalar sends requests through a proxy and reads `Set-Cookie` from a custom
+ * header because browsers hide it from `fetch`, so it has to maintain its own
+ * cookie jar instead of relying on the browser. This function is that jar's
+ * write path: it decides which cookies to add, update, or remove.
+ *
+ * Cookies are scoped like a browser would scope them — using the `Set-Cookie`
+ * `Domain`/`Path` attributes, or falling back to the request host and default
+ * path — so they are only replayed on matching requests. Expired cookies (an
+ * `Expires` in the past or a non-positive `Max-Age`) remove the matching cookie,
+ * matching how a server deletes a cookie.
+ *
+ * @param cookieHeaderKeys - Serialized `Set-Cookie` values from the response
+ * @param documentCookies - The current persisted document cookies (order matches the store)
+ * @param requestUrl - The request URL, used to derive the default domain and path
+ * @param now - Current time in ms, injectable for testing
+ */
+export declare const getResponseCookieActions: ({ cookieHeaderKeys, documentCookies, requestUrl, now, }: {
+    cookieHeaderKeys: string[];
+    documentCookies: XScalarCookie[];
+    requestUrl: string;
+    now?: number;
+}) => ResponseCookieAction[];
+export {};
+//# sourceMappingURL=persist-response-cookies.d.ts.map

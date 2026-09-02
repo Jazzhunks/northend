@@ -1,0 +1,30 @@
+/**
+ * Scalar Tristate Toggle Input component
+ *
+ * A tristate toggle input component for use in forms, supporting an
+ * additional "unset" state alongside on/off.
+ *
+ * @example
+ *  <ScalarTristateToggleInput v-model="model">
+ *    Label
+ *  </ScalarTristateToggleInput>
+ */
+declare const _default: typeof __VLS_export;
+export default _default;
+declare const __VLS_export: __VLS_WithSlots<import("vue").DefineComponent<{
+    modelValue?: boolean | undefined;
+}, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {
+    "update:modelValue": (value: boolean | undefined) => any;
+}, string, import("vue").PublicProps, Readonly<{
+    modelValue?: boolean | undefined;
+}> & Readonly<{
+    "onUpdate:modelValue"?: ((value: boolean | undefined) => any) | undefined;
+}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>, {
+    default?: (props: {}) => any;
+}>;
+type __VLS_WithSlots<T, S> = T & {
+    new (): {
+        $slots: S;
+    };
+};
+//# sourceMappingURL=ScalarTristateToggleInput.vue.d.ts.map

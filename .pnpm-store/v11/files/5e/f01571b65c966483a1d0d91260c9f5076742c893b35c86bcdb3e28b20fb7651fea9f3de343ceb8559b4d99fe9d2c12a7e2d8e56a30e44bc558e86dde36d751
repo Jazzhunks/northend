@@ -1,0 +1,31 @@
+{
+    "name": "@types/node-red-node-test-helper",
+    "version": "0.3.5",
+    "description": "TypeScript definitions for node-red-node-test-helper",
+    "homepage": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node-red-node-test-helper",
+    "license": "MIT",
+    "contributors": [
+        {
+            "name": "Alex Kaul",
+            "githubUsername": "alexk111",
+            "url": "https://github.com/alexk111"
+        }
+    ],
+    "main": "",
+    "types": "index.d.ts",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
+        "directory": "types/node-red-node-test-helper"
+    },
+    "scripts": {},
+    "dependencies": {
+        "@types/node-red": "*",
+        "@types/node-red__runtime": "*",
+        "@types/sinon": "*",
+        "@types/supertest": "*"
+    },
+    "peerDependencies": {},
+    "typesPublisherContentHash": "15ff89e78f628d3b2a06385827041e4d0d2db61ef3fb14a77086160a3e8ec900",
+    "typeScriptVersion": "5.2"
+}

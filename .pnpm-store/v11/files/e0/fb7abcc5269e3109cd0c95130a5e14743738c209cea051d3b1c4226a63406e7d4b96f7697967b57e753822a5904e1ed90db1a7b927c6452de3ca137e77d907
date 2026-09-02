@@ -1,0 +1,1 @@
+{"version":3,"file":"DataTableRow.vue.js","names":[],"sources":["../../../../src/v2/components/data-table/DataTableRow.vue"],"sourcesContent":["<template>\n  <tr class=\"group contents\">\n    <slot />\n  </tr>\n</template>\n"],"mappings":";;;;mBACM,OAAM,kBAAgB;;qBAA1B,mBAEK,MAFL,YAEK,CADH,WAAQ,KAAA,QAAA,UAAA,CAAA,CAAA"}

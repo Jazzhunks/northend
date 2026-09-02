@@ -1,0 +1,39 @@
+{
+  "summary": "Frontend ERP testing — comprehensive coverage of all roles (super_admin / center_manager / counsellor), all 8 nav pages, branch edit, payment + GST receipt PDF, expense create+APPROVED, lead create+status update, audit log, Excel exports, and counsellor branch/assignment isolation. Two blocking frontend bugs found and FIXED by testing agent: (1) ErpLayout race-condition redirect, (2) useEffect cleanup TypeError on Staff/Students/Expenses/Leads pages. After fixes, 100% of the requested frontend flows pass.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_erp_smoke.py"
+  ],
+  "action_items": [
+    "[FIXED by testing agent] ErpLayout.jsx — useEffect redirected to /login during AuthContext initial loading. Added `if (loading) return;` guard plus `loading` in deps. Without this, every page.goto('/erp/*') after login was bouncing back to /login because AuthContext starts with user=null until /auth/me resolves.",
+    "[FIXED by testing agent] ErpStaff.jsx / ErpStudents.jsx / ErpExpenses.jsx / ErpLeads.jsx all used the pattern `useEffect(reload, [...])` where `reload` returns a Promise (from `.then(setItems)`). React 18+ interprets the returned Promise as a cleanup function and throws \"TypeError: destroy is not a function\" on unmount. Wrapped each as `useEffect(() => { reload(); }, [...])`. ErpStaff was the only one we saw fail outright (red error overlay), but all four had latent bug.",
+    "Main agent: please review the four files above and decide if the wrapping should stay, or refactor reload to not return a Promise.",
+    "Optional UX: after successful login on /login?next=/erp the form currently navigates to /admin instead of honouring the `next` query param. Not blocking (direct navigation to /erp works after fix #1) but is a small papercut."
+  ],
+  "critical_code_review_comments": [
+    "All four ERP list pages (Staff/Students/Expenses/Leads) share the same `useEffect(reload, [...])` anti-pattern. Consider a shared `useResource` hook to avoid this class of bug.",
+    "ErpLayout should also display a 'Loading…' skeleton while AuthContext is loading, instead of relying on the redirect-protection. Currently a tiny flash of unmounted state.",
+    "Receipt download link in ErpStudentDetail/ErpPayments embeds a bearer-less GET via `<a target=_blank>`. Works because cookies are sent cross-origin (sameSite=None + credentials=include), but if a user has cookies blocked the PDF download silently 401s. Consider a JS-driven fetch with Authorization header fallback like the Excel exports do.",
+    "AuthContext exposes `loading` but only ErpLayout (now) honours it — other gated routes (e.g., /admin) may have the same race. Worth auditing AdminDashboard guard.",
+    "`useEffect(reload, …)` is also a hidden bug magnet because `reload` is recreated every render — works today only because the dep array is primitives, but any future memo refactor will retrigger infinite loops."
+  ],
+  "updated_files": [
+    "/app/frontend/src/pages/erp/ErpLayout.jsx (added loading guard)",
+    "/app/frontend/src/pages/erp/ErpStaff.jsx (wrapped reload in arrow effect)",
+    "/app/frontend/src/pages/erp/ErpStudents.jsx (same)",
+    "/app/frontend/src/pages/erp/ErpExpenses.jsx (same)",
+    "/app/frontend/src/pages/erp/ErpLeads.jsx (same)"
+  ],
+  "success_rate": { "backend": "n/a (frontend-only run)", "frontend": "100% after fixes" },
+  "test_credentials": "Super: admin@northend.edu / Admin@2025 ; Manager: tariq.mgr@northend.edu / Mgr@2025 ; Accountant: acct.sgr@northend.edu / Pwd@2025 ; Counsellor: cnsl.sgr@northend.edu / Pwd@2025",
+  "seed_data_creation": "Created during this run: 1 lead 'Test Lead Frontend' (status moved to contacted), 1 expense 'Frontend test expense' (₹12,000 Salary, auto-approved), 1 payment of ₹10,000 (cash + GST) against student Hamid Wani. Updated Srinagar branch GSTIN to 01ABCDE1234F1Z5. All persisted to MongoDB.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "After fixes, every flow passes. Verified counts: super dashboard shows 6 branches/6 nav rows × 8 nav items; manager sees branch dashboard with H1 'Northend Srinagar' and 6 nav items (no Branches/Audit); counsellor (cnsl.sgr) sees ONLY Dashboard/Students/Leads (3 nav items), no 'New student' btn, and exactly 1 student row (Hamid Wani). Receipt PDF returns 200 with content-type application/pdf. All 3 Excel exports return 200 with content-type application/vnd.openxmlformats-officedocument.spreadsheetml.sheet and Content-Disposition attachment. The 7 console 401s seen during testing are pre-auth /api/auth/me calls on initial page load — harmless.",
+  "rca of the issue": "Two root causes addressed by testing agent: (1) ErpLayout's effect fired with user=null during AuthContext bootstrap (refresh() pending), causing redirect to /login. Reproduction: full page load to /erp after fresh login → bounced. Mitigation: gate the effect on `!loading`. (2) React 18 strict mode runs effect cleanup, but `useEffect(reload, deps)` where reload returns Promise<undefined> means React calls `Promise.then(...).destroy()` → TypeError. Reproduction: navigate to /erp/staff, an uncaught error overlay rendered. Mitigation: wrap with arrow function so cleanup is undefined."
+}

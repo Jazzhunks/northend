@@ -1,0 +1,7 @@
+import ScalarIconArrowsOutLineHorizontal_vue_vue_type_script_setup_true_lang_default from "./ScalarIconArrowsOutLineHorizontal.vue.script.js";
+//#region src/components/ScalarIconArrowsOutLineHorizontal.vue
+var ScalarIconArrowsOutLineHorizontal_default = ScalarIconArrowsOutLineHorizontal_vue_vue_type_script_setup_true_lang_default;
+//#endregion
+export { ScalarIconArrowsOutLineHorizontal_default as default };
+
+//# sourceMappingURL=ScalarIconArrowsOutLineHorizontal.js.map

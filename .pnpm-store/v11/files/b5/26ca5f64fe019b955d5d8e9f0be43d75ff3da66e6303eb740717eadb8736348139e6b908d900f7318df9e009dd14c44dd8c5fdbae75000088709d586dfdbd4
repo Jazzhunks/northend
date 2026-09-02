@@ -1,0 +1,79 @@
+import { type DraggingItem, type HoveredItem, type UseDraggableOptions } from '../hooks/use-draggable.js';
+import type { Item, Layout, SidebarOptions } from '../types';
+type __VLS_Props = {
+    /**
+     * The sidebar item to render.
+     */
+    item: Item;
+    /**
+     * The layout mode for the sidebar ('client' or 'reference').
+     */
+    layout: Layout;
+    /**
+     * Function to determine if an item is currently selected by id.
+     */
+    isSelected: (id: string) => boolean;
+    /**
+     * Function to determine if an item is currently expanded (showing its children) by id.
+     */
+    isExpanded: (id: string) => boolean;
+    /**
+     * Sidebar configuration options.
+     * - operationTitleSource: sets whether operations show their path or summary as the display title.
+     */
+    options?: SidebarOptions;
+    /**
+     * Prevents this item from being dragged.
+     *
+     * @default true
+     */
+    isDraggable?: UseDraggableOptions['isDraggable'];
+    /**
+     * Prevents this item from being hovered and dropped into. Can be either a function or a boolean.
+     *
+     * @default true
+     */
+    isDroppable?: UseDraggableOptions['isDroppable'];
+};
+type __VLS_Slots = {
+    /**
+     * Adds an optional decorator for each item, such as an edit menu.
+     * The slot receives an object with the current item.
+     */
+    decorator?(props: {
+        item: Item;
+    }): unknown;
+    /**
+     * Adds an optional empty state for an item.
+     * The slot receives an object with the current item.
+     */
+    empty?(props: {
+        item: Item;
+    }): unknown;
+    /**
+     * Adds an optional icon for each item.
+     * The slot receives an object with the current item and the open state.
+     */
+    icon?(props: {
+        item: Item;
+        open: boolean;
+    }): unknown;
+};
+declare const __VLS_base: import("vue").DefineComponent<__VLS_Props, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {} & {
+    onDragEnd: (draggingItem: DraggingItem, hoveredItem: HoveredItem) => any;
+    selectItem: (id: string) => any;
+    toggleGroup: (id: string) => any;
+}, string, import("vue").PublicProps, Readonly<__VLS_Props> & Readonly<{
+    onOnDragEnd?: ((draggingItem: DraggingItem, hoveredItem: HoveredItem) => any) | undefined;
+    onSelectItem?: ((id: string) => any) | undefined;
+    onToggleGroup?: ((id: string) => any) | undefined;
+}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;
+declare const __VLS_export: __VLS_WithSlots<typeof __VLS_base, __VLS_Slots>;
+declare const _default: typeof __VLS_export;
+export default _default;
+type __VLS_WithSlots<T, S> = T & {
+    new (): {
+        $slots: S;
+    };
+};
+//# sourceMappingURL=SidebarItem.vue.d.ts.map

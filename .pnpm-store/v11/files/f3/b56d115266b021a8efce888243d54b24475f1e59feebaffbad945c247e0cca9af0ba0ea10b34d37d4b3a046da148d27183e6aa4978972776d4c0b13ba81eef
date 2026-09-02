@@ -1,0 +1,475 @@
+import ViewLayoutSection_default from "../../../components/ViewLayout/ViewLayoutSection.vue.js";
+import SectionFilter_default from "../../../components/SectionFilter.vue.js";
+import RequestBody_default from "./components/RequestBody.vue.js";
+import RequestCodeSnippet_default from "./components/RequestCodeSnippet.vue.js";
+import RequestParams_default from "./components/RequestParams.vue.js";
+import { createParameterHandlers } from "./helpers/create-parameter-handlers.js";
+import { createParameterRows } from "./helpers/create-parameter-rows.js";
+import { groupBy } from "./helpers/group-by.js";
+import AuthSelector_default from "../scalar-auth-selector-block/components/AuthSelector.vue.js";
+import { Fragment, computed, createBlock, createCommentVNode, createElementBlock, createElementVNode, createVNode, defineComponent, mergeProps, openBlock, ref, renderList, resolveDynamicComponent, toDisplayString, toHandlers, unref, useId, vShow, watch, withCtx, withDirectives } from "vue";
+import { filterGlobalCookie, getEnvironmentVariables, getResolvedUrl } from "@scalar/workspace-store/request-example";
+import { REGEX } from "@scalar/helpers/regex/regex-helpers";
+import { canMethodHaveBody } from "@scalar/helpers/http/can-method-have-body";
+import { getResolvedRef } from "@scalar/workspace-store/helpers/get-resolved-ref";
+import { ScalarErrorBoundary } from "@scalar/components/error-boundary";
+import { replaceEnvVariables } from "@scalar/helpers/regex/replace-variables";
+import { unpackProxyObject } from "@scalar/workspace-store/helpers/unpack-proxy";
+//#region src/v2/blocks/request-block/RequestBlock.vue?vue&type=script&setup=true&lang.ts
+var _hoisted_1 = { class: "group pointer-events-none flex flex-1 items-center gap-1 lg:pr-24" };
+var _hoisted_2 = ["for"];
+var _hoisted_3 = [
+	"id",
+	"placeholder",
+	"value"
+];
+var _hoisted_4 = {
+	key: 2,
+	class: "text-c-1 flex h-8 items-center"
+};
+var _hoisted_5 = ["id", "role"];
+var RequestBlock_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	__name: "RequestBlock",
+	props: {
+		authMeta: { default: () => ({ type: "document" }) },
+		clientOptions: {},
+		environment: {},
+		eventBus: {},
+		exampleKey: {},
+		workspaceCookies: {},
+		documentCookies: {},
+		layout: {},
+		method: {},
+		operation: {},
+		path: {},
+		plugins: {},
+		proxyUrl: {},
+		securityRequirements: {},
+		securitySchemes: {},
+		requestBodyCompositionSelection: {},
+		selectedClient: {},
+		selectedSecurity: {},
+		selectedSecuritySchemes: {},
+		server: {},
+		defaultHeaders: {},
+		options: {}
+	},
+	setup(__props) {
+		/** Operation metadata used across event emissions */
+		const meta = computed(() => ({
+			method: __props.method,
+			path: __props.path,
+			exampleKey: __props.exampleKey
+		}));
+		const deletedExpandedParameterPaths = ref({});
+		/** Renamed expanded rows, tracked as old-schema-path -> typed-value-path per parameter. */
+		const renamedExpandedParameterPaths = ref({});
+		const getExpandedParameterKey = (parameter) => `${parameter.in}:${parameter.name}`;
+		const getHiddenValuePaths = (parameter) => deletedExpandedParameterPaths.value[getExpandedParameterKey(parameter)] ?? [];
+		const getRenamedValuePaths = (parameter) => renamedExpandedParameterPaths.value[getExpandedParameterKey(parameter)] ?? [];
+		const pathsEqual = (a, b) => a.length === b.length && a.every((segment, index) => segment === b[index]);
+		/**
+		* Hides the schema path of an expanded row so it does not reappear as an empty suggestion. Used
+		* both when a row is deleted and when its key is renamed (the old key should not pop back up).
+		*/
+		const hideExpandedRowPath = (row) => {
+			if (!row.originalParameter || !row.sourceParameterValuePath) return;
+			const key = getExpandedParameterKey(row.originalParameter);
+			deletedExpandedParameterPaths.value = {
+				...deletedExpandedParameterPaths.value,
+				[key]: [...deletedExpandedParameterPaths.value[key] ?? [], row.sourceParameterValuePath]
+			};
+		};
+		/**
+		* Records that an expanded row was renamed from its current value path to the typed one, so the
+		* read side can render the renamed key in the original property's slot instead of appending it to
+		* the end of the table. Repeated renames of the same row stay anchored to the original schema path.
+		*/
+		const recordExpandedRowRename = (row, newValuePath) => {
+			if (!row.originalParameter || !row.sourceParameterValuePath) return;
+			const from = row.sourceParameterValuePath;
+			const key = getExpandedParameterKey(row.originalParameter);
+			const existing = renamedExpandedParameterPaths.value[key] ?? [];
+			const chained = existing.find((entry) => pathsEqual(entry.to, from));
+			const next = chained ? existing.map((entry) => entry === chained ? {
+				from: entry.from,
+				to: newValuePath
+			} : entry) : [...existing, {
+				from,
+				to: newValuePath
+			}];
+			renamedExpandedParameterPaths.value = {
+				...renamedExpandedParameterPaths.value,
+				[key]: next
+			};
+		};
+		/** Parameters grouped by type (path, query, header, cookie) */
+		const sections = computed(() => groupBy(__props.operation.parameters?.map((param) => getResolvedRef(param)).flatMap((param) => createParameterRows(param, __props.exampleKey, {
+			hiddenValuePaths: param.in === "query" ? getHiddenValuePaths(param) : [],
+			renamedValuePaths: param.in === "query" ? getRenamedValuePaths(param) : []
+		}).map((row) => ({
+			...row,
+			in: param.in
+		}))) ?? [], "in", ({ in: _in, ...row }) => {
+			return row;
+		}));
+		const headersMap = computed(() => groupBy(sections.value.header?.map((it) => ({
+			...it,
+			name: it.name.toLowerCase()
+		})) ?? [], "name"));
+		const defaultHeaders = computed(() => {
+			const disableParameters = __props.operation["x-scalar-disable-parameters"]?.["default-headers"]?.[__props.exampleKey] ?? {};
+			const isOverridden = (name) => {
+				const header = headersMap.value[name.toLowerCase()]?.[0];
+				if (!header) return false;
+				return !header.isDisabled;
+			};
+			return Object.entries(__props.defaultHeaders).map(([name, value]) => {
+				return {
+					name,
+					value,
+					schema: void 0,
+					isOverridden: isOverridden(name),
+					isReadonly: true,
+					isDisabled: disableParameters[name.toLowerCase()] ?? false
+				};
+			});
+		});
+		const headers = computed(() => [...defaultHeaders.value, ...sections.value.header ?? []]);
+		const defaultCookies = computed(() => {
+			const environmentVariables = getEnvironmentVariables(__props.environment);
+			const url = replaceEnvVariables(getResolvedUrl({
+				server: __props.server,
+				path: __props.path
+			}), environmentVariables);
+			const disabledGlobalCookies = __props.operation["x-scalar-disable-parameters"]?.["global-cookies"]?.[__props.exampleKey] ?? {};
+			const transform = (cookie, location) => {
+				return {
+					name: cookie.name,
+					value: cookie.value,
+					globalRoute: {
+						page: location,
+						path: "cookies"
+					},
+					isReadonly: true,
+					isDisabled: disabledGlobalCookies[cookie.name.toLowerCase()] ?? false
+				};
+			};
+			return [{
+				location: "workspace",
+				cookies: __props.workspaceCookies
+			}, {
+				location: "document",
+				cookies: __props.documentCookies
+			}].flatMap(({ location, cookies }) => {
+				return cookies.filter((cookie) => filterGlobalCookie({
+					cookie,
+					url,
+					disabledGlobalCookies: {}
+				})).map((cookie) => transform(cookie, location));
+			});
+		});
+		const cookies = computed(() => [...defaultCookies.value ?? [], ...sections.value.cookie ?? []]);
+		/** Currently selected filter for the request sections */
+		const selectedFilter = ref("All");
+		/** Available operation sections */
+		const OPERATION_SECTIONS = [
+			"Auth",
+			"Variables",
+			"Cookies",
+			"Headers",
+			"Query",
+			"Body"
+		];
+		/**
+		* Pre-generated stable IDs for all possible filter sections.
+		* These are created once at setup time to avoid regenerating IDs on re-render.
+		*/
+		const sectionIds = {
+			All: useId(),
+			Auth: useId(),
+			Variables: useId(),
+			Cookies: useId(),
+			Headers: useId(),
+			Query: useId(),
+			Body: useId()
+		};
+		/** Filters available based on operation state */
+		const filters = computed(() => {
+			const availableFilters = new Set(["All", ...OPERATION_SECTIONS]);
+			if (!sections.value.path?.length) availableFilters.delete("Variables");
+			if (!canMethodHaveBody(__props.method)) availableFilters.delete("Body");
+			if (isAuthHidden.value) availableFilters.delete("Auth");
+			return [...availableFilters];
+		});
+		/**
+		* Map available filters to their pre-generated stable IDs.
+		* Only includes IDs for filters that are currently available.
+		*/
+		const filterIds = computed(() => Object.fromEntries(filters.value.map((section) => [section, sectionIds[section]])));
+		/**
+		* Hide auth selector in readonly mode when no security schemes are defined.
+		* This keeps the UI clean when there are no authentication options available.
+		*/
+		const isAuthHidden = computed(() => __props.layout === "modal" && !Object.keys(__props.securitySchemes ?? {}).length);
+		/**
+		* Keep auth available for unauthenticated operations, but collapse it by default
+		* in readonly modal layouts unless a requirement or manual selection exists.
+		*/
+		const isAuthDefaultOpen = computed(() => __props.layout !== "modal" || Boolean(__props.securityRequirements?.length || __props.selectedSecurity.selectedSchemes.length));
+		/** Get a sensible placeholder for the request name input */
+		const requestNamePlaceholder = computed(() => {
+			if (__props.operation.summary) return __props.operation.summary;
+			return __props.path.replace(REGEX.PROTOCOL, "") || "Request Name";
+		});
+		/** Check if the section should be shown based on the selected filter */
+		const isSectionVisible = (section) => {
+			return selectedFilter.value === "All" || selectedFilter.value === section;
+		};
+		/**
+		* Reset filter to 'All' if Body filter is selected but method changes to one that cannot have a body.
+		* This prevents showing an empty Body section when switching methods.
+		*/
+		watch(() => __props.method, (newMethod) => {
+			if (selectedFilter.value === "Body" && !canMethodHaveBody(newMethod)) selectedFilter.value = "All";
+		});
+		watch(() => [
+			__props.method,
+			__props.path,
+			__props.exampleKey
+		], () => {
+			deletedExpandedParameterPaths.value = {};
+			renamedExpandedParameterPaths.value = {};
+		});
+		/** Handle operation summary updates */
+		const handleSummaryUpdate = (event) => {
+			const summary = event.target.value;
+			__props.eventBus.emit("operation:update:meta", {
+				meta: meta.value,
+				payload: { summary: summary.trim() }
+			});
+		};
+		/** Parameter handlers */
+		const parameterHandlers = computed(() => ({
+			path: createParameterHandlers("path", __props.eventBus, meta.value, { context: sections.value.path ?? [] }),
+			cookie: createParameterHandlers("cookie", __props.eventBus, meta.value, {
+				context: cookies.value ?? [],
+				globalParameters: defaultCookies.value.length
+			}),
+			header: createParameterHandlers("header", __props.eventBus, meta.value, {
+				context: headers.value,
+				defaultParameters: defaultHeaders.value.length
+			}),
+			query: createParameterHandlers("query", __props.eventBus, meta.value, {
+				context: sections.value.query ?? [],
+				onDeleteExpandedRow: hideExpandedRowPath,
+				onRenameExpandedRow: recordExpandedRowRename
+			})
+		}));
+		/** Handle request body content type update */
+		const handleUpdateContentType = (payload) => __props.eventBus.emit("operation:update:requestBody:contentType", {
+			payload: { contentType: payload.value },
+			meta: meta.value
+		});
+		/** Handle request body value update */
+		const handleUpdateBodyValue = ({ payload, contentType }) => {
+			const debounceKey = typeof payload === "string" ? `update:requestBody:value-${contentType}` : void 0;
+			__props.eventBus.emit("operation:update:requestBody:value", {
+				payload,
+				contentType,
+				meta: meta.value
+			}, { debounceKey });
+		};
+		/** Handle request body value update */
+		const handleUpdateBodyFormValue = ({ payload, contentType }) => {
+			const debounceKey = `update:requestBody:${contentType}-form-value`;
+			__props.eventBus.emit("operation:update:requestBody:formValue", {
+				payload: payload.map((row) => unpackProxyObject(row, { depth: 1 })),
+				contentType,
+				meta: meta.value
+			}, { debounceKey });
+		};
+		const labelRequestNameId = useId();
+		const globalCookies = computed(() => [...__props.workspaceCookies, ...__props.documentCookies]);
+		/** Allow updating the operation extensions for the plugins */
+		const updateOperationExtension = (payload) => __props.eventBus.emit("operation:update:extension", {
+			payload,
+			meta: meta.value
+		});
+		return (_ctx, _cache) => {
+			return openBlock(), createBlock(ViewLayoutSection_default, { "aria-label": `Request: ${__props.operation.summary}` }, {
+				title: withCtx(() => [createElementVNode("div", _hoisted_1, [__props.layout !== "modal" ? (openBlock(), createElementBlock("label", {
+					key: 0,
+					class: "pointer-events-auto absolute top-0 left-0 h-full w-full cursor-text opacity-0",
+					for: unref(labelRequestNameId)
+				}, null, 8, _hoisted_2)) : createCommentVNode("", true), __props.layout !== "modal" ? (openBlock(), createElementBlock("input", {
+					key: 1,
+					id: unref(labelRequestNameId),
+					class: "text-c-1 group-hover-input pointer-events-auto relative z-10 -ml-0.5 h-8 w-full rounded pl-1.25 has-[:focus-visible]:outline md:-ml-1.25",
+					placeholder: requestNamePlaceholder.value,
+					value: __props.operation.summary,
+					onBlur: handleSummaryUpdate
+				}, null, 40, _hoisted_3)) : (openBlock(), createElementBlock("span", _hoisted_4, toDisplayString(__props.operation.summary), 1))]), createVNode(SectionFilter_default, {
+					modelValue: selectedFilter.value,
+					"onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => selectedFilter.value = $event),
+					filterIds: filterIds.value,
+					filters: filters.value
+				}, null, 8, [
+					"modelValue",
+					"filterIds",
+					"filters"
+				])]),
+				default: withCtx(() => [createElementVNode("div", {
+					id: filterIds.value.All,
+					class: "request-section-content custom-scroll relative flex flex-1 flex-col",
+					role: selectedFilter.value === "All" ? "tabpanel" : "none"
+				}, [
+					withDirectives(createVNode(unref(AuthSelector_default), {
+						id: filterIds.value.Auth,
+						createAnySecurityScheme: __props.layout !== "modal",
+						defaultOpen: isAuthDefaultOpen.value,
+						environment: __props.environment,
+						eventBus: __props.eventBus,
+						meta: __props.authMeta,
+						options: __props.options,
+						proxyUrl: __props.proxyUrl,
+						securityRequirements: __props.securityRequirements,
+						securitySchemes: __props.securitySchemes,
+						selectedSecurity: __props.selectedSecurity,
+						selectedSecuritySchemes: __props.selectedSecuritySchemes,
+						server: __props.server,
+						title: "Authentication"
+					}, null, 8, [
+						"id",
+						"createAnySecurityScheme",
+						"defaultOpen",
+						"environment",
+						"eventBus",
+						"meta",
+						"options",
+						"proxyUrl",
+						"securityRequirements",
+						"securitySchemes",
+						"selectedSecurity",
+						"selectedSecuritySchemes",
+						"server"
+					]), [[vShow, isSectionVisible("Auth") && !isAuthHidden.value]]),
+					withDirectives(createVNode(RequestParams_default, mergeProps({
+						id: filterIds.value.Variables,
+						environment: __props.environment,
+						eventBus: __props.eventBus,
+						exampleKey: __props.exampleKey,
+						rows: sections.value.path ?? [],
+						showAddRowPlaceholder: false,
+						title: "Variables"
+					}, toHandlers(parameterHandlers.value.path)), null, 16, [
+						"id",
+						"environment",
+						"eventBus",
+						"exampleKey",
+						"rows"
+					]), [[vShow, isSectionVisible("Variables") && sections.value.path?.length]]),
+					withDirectives(createVNode(RequestParams_default, mergeProps({
+						id: filterIds.value.Cookies,
+						environment: __props.environment,
+						eventBus: __props.eventBus,
+						exampleKey: __props.exampleKey,
+						rows: cookies.value ?? [],
+						showAddRowPlaceholder: true,
+						title: "Cookies"
+					}, toHandlers(parameterHandlers.value.cookie)), null, 16, [
+						"id",
+						"environment",
+						"eventBus",
+						"exampleKey",
+						"rows"
+					]), [[vShow, isSectionVisible("Cookies")]]),
+					withDirectives(createVNode(RequestParams_default, mergeProps({
+						id: filterIds.value.Headers,
+						environment: __props.environment,
+						eventBus: __props.eventBus,
+						exampleKey: __props.exampleKey,
+						rows: headers.value ?? [],
+						title: "Headers"
+					}, toHandlers(parameterHandlers.value.header)), null, 16, [
+						"id",
+						"environment",
+						"eventBus",
+						"exampleKey",
+						"rows"
+					]), [[vShow, isSectionVisible("Headers")]]),
+					withDirectives(createVNode(RequestParams_default, mergeProps({
+						id: filterIds.value.Query,
+						environment: __props.environment,
+						eventBus: __props.eventBus,
+						exampleKey: __props.exampleKey,
+						rows: sections.value.query ?? [],
+						title: "Query Parameters"
+					}, toHandlers(parameterHandlers.value.query)), null, 16, [
+						"id",
+						"environment",
+						"eventBus",
+						"exampleKey",
+						"rows"
+					]), [[vShow, isSectionVisible("Query")]]),
+					withDirectives(createVNode(RequestBody_default, {
+						id: filterIds.value.Body,
+						environment: __props.environment,
+						exampleKey: __props.exampleKey,
+						requestBody: unref(getResolvedRef)(__props.operation.requestBody),
+						requestBodyCompositionSelection: __props.requestBodyCompositionSelection,
+						title: "Request Body",
+						"onUpdate:contentType": handleUpdateContentType,
+						"onUpdate:formValue": handleUpdateBodyFormValue,
+						"onUpdate:value": handleUpdateBodyValue
+					}, null, 8, [
+						"id",
+						"environment",
+						"exampleKey",
+						"requestBody",
+						"requestBodyCompositionSelection"
+					]), [[vShow, isSectionVisible("Body") && unref(canMethodHaveBody)(__props.method)]]),
+					(openBlock(true), createElementBlock(Fragment, null, renderList(__props.plugins, (plugin, index) => {
+						return openBlock(), createBlock(unref(ScalarErrorBoundary), { key: index }, {
+							default: withCtx(() => [plugin?.components?.request ? withDirectives((openBlock(), createBlock(resolveDynamicComponent(plugin.components.request.component), mergeProps({
+								key: 0,
+								operation: __props.operation
+							}, { ref_for: true }, plugin.components.request.additionalProps, { "onOperation:update:extension": updateOperationExtension }), null, 16, ["operation"])), [[vShow, selectedFilter.value === "All"]]) : createCommentVNode("", true)]),
+							_: 2
+						}, 1024);
+					}), 128)),
+					_cache[1] || (_cache[1] = createElementVNode("div", { class: "flex grow" }, null, -1)),
+					withDirectives(createVNode(RequestCodeSnippet_default, {
+						clientOptions: __props.clientOptions,
+						eventBus: __props.eventBus,
+						globalCookies: globalCookies.value,
+						integration: "client",
+						method: __props.method,
+						operation: __props.operation,
+						path: __props.path,
+						securitySchemes: __props.selectedSecuritySchemes,
+						selectedClient: __props.selectedClient,
+						selectedContentType: unref(getResolvedRef)(__props.operation.requestBody)?.["x-scalar-selected-content-type"]?.[__props.exampleKey],
+						selectedServer: __props.server ?? void 0
+					}, null, 8, [
+						"clientOptions",
+						"eventBus",
+						"globalCookies",
+						"method",
+						"operation",
+						"path",
+						"securitySchemes",
+						"selectedClient",
+						"selectedContentType",
+						"selectedServer"
+					]), [[vShow, selectedFilter.value === "All"]])
+				], 8, _hoisted_5)]),
+				_: 1
+			}, 8, ["aria-label"]);
+		};
+	}
+});
+//#endregion
+export { RequestBlock_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=RequestBlock.vue.script.js.map

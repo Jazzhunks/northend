@@ -1,0 +1,25 @@
+import { __exportAll } from "../../../_virtual/_rolldown/runtime.js";
+import { createElementBlock, createElementVNode, openBlock } from "vue";
+//#region src/components/ScalarIcon/icons/LightMode.svg?component
+var LightMode_exports = /* @__PURE__ */ __exportAll({
+	default: () => LightMode_default,
+	render: () => render$1
+});
+var _hoisted_1 = {
+	xmlns: "http://www.w3.org/2000/svg",
+	viewBox: "0 0 24 24"
+};
+function render$1(_ctx, _cache) {
+	return openBlock(), createElementBlock("svg", _hoisted_1, [..._cache[0] || (_cache[0] = [createElementVNode("path", {
+		fill: "none",
+		stroke: "currentColor",
+		"stroke-linecap": "round",
+		"stroke-linejoin": "round",
+		d: "M7.501 12a4.5 4.5 0 1 0 9 0 4.5 4.5 0 1 0-9 0m4.5-10.5v3m0 15v3m10.5-10.5h-3m-15 0h-3m17.924-7.424-2.121 2.121M6.697 17.304l-2.121 2.121m14.849 0-2.121-2.121M6.697 6.697 4.576 4.576"
+	}, null, -1)])]);
+}
+var LightMode_default = { render: render$1 };
+//#endregion
+export { LightMode_exports };
+
+//# sourceMappingURL=LightMode.svg.virtual.js.map

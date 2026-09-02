@@ -1,0 +1,13 @@
+declare function focusPrompt(): void;
+declare const __VLS_export: import("vue").DefineComponent<{}, {
+    focusPrompt: typeof focusPrompt;
+}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {} & {
+    submit: () => any;
+    uploadApi: () => any;
+}, string, import("vue").PublicProps, Readonly<{}> & Readonly<{
+    onSubmit?: (() => any) | undefined;
+    onUploadApi?: (() => any) | undefined;
+}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, true, {}, any>;
+declare const _default: typeof __VLS_export;
+export default _default;
+//# sourceMappingURL=PromptForm.vue.d.ts.map

@@ -1,0 +1,1617 @@
+{
+  "$ref": "#/definitions/RcFile",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "CustomType.Any": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/CustomType.NameAndVersionProps"
+        },
+        {
+          "$ref": "#/definitions/CustomType.NamedVersionString"
+        },
+        {
+          "$ref": "#/definitions/CustomType.UnnamedVersionString"
+        },
+        {
+          "$ref": "#/definitions/CustomType.VersionsByName"
+        }
+      ]
+    },
+    "CustomType.NameAndVersionProps": {
+      "additionalProperties": false,
+      "properties": {
+        "namePath": {
+          "see": "https://syncpack.dev/config/custom-types/#namepath",
+          "type": "string"
+        },
+        "path": {
+          "see": "https://syncpack.dev/config/custom-types/#name",
+          "type": "string"
+        },
+        "strategy": {
+          "const": "name~version",
+          "see": "https://syncpack.dev/config/custom-types/#namestrategy",
+          "type": "string"
+        }
+      },
+      "required": [
+        "namePath",
+        "path",
+        "strategy"
+      ],
+      "type": "object"
+    },
+    "CustomType.NamedVersionString": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "see": "https://syncpack.dev/config/custom-types/#name",
+          "type": "string"
+        },
+        "strategy": {
+          "const": "name@version",
+          "see": "https://syncpack.dev/config/custom-types/#namestrategy",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "strategy"
+      ],
+      "type": "object"
+    },
+    "CustomType.UnnamedVersionString": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "see": "https://syncpack.dev/config/custom-types/#name",
+          "type": "string"
+        },
+        "strategy": {
+          "const": "version",
+          "see": "https://syncpack.dev/config/custom-types/#namestrategy",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "strategy"
+      ],
+      "type": "object"
+    },
+    "CustomType.VersionsByName": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "see": "https://syncpack.dev/config/custom-types/#name",
+          "type": "string"
+        },
+        "strategy": {
+          "const": "versionsByName",
+          "see": "https://syncpack.dev/config/custom-types/#namestrategy",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "strategy"
+      ],
+      "type": "object"
+    },
+    "DependencyGroup": {
+      "additionalProperties": false,
+      "properties": {
+        "aliasName": {
+          "see": "https://syncpack.dev/config/dependency-groups/#aliasname",
+          "type": "string"
+        },
+        "dependencies": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/config/dependency-groups/#dependencies",
+          "type": "array"
+        },
+        "dependencyTypes": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "dev",
+                  "local",
+                  "overrides",
+                  "peer",
+                  "pnpmOverrides",
+                  "prod",
+                  "resolutions"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "see": "https://syncpack.dev/config/dependency-groups/#dependencytypes",
+          "type": "array"
+        },
+        "packages": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/config/dependency-groups/#packages",
+          "type": "array"
+        },
+        "specifierTypes": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "alias",
+                  "exact",
+                  "file",
+                  "git",
+                  "latest",
+                  "major",
+                  "minor",
+                  "missing",
+                  "range",
+                  "range-complex",
+                  "range-major",
+                  "range-minor",
+                  "tag",
+                  "unsupported",
+                  "url",
+                  "workspace-protocol"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "see": "https://syncpack.dev/config/dependency-groups/#specifiertypes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "aliasName"
+      ],
+      "type": "object"
+    },
+    "RcFile": {
+      "additionalProperties": false,
+      "properties": {
+        "$schema": {
+          "see": "https://syncpack.dev/config/syncpackrc/#json",
+          "type": "string"
+        },
+        "customTypes": {
+          "additionalProperties": {
+            "$ref": "#/definitions/CustomType.Any"
+          },
+          "see": "https://syncpack.dev/config/custom-types",
+          "type": "object"
+        },
+        "dependencyGroups": {
+          "items": {
+            "$ref": "#/definitions/DependencyGroup"
+          },
+          "see": "https://syncpack.dev/config/dependency-groups",
+          "type": "array"
+        },
+        "formatBugs": {
+          "see": "https://syncpack.dev/config/format-bugs",
+          "type": "boolean"
+        },
+        "formatRepository": {
+          "see": "https://syncpack.dev/config/format-repository",
+          "type": "boolean"
+        },
+        "indent": {
+          "see": "https://syncpack.dev/config/indent",
+          "type": "string"
+        },
+        "maxConcurrentRequests": {
+          "see": "https://syncpack.dev/config/max-concurrent-requests",
+          "type": "number"
+        },
+        "minimumReleaseAge": {
+          "description": "Skip dependency updates published less than this many minutes ago. `0` disables the filter. When omitted, the value from the project's `pnpm-workspace.yaml` is used; if neither is set, defaults to `1440` (one day). Setting it here always overrides the pnpm value.",
+          "see": "https://pnpm.io/settings#minimumreleaseage",
+          "type": "number"
+        },
+        "semverGroups": {
+          "items": {
+            "$ref": "#/definitions/SemverGroup.Any"
+          },
+          "see": "https://syncpack.dev/semver-groups",
+          "type": "array"
+        },
+        "sortAz": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/config/sort-az",
+          "type": "array"
+        },
+        "sortExports": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/config/sort-exports",
+          "type": "array"
+        },
+        "sortFirst": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/config/sort-first",
+          "type": "array"
+        },
+        "sortPackages": {
+          "see": "https://syncpack.dev/config/sort-packages",
+          "type": "boolean"
+        },
+        "source": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/config/source",
+          "type": "array"
+        },
+        "sourceMode": {
+          "enum": [
+            "replace",
+            "extend"
+          ],
+          "see": "https://syncpack.dev/config/source-mode",
+          "type": "string"
+        },
+        "strict": {
+          "see": "https://syncpack.dev/config/strict",
+          "type": "boolean"
+        },
+        "updateGroups": {
+          "items": {
+            "$ref": "#/definitions/UpdateGroup.Any"
+          },
+          "see": "https://syncpack.dev/update-groups",
+          "type": "array"
+        },
+        "versionGroups": {
+          "items": {
+            "$ref": "#/definitions/VersionGroup.Any"
+          },
+          "see": "https://syncpack.dev/version-groups",
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "SemverGroup.Any": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/SemverGroup.Ignored"
+        },
+        {
+          "$ref": "#/definitions/SemverGroup.WithRange"
+        }
+      ]
+    },
+    "SemverGroup.Ignored": {
+      "additionalProperties": false,
+      "properties": {
+        "dependencies": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#dependencies",
+          "type": "array"
+        },
+        "dependencyTypes": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "dev",
+                  "local",
+                  "overrides",
+                  "peer",
+                  "pnpmOverrides",
+                  "prod",
+                  "resolutions"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#dependencytypes",
+          "type": "array"
+        },
+        "isIgnored": {
+          "const": true,
+          "see": "https://syncpack.dev/semver-groups/ignored/#isignored",
+          "type": "boolean"
+        },
+        "label": {
+          "see": "https://syncpack.dev/version-groups/highest-semver/#label",
+          "type": "string"
+        },
+        "packages": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#packages",
+          "type": "array"
+        },
+        "specifierTypes": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "alias",
+                  "exact",
+                  "file",
+                  "git",
+                  "latest",
+                  "major",
+                  "minor",
+                  "missing",
+                  "range",
+                  "range-complex",
+                  "range-major",
+                  "range-minor",
+                  "tag",
+                  "unsupported",
+                  "url",
+                  "workspace-protocol"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#specifiertypes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "isIgnored"
+      ],
+      "type": "object"
+    },
+    "SemverGroup.WithRange": {
+      "additionalProperties": false,
+      "properties": {
+        "dependencies": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#dependencies",
+          "type": "array"
+        },
+        "dependencyTypes": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "dev",
+                  "local",
+                  "overrides",
+                  "peer",
+                  "pnpmOverrides",
+                  "prod",
+                  "resolutions"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#dependencytypes",
+          "type": "array"
+        },
+        "label": {
+          "see": "https://syncpack.dev/version-groups/highest-semver/#label",
+          "type": "string"
+        },
+        "packages": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#packages",
+          "type": "array"
+        },
+        "range": {
+          "enum": [
+            "",
+            "*",
+            ">",
+            ">=",
+            ".x",
+            "<",
+            "<=",
+            "^",
+            "~"
+          ],
+          "see": "https://syncpack.dev/semver-groups/with-range/#range",
+          "type": "string"
+        },
+        "specifierTypes": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "alias",
+                  "exact",
+                  "file",
+                  "git",
+                  "latest",
+                  "major",
+                  "minor",
+                  "missing",
+                  "range",
+                  "range-complex",
+                  "range-major",
+                  "range-minor",
+                  "tag",
+                  "unsupported",
+                  "url",
+                  "workspace-protocol"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#specifiertypes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "range"
+      ],
+      "type": "object"
+    },
+    "Severity": {
+      "enum": [
+        "fix",
+        "warn",
+        "error"
+      ],
+      "see": "https://syncpack.dev/severity/",
+      "type": "string"
+    },
+    "UpdateGroup.Any": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/UpdateGroup.Ignored"
+        },
+        {
+          "$ref": "#/definitions/UpdateGroup.Targeted"
+        }
+      ]
+    },
+    "UpdateGroup.Ignored": {
+      "additionalProperties": false,
+      "properties": {
+        "dependencies": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#dependencies",
+          "type": "array"
+        },
+        "dependencyTypes": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "dev",
+                  "local",
+                  "overrides",
+                  "peer",
+                  "pnpmOverrides",
+                  "prod",
+                  "resolutions"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#dependencytypes",
+          "type": "array"
+        },
+        "isIgnored": {
+          "const": true,
+          "see": "https://syncpack.dev/update-groups/ignored/#isignored",
+          "type": "boolean"
+        },
+        "label": {
+          "see": "https://syncpack.dev/version-groups/highest-semver/#label",
+          "type": "string"
+        },
+        "packages": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#packages",
+          "type": "array"
+        },
+        "specifierTypes": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "alias",
+                  "exact",
+                  "file",
+                  "git",
+                  "latest",
+                  "major",
+                  "minor",
+                  "missing",
+                  "range",
+                  "range-complex",
+                  "range-major",
+                  "range-minor",
+                  "tag",
+                  "unsupported",
+                  "url",
+                  "workspace-protocol"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#specifiertypes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "isIgnored"
+      ],
+      "type": "object"
+    },
+    "UpdateGroup.Targeted": {
+      "additionalProperties": false,
+      "properties": {
+        "dependencies": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#dependencies",
+          "type": "array"
+        },
+        "dependencyTypes": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "dev",
+                  "local",
+                  "overrides",
+                  "peer",
+                  "pnpmOverrides",
+                  "prod",
+                  "resolutions"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#dependencytypes",
+          "type": "array"
+        },
+        "label": {
+          "see": "https://syncpack.dev/version-groups/highest-semver/#label",
+          "type": "string"
+        },
+        "packages": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#packages",
+          "type": "array"
+        },
+        "specifierTypes": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "alias",
+                  "exact",
+                  "file",
+                  "git",
+                  "latest",
+                  "major",
+                  "minor",
+                  "missing",
+                  "range",
+                  "range-complex",
+                  "range-major",
+                  "range-minor",
+                  "tag",
+                  "unsupported",
+                  "url",
+                  "workspace-protocol"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#specifiertypes",
+          "type": "array"
+        },
+        "target": {
+          "enum": [
+            "patch",
+            "minor",
+            "latest"
+          ],
+          "see": "https://syncpack.dev/update-groups/targeted/#target",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target"
+      ],
+      "type": "object"
+    },
+    "VersionGroup.Any": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/VersionGroup.Banned"
+        },
+        {
+          "$ref": "#/definitions/VersionGroup.Catalog"
+        },
+        {
+          "$ref": "#/definitions/VersionGroup.Ignored"
+        },
+        {
+          "$ref": "#/definitions/VersionGroup.Pinned"
+        },
+        {
+          "$ref": "#/definitions/VersionGroup.SameRange"
+        },
+        {
+          "$ref": "#/definitions/VersionGroup.SameMinor"
+        },
+        {
+          "$ref": "#/definitions/VersionGroup.SemverRangeOnly"
+        },
+        {
+          "$ref": "#/definitions/VersionGroup.SnappedTo"
+        },
+        {
+          "$ref": "#/definitions/VersionGroup.Standard"
+        }
+      ]
+    },
+    "VersionGroup.Banned": {
+      "additionalProperties": false,
+      "properties": {
+        "dependencies": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#dependencies",
+          "type": "array"
+        },
+        "dependencyTypes": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "dev",
+                  "local",
+                  "overrides",
+                  "peer",
+                  "pnpmOverrides",
+                  "prod",
+                  "resolutions"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#dependencytypes",
+          "type": "array"
+        },
+        "isBanned": {
+          "const": true,
+          "see": "https://syncpack.dev/version-groups/banned/#isbanned",
+          "type": "boolean"
+        },
+        "label": {
+          "see": "https://syncpack.dev/version-groups/highest-semver/#label",
+          "type": "string"
+        },
+        "packages": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#packages",
+          "type": "array"
+        },
+        "severity": {
+          "additionalProperties": false,
+          "properties": {
+            "IsBanned": {
+              "$ref": "#/definitions/Severity"
+            }
+          },
+          "see": "https://syncpack.dev/version-groups/banned/#severity",
+          "type": "object"
+        },
+        "specifierTypes": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "alias",
+                  "exact",
+                  "file",
+                  "git",
+                  "latest",
+                  "major",
+                  "minor",
+                  "missing",
+                  "range",
+                  "range-complex",
+                  "range-major",
+                  "range-minor",
+                  "tag",
+                  "unsupported",
+                  "url",
+                  "workspace-protocol"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#specifiertypes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "isBanned"
+      ],
+      "type": "object"
+    },
+    "VersionGroup.Catalog": {
+      "additionalProperties": false,
+      "properties": {
+        "dependencies": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#dependencies",
+          "type": "array"
+        },
+        "dependencyTypes": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "dev",
+                  "local",
+                  "overrides",
+                  "peer",
+                  "pnpmOverrides",
+                  "prod",
+                  "resolutions"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#dependencytypes",
+          "type": "array"
+        },
+        "label": {
+          "see": "https://syncpack.dev/version-groups/highest-semver/#label",
+          "type": "string"
+        },
+        "packages": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#packages",
+          "type": "array"
+        },
+        "policy": {
+          "const": "catalog",
+          "see": "https://syncpack.dev/version-groups/catalog/#policy",
+          "type": "string"
+        },
+        "severity": {
+          "additionalProperties": false,
+          "properties": {
+            "MissingFromCatalog": {
+              "$ref": "#/definitions/Severity"
+            },
+            "NotUsingCatalog": {
+              "$ref": "#/definitions/Severity"
+            }
+          },
+          "see": "https://syncpack.dev/version-groups/catalog/#severity",
+          "type": "object"
+        },
+        "specifierTypes": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "alias",
+                  "exact",
+                  "file",
+                  "git",
+                  "latest",
+                  "major",
+                  "minor",
+                  "missing",
+                  "range",
+                  "range-complex",
+                  "range-major",
+                  "range-minor",
+                  "tag",
+                  "unsupported",
+                  "url",
+                  "workspace-protocol"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#specifiertypes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "policy"
+      ],
+      "type": "object"
+    },
+    "VersionGroup.Ignored": {
+      "additionalProperties": false,
+      "properties": {
+        "dependencies": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#dependencies",
+          "type": "array"
+        },
+        "dependencyTypes": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "dev",
+                  "local",
+                  "overrides",
+                  "peer",
+                  "pnpmOverrides",
+                  "prod",
+                  "resolutions"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#dependencytypes",
+          "type": "array"
+        },
+        "isIgnored": {
+          "const": true,
+          "see": "https://syncpack.dev/version-groups/ignored/#isignored",
+          "type": "boolean"
+        },
+        "label": {
+          "see": "https://syncpack.dev/version-groups/highest-semver/#label",
+          "type": "string"
+        },
+        "packages": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#packages",
+          "type": "array"
+        },
+        "specifierTypes": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "alias",
+                  "exact",
+                  "file",
+                  "git",
+                  "latest",
+                  "major",
+                  "minor",
+                  "missing",
+                  "range",
+                  "range-complex",
+                  "range-major",
+                  "range-minor",
+                  "tag",
+                  "unsupported",
+                  "url",
+                  "workspace-protocol"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#specifiertypes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "isIgnored"
+      ],
+      "type": "object"
+    },
+    "VersionGroup.Pinned": {
+      "additionalProperties": false,
+      "properties": {
+        "dependencies": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#dependencies",
+          "type": "array"
+        },
+        "dependencyTypes": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "dev",
+                  "local",
+                  "overrides",
+                  "peer",
+                  "pnpmOverrides",
+                  "prod",
+                  "resolutions"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#dependencytypes",
+          "type": "array"
+        },
+        "label": {
+          "see": "https://syncpack.dev/version-groups/highest-semver/#label",
+          "type": "string"
+        },
+        "packages": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#packages",
+          "type": "array"
+        },
+        "pinVersion": {
+          "see": "https://syncpack.dev/version-groups/pinned/#pinversion",
+          "type": "string"
+        },
+        "severity": {
+          "additionalProperties": false,
+          "properties": {
+            "DiffersToPin": {
+              "$ref": "#/definitions/Severity"
+            },
+            "PinOverridesSemverRange": {
+              "$ref": "#/definitions/Severity"
+            },
+            "PinOverridesSemverRangeMismatch": {
+              "$ref": "#/definitions/Severity"
+            },
+            "RefuseToPinLocal": {
+              "$ref": "#/definitions/Severity"
+            }
+          },
+          "see": "https://syncpack.dev/version-groups/pinned/#severity",
+          "type": "object"
+        },
+        "specifierTypes": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "alias",
+                  "exact",
+                  "file",
+                  "git",
+                  "latest",
+                  "major",
+                  "minor",
+                  "missing",
+                  "range",
+                  "range-complex",
+                  "range-major",
+                  "range-minor",
+                  "tag",
+                  "unsupported",
+                  "url",
+                  "workspace-protocol"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#specifiertypes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "pinVersion"
+      ],
+      "type": "object"
+    },
+    "VersionGroup.SameMinor": {
+      "additionalProperties": false,
+      "properties": {
+        "dependencies": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#dependencies",
+          "type": "array"
+        },
+        "dependencyTypes": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "dev",
+                  "local",
+                  "overrides",
+                  "peer",
+                  "pnpmOverrides",
+                  "prod",
+                  "resolutions"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#dependencytypes",
+          "type": "array"
+        },
+        "label": {
+          "see": "https://syncpack.dev/version-groups/highest-semver/#label",
+          "type": "string"
+        },
+        "packages": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#packages",
+          "type": "array"
+        },
+        "policy": {
+          "const": "sameMinor",
+          "see": "https://syncpack.dev/version-groups/same-minor/#policy",
+          "type": "string"
+        },
+        "severity": {
+          "additionalProperties": false,
+          "properties": {
+            "DiffersToHighestOrLowestSemverMinor": {
+              "$ref": "#/definitions/Severity"
+            },
+            "SameMinorOverridesSemverRange": {
+              "$ref": "#/definitions/Severity"
+            },
+            "SameMinorOverridesSemverRangeMismatch": {
+              "$ref": "#/definitions/Severity"
+            },
+            "SemverRangeMismatch": {
+              "$ref": "#/definitions/Severity"
+            }
+          },
+          "see": "https://syncpack.dev/version-groups/same-minor/#severity",
+          "type": "object"
+        },
+        "specifierTypes": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "alias",
+                  "exact",
+                  "file",
+                  "git",
+                  "latest",
+                  "major",
+                  "minor",
+                  "missing",
+                  "range",
+                  "range-complex",
+                  "range-major",
+                  "range-minor",
+                  "tag",
+                  "unsupported",
+                  "url",
+                  "workspace-protocol"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#specifiertypes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "policy"
+      ],
+      "type": "object"
+    },
+    "VersionGroup.SameRange": {
+      "additionalProperties": false,
+      "properties": {
+        "dependencies": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#dependencies",
+          "type": "array"
+        },
+        "dependencyTypes": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "dev",
+                  "local",
+                  "overrides",
+                  "peer",
+                  "pnpmOverrides",
+                  "prod",
+                  "resolutions"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#dependencytypes",
+          "type": "array"
+        },
+        "label": {
+          "see": "https://syncpack.dev/version-groups/highest-semver/#label",
+          "type": "string"
+        },
+        "packages": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#packages",
+          "type": "array"
+        },
+        "policy": {
+          "const": "sameRange",
+          "see": "https://syncpack.dev/version-groups/same-range/#policy",
+          "type": "string"
+        },
+        "severity": {
+          "additionalProperties": false,
+          "properties": {
+            "SemverRangeMismatch": {
+              "$ref": "#/definitions/Severity"
+            }
+          },
+          "see": "https://syncpack.dev/version-groups/same-range/#severity",
+          "type": "object"
+        },
+        "specifierTypes": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "alias",
+                  "exact",
+                  "file",
+                  "git",
+                  "latest",
+                  "major",
+                  "minor",
+                  "missing",
+                  "range",
+                  "range-complex",
+                  "range-major",
+                  "range-minor",
+                  "tag",
+                  "unsupported",
+                  "url",
+                  "workspace-protocol"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#specifiertypes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "policy"
+      ],
+      "type": "object"
+    },
+    "VersionGroup.SemverRangeOnly": {
+      "additionalProperties": false,
+      "properties": {
+        "dependencies": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#dependencies",
+          "type": "array"
+        },
+        "dependencyTypes": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "dev",
+                  "local",
+                  "overrides",
+                  "peer",
+                  "pnpmOverrides",
+                  "prod",
+                  "resolutions"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#dependencytypes",
+          "type": "array"
+        },
+        "label": {
+          "see": "https://syncpack.dev/version-groups/highest-semver/#label",
+          "type": "string"
+        },
+        "packages": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#packages",
+          "type": "array"
+        },
+        "policy": {
+          "const": "semverRangeOnly",
+          "see": "https://syncpack.dev/version-groups/range-only/#policy",
+          "type": "string"
+        },
+        "severity": {
+          "additionalProperties": false,
+          "properties": {
+            "SemverRangeMismatch": {
+              "$ref": "#/definitions/Severity"
+            }
+          },
+          "see": "https://syncpack.dev/version-groups/range-only/#severity",
+          "type": "object"
+        },
+        "specifierTypes": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "alias",
+                  "exact",
+                  "file",
+                  "git",
+                  "latest",
+                  "major",
+                  "minor",
+                  "missing",
+                  "range",
+                  "range-complex",
+                  "range-major",
+                  "range-minor",
+                  "tag",
+                  "unsupported",
+                  "url",
+                  "workspace-protocol"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#specifiertypes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "policy"
+      ],
+      "type": "object"
+    },
+    "VersionGroup.SnappedTo": {
+      "additionalProperties": false,
+      "properties": {
+        "dependencies": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#dependencies",
+          "type": "array"
+        },
+        "dependencyTypes": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "dev",
+                  "local",
+                  "overrides",
+                  "peer",
+                  "pnpmOverrides",
+                  "prod",
+                  "resolutions"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#dependencytypes",
+          "type": "array"
+        },
+        "label": {
+          "see": "https://syncpack.dev/version-groups/highest-semver/#label",
+          "type": "string"
+        },
+        "packages": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#packages",
+          "type": "array"
+        },
+        "severity": {
+          "additionalProperties": false,
+          "properties": {
+            "DiffersToSnapTarget": {
+              "$ref": "#/definitions/Severity"
+            },
+            "RefuseToSnapLocal": {
+              "$ref": "#/definitions/Severity"
+            },
+            "SemverRangeMismatch": {
+              "$ref": "#/definitions/Severity"
+            }
+          },
+          "see": "https://syncpack.dev/version-groups/snapped-to/#severity",
+          "type": "object"
+        },
+        "snapTo": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/version-groups/snapped-to/#snapto",
+          "type": "array"
+        },
+        "specifierTypes": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "alias",
+                  "exact",
+                  "file",
+                  "git",
+                  "latest",
+                  "major",
+                  "minor",
+                  "missing",
+                  "range",
+                  "range-complex",
+                  "range-major",
+                  "range-minor",
+                  "tag",
+                  "unsupported",
+                  "url",
+                  "workspace-protocol"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#specifiertypes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "snapTo"
+      ],
+      "type": "object"
+    },
+    "VersionGroup.Standard": {
+      "additionalProperties": false,
+      "properties": {
+        "dependencies": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#dependencies",
+          "type": "array"
+        },
+        "dependencyTypes": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "dev",
+                  "local",
+                  "overrides",
+                  "peer",
+                  "pnpmOverrides",
+                  "prod",
+                  "resolutions"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#dependencytypes",
+          "type": "array"
+        },
+        "label": {
+          "see": "https://syncpack.dev/version-groups/highest-semver/#label",
+          "type": "string"
+        },
+        "packages": {
+          "items": {
+            "type": "string"
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#packages",
+          "type": "array"
+        },
+        "preferVersion": {
+          "enum": [
+            "highestSemver",
+            "lowestSemver"
+          ],
+          "see": "https://syncpack.dev/version-groups/lowest-semver/#preferversion",
+          "type": "string"
+        },
+        "severity": {
+          "additionalProperties": false,
+          "properties": {
+            "DiffersToCatalog": {
+              "$ref": "#/definitions/Severity"
+            },
+            "DiffersToHighestOrLowestSemver": {
+              "$ref": "#/definitions/Severity"
+            },
+            "DiffersToLocal": {
+              "$ref": "#/definitions/Severity"
+            },
+            "SemverRangeMismatch": {
+              "$ref": "#/definitions/Severity"
+            }
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#severity",
+          "type": "object"
+        },
+        "specifierTypes": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "alias",
+                  "exact",
+                  "file",
+                  "git",
+                  "latest",
+                  "major",
+                  "minor",
+                  "missing",
+                  "range",
+                  "range-complex",
+                  "range-major",
+                  "range-minor",
+                  "tag",
+                  "unsupported",
+                  "url",
+                  "workspace-protocol"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "see": "https://syncpack.dev/version-groups/highest-semver/#specifiertypes",
+          "type": "array"
+        }
+      },
+      "type": "object"
+    }
+  }
+}

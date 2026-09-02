@@ -1,0 +1,1015 @@
+import { upgrade as upgradeAsyncApi } from '@scalar/asyncapi-upgrader';
+import { getValueAtPath } from '@scalar/helpers/object/get-value-at-path';
+import { isObject } from '@scalar/helpers/object/is-object';
+import { preventPollution } from '@scalar/helpers/object/prevent-pollution';
+import { generateHash } from '@scalar/helpers/string/generate-hash';
+import { measureAsync, measureSync } from '@scalar/helpers/testing/measure';
+import { bundle } from '@scalar/json-magic/bundle';
+import { fetchUrls } from '@scalar/json-magic/bundle/plugins/browser';
+import { apply, diff, merge } from '@scalar/json-magic/diff';
+import { createMagicProxy, getRaw } from '@scalar/json-magic/magic-proxy';
+import { upgrade } from '@scalar/openapi-upgrader';
+import { asyncApiObjectSchema } from '@scalar/schemas/asyncapi/3.1';
+import { Value } from '@scalar/typebox/value';
+import { coerce } from '@scalar/validation';
+import { reactive } from 'vue';
+import YAML from 'yaml';
+import { createAuthStore } from './entities/auth/index.js';
+import { createHistoryStore } from './entities/history/index.js';
+import { deepClone } from './helpers/deep-clone.js';
+import { createDetectChangesProxy } from './helpers/detect-changes-proxy.js';
+import { safeAssign } from './helpers/general.js';
+import { getFetch } from './helpers/get-fetch.js';
+import { mergeObjects } from './helpers/merge-object.js';
+import { createOverridesProxy } from './helpers/overrides-proxy.js';
+import { unpackProxyObject } from './helpers/unpack-proxy.js';
+import { createNavigation, traverseAsyncApiDocument } from './navigation/index.js';
+import { externalValueResolver, loadingStatus, normalizeAuthSchemes, normalizeRefs, refsEverywhere, removeExtraScalarKeys, restoreOriginalRefs, syncPathParameters, } from './plugins/bundler/index.js';
+import { extensions } from './schemas/extensions.js';
+import { isAsyncApiDocument, isOpenApiDocument } from './schemas/type-guards.js';
+import { generateSchema } from './schemas/v3.1/openapi/index.js';
+import { recursiveRef } from './schemas/v3.1/openapi/reference.js';
+import { OpenAPIDocumentSchema as OpenAPIDocumentSchemaStrict, } from './schemas/v3.1/strict/openapi-document.js';
+/**
+ * Resolves a workspace document from various input sources (URL, local file, or direct document object).
+ *
+ * @param workspaceDocument - The document input to resolve, which can be:
+ *   - A URL to fetch the document from
+ *   - A direct document object
+ * @returns A promise that resolves to an object containing:
+ *   - ok: boolean indicating if the resolution was successful
+ *   - data: The resolved document data
+ *
+ * @example
+ * // Resolve from URL
+ * const urlDoc = await loadDocument({ name: 'api', url: 'https://api.example.com/openapi.json' })
+ *
+ * // Resolve direct document
+ * const directDoc = await loadDocument({
+ *   name: 'inline',
+ *   document: { openapi: '3.0.0', paths: {} }
+ * })
+ */
+function loadDocument(workspaceDocument) {
+    if ('url' in workspaceDocument) {
+        return fetchUrls({ fetch: workspaceDocument.fetch }).exec(workspaceDocument.url);
+    }
+    if ('path' in workspaceDocument) {
+        const loader = workspaceDocument.fileLoader;
+        if (!loader) {
+            console.error('No loader provided for loading files');
+            return Promise.resolve({
+                ok: false,
+            });
+        }
+        return loader.exec(workspaceDocument.path);
+    }
+    return Promise.resolve({
+        ok: true,
+        data: workspaceDocument.document,
+        // string version of the raw document for hashing purposes
+        raw: JSON.stringify(workspaceDocument.document),
+    });
+}
+/**
+ * Returns the base source of a workspace document if it was loaded from a URL or file.
+ * If the document was loaded from a file, returns the path to the file.
+ * If the document was provided directly as an object, returns undefined.
+ * Which can be used to resolve relative references in the document.
+ *
+ * @param input - The workspace document input (either UrlDoc or ObjectDoc)
+ * @returns The URL string if present, otherwise undefined
+ */
+const getDocumentSource = (input) => {
+    if ('url' in input) {
+        return input.url;
+    }
+    if ('path' in input) {
+        return input.path;
+    }
+    return undefined;
+};
+const openapiSchema = generateSchema(recursiveRef);
+/**
+ * Top-level document keys that the dirty-tracker treats as metadata-only.
+ * Mutations under these keys are programmatic bookkeeping (commit hashes,
+ * cached conflict state, etc.) and never represent a user edit, so they
+ * must not flip `x-scalar-is-dirty` to `true`.
+ */
+const METADATA_ONLY_DOCUMENT_KEYS = new Set([
+    // The dirty flag itself - flipping it would re-enter this branch forever.
+    'x-scalar-is-dirty',
+    // Programmatic bookkeeping for registry-backed documents (commit hash,
+    // conflict cache).
+    'x-scalar-registry-meta',
+]);
+/**
+ * Removes internal and metadata keys from the provided document object.
+ *
+ * This function deletes a list of known internal keys that are only meant for
+ * in-memory/document processing use and should not be present in the final bundled document.
+ * Most of these keys are injected by the bundler or used for Scalar OpenAPI document state tracking.
+ *
+ * Note: Nested internal keys are handled elsewhere in the bundler pipeline.
+ *
+ * @param document - The OpenAPI document object to be sanitized in-place.
+ */
+const purgeInternalDocumentKeys = (input) => {
+    const result = deepClone(input);
+    // Top level keys that need to be excluded from the original document
+    // Nested keys are removed during the previous step of the bundler process
+    const EXCLUDE_KEYS = [
+        // Bundler metadata fields added temporarily during document processing
+        'x-ext',
+        'x-ext-urls',
+        // Scalar internal/external metadata fields
+        'x-scalar-navigation',
+        'x-scalar-is-dirty',
+        'x-original-oas-version',
+        'x-scalar-original-document-hash',
+        'x-scalar-original-source-url',
+        'x-scalar-registry-meta',
+    ];
+    // Remove top-level properties that should only exist temporarily or for internal usage
+    // These properties are used for internal purposes and are not needed in the final bundled document
+    for (const property of EXCLUDE_KEYS) {
+        delete result[property];
+    }
+    return result;
+};
+/**
+ * Creates a reactive workspace store that manages documents and their metadata.
+ * The store provides functionality for accessing, updating, and resolving document references.
+ *
+ * @param workspaceProps - Configuration object for the workspace
+ * @param workspaceProps.meta - Optional metadata for the workspace
+ * @param workspaceProps.documents - Optional record of documents to initialize the workspace with
+ *  Documents that require asynchronous loading must be added using `1` after the store is created
+ *  this allows atomic awaiting and does not block page load for the store initialization
+ * @returns An object containing methods and getters for managing the workspace
+ */
+export const createWorkspaceStore = (workspaceProps) => {
+    const { verbose = false } = workspaceProps ?? {};
+    const withMeasurementSync = (name, fn) => (verbose ? measureSync(name, fn) : fn());
+    const withMeasurementAsync = (name, fn) => verbose ? measureAsync(name, fn) : fn();
+    /**
+     * Holds additional configuration options for each document in the workspace.
+     *
+     * This can include settings that can not be persisted between sessions (not JSON serializable)
+     */
+    const extraDocumentConfigurations = {};
+    /**
+     * Notifies all workspace plugins of a workspace state change event.
+     *
+     * This function iterates through all registered plugins (if any) and invokes
+     * their onWorkspaceStateChanges hook with the given event object.
+     *
+     * @param event - The workspace state change event to broadcast to plugins
+     */
+    const fireWorkspaceChange = (event) => {
+        workspaceProps?.plugins?.forEach((plugin) => plugin.hooks?.onWorkspaceStateChanges?.(event));
+    };
+    /**
+     * An object containing the reactive workspace state.
+     *
+     * Every change to the workspace, is tracked and broadcast to all registered plugins.
+     * allowing for change tracking.
+     *
+     * NOTE:
+     * The detect changes proxy is applied separately beacause the vue reactitvity proxy have to be the outer most proxy.
+     * If the order is reversed, Vue cannot properly track mutations, leading to lost reactivity and bugs.
+     * By wrapping the contents with the detect changes proxy first, and then passing the result to Vue's `reactive`,
+     * we ensure that Vue manages its reactivity as expected and our change detection hooks
+     * are also triggered reliably.
+     * Do not reverse this order‼️
+     */
+    const workspace = reactive(createDetectChangesProxy({
+        ...workspaceProps?.meta,
+        documents: {},
+        /**
+         * Returns the currently active document from the workspace.
+         * The active document is determined by the 'x-scalar-active-document' metadata field,
+         * falling back to the first document in the workspace if no active document is specified.
+         *
+         * @returns The active document or undefined if no document is found
+         */
+        get activeDocument() {
+            return workspace.documents[getActiveDocumentName()];
+        },
+    }, {
+        hooks: {
+            onAfterChange(path) {
+                const type = path[0];
+                /** Document changes */
+                if (type === 'documents') {
+                    // We are overriding the while documents object, ignore. This should not happen
+                    if (path.length < 2) {
+                        console.log('[WARN]: Overriding entire documents object is not supported');
+                        return;
+                    }
+                    const documentName = path[1];
+                    const document = workspace.documents[documentName] ?? {
+                        openapi: '3.1.0',
+                        info: { title: '', version: '' },
+                        'x-scalar-original-document-hash': '',
+                    };
+                    const event = {
+                        type: 'documents',
+                        documentName,
+                        value: unpackProxyObject(document),
+                        path: path.slice(2),
+                    };
+                    // Don't mark as dirty when the document is first created or when
+                    // only metadata-only fields change. `x-scalar-registry-meta` is
+                    // updated programmatically (commit hash, conflict cache) and
+                    // does not represent a user edit.
+                    if (event.path.length > 0 && !METADATA_ONLY_DOCUMENT_KEYS.has(event.path[0])) {
+                        // The document has been modified since it was last saved
+                        document['x-scalar-is-dirty'] = true;
+                    }
+                    fireWorkspaceChange(event);
+                    return;
+                }
+                /** Active document changes */
+                if (type === 'activeDocument') {
+                    const documentName = getActiveDocumentName();
+                    const document = workspace.documents[documentName] ?? {
+                        openapi: '3.1.0',
+                        info: { title: '', version: '' },
+                        'x-scalar-original-document-hash': '',
+                    };
+                    // Active document changed
+                    const event = {
+                        type: 'documents',
+                        documentName,
+                        value: unpackProxyObject(document),
+                        path: path.slice(2),
+                    };
+                    // Don't mark as dirty when the document is first created or when
+                    // only metadata-only fields change. `x-scalar-registry-meta` is
+                    // updated programmatically (commit hash, conflict cache) and
+                    // does not represent a user edit.
+                    if (event.path.length > 0 && !METADATA_ONLY_DOCUMENT_KEYS.has(event.path[0])) {
+                        // The document has been modified since it was last saved
+                        document['x-scalar-is-dirty'] = true;
+                    }
+                    fireWorkspaceChange(event);
+                    return;
+                }
+                /** Workspace meta changes */
+                const { activeDocument: _a, documents: _d, ...meta } = workspace;
+                const event = {
+                    type: 'meta',
+                    value: unpackProxyObject(meta, { depth: 1 }),
+                };
+                fireWorkspaceChange(event);
+                return;
+            },
+        },
+    }));
+    /**
+     * An object containing all the workspace state, wrapped in a detect changes proxy.
+     *
+     * Every change to the workspace state (documents, configs, metadata, etc.) can be detected here,
+     * allowing for change tracking.
+     */
+    const { originalDocuments, intermediateDocuments, overrides } = createDetectChangesProxy({
+        /**
+         * Holds the original, unmodified documents as they were initially loaded into the workspace.
+         * These documents are stored in their raw form—prior to any reactive wrapping, dereferencing, or bundling.
+         * This map preserves the pristine structure of each document, using deep clones to ensure that
+         * subsequent mutations in the workspace do not affect the originals.
+         * The originals are retained so that we can restore, compare, or sync with the remote registry as needed.
+         */
+        originalDocuments: {},
+        /**
+         * Stores the intermediate state of documents after local edits but before syncing with the remote registry.
+         *
+         * This map acts as a local "saved" version of the document, reflecting the user's changes after they hit "save".
+         * The `originalDocuments` map, by contrast, always mirrors the document as it exists in the remote registry.
+         *
+         * Use this map to stage local changes that are ready to be propagated back to the remote registry.
+         * This separation allows us to distinguish between:
+         *   - The last known remote version (`originalDocuments`)
+         *   - The latest locally saved version (`intermediateDocuments`)
+         *   - The current in-memory (possibly unsaved) workspace document (`workspace.documents`)
+         */
+        intermediateDocuments: {},
+        /**
+         * Stores per-document overrides for OpenAPI documents.
+         * This object is used to override specific fields of a document
+         * when you cannot (or should not) modify the source document directly.
+         * For example, this enables UI-driven or temporary changes to be applied
+         * on top of the original document, without mutating the source.
+         * The key is the document name, and the value is a deep partial
+         * OpenAPI document representing the overridden fields.
+         */
+        overrides: {},
+    }, {
+        hooks: {
+            onAfterChange(path) {
+                const type = path[0];
+                if (!type) {
+                    return;
+                }
+                if (path.length < 2) {
+                    return;
+                }
+                const documentName = path[1];
+                if (type === 'originalDocuments') {
+                    const event = {
+                        type,
+                        documentName: documentName,
+                        value: unpackProxyObject(originalDocuments[documentName] ?? {}),
+                        path: path.splice(2),
+                    };
+                    fireWorkspaceChange(event);
+                }
+                if (type === 'intermediateDocuments') {
+                    const event = {
+                        type,
+                        documentName: documentName,
+                        value: unpackProxyObject(intermediateDocuments[documentName] ?? {}),
+                        path: path.splice(2),
+                    };
+                    fireWorkspaceChange(event);
+                }
+                if (type === 'overrides') {
+                    const event = {
+                        type,
+                        documentName: documentName,
+                        value: unpackProxyObject(overrides[documentName] ?? {}),
+                    };
+                    fireWorkspaceChange(event);
+                }
+            },
+        },
+    });
+    /**
+     * This store is used to track the history of requests and responses for documents and operations.
+     */
+    const history = createHistoryStore({
+        hooks: {
+            onHistoryChange: (documentName) => {
+                fireWorkspaceChange({
+                    type: 'history',
+                    documentName,
+                    value: history.export()[documentName] ?? {},
+                });
+            },
+        },
+    });
+    /**
+     * The auth store for the workspace
+     */
+    const auth = createAuthStore({
+        hooks: {
+            onAuthChange: (documentName) => {
+                fireWorkspaceChange({
+                    type: 'auth',
+                    documentName,
+                    value: auth.export()[documentName] ?? {
+                        secrets: {},
+                        selected: { document: { selectedIndex: 0, selectedSchemes: [] }, path: {} },
+                    },
+                });
+            },
+        },
+    });
+    /**
+     * Returns the name of the currently active document in the workspace.
+     * The active document is determined by the 'x-scalar-active-document' metadata field,
+     * falling back to the first document in the workspace if no active document is specified.
+     *
+     * @returns The name of the active document or an empty string if no document is found
+     */
+    function getActiveDocumentName() {
+        return workspace[extensions.workspace.activeDocument] ?? Object.keys(workspace.documents)[0] ?? '';
+    }
+    function exportDocument(documentName, format, minify) {
+        // The original document map now holds the most recently saved state of
+        // the document - `saveDocument` writes directly into it and
+        // `revertDocumentChanges` reads from it. Exporting therefore mirrors
+        // exactly what the user would get if they reverted to the last save.
+        const savedDocument = originalDocuments[documentName];
+        if (!savedDocument) {
+            return;
+        }
+        if (format === 'json') {
+            return minify ? JSON.stringify(savedDocument) : JSON.stringify(savedDocument, null, 2);
+        }
+        return YAML.stringify(savedDocument);
+    }
+    // Save the current state of the specified document as the new baseline.
+    // The reactive workspace document is serialised back into a plain shape
+    // (with bundler-internal keys stripped) and stored under
+    // `originalDocuments[documentName]` - the original map is now the single
+    // source of truth for "what the user has saved". The intermediate map is
+    // deprecated, but we keep mirroring writes into it so any consumer still
+    // reading from `getIntermediateDocument` observes fresh content while
+    // the layer is being phased out.
+    const saveDocument = async (documentName) => {
+        const activeDocument = workspace.documents[documentName];
+        const newDocument = await getEditableDocument(documentName);
+        if (!activeDocument || !newDocument) {
+            console.warn('Failed to save document, active document is missing');
+            return false;
+        }
+        // Promote the in-memory edits to the new saved baseline. Two stores
+        // get a deep clone each so subsequent mutations on either one stay
+        // isolated.
+        originalDocuments[documentName] = newDocument;
+        intermediateDocuments[documentName] = deepClone(newDocument);
+        // Mark the document as not dirty since we are saving it
+        activeDocument['x-scalar-is-dirty'] = false;
+        return true;
+    };
+    // Add a document to the store synchronously from an in-memory OpenAPI or AsyncAPI document
+    async function addInMemoryDocument(input, navigationOptions) {
+        const { name } = input;
+        const meta = deepClone(input.meta);
+        const clonedRawInputDocument = withMeasurementSync('deepClone', () => deepClone(input.document));
+        withMeasurementSync('initialize', () => {
+            if (input.initialize !== false) {
+                // Store the original document in the originalDocuments map
+                // This is used to track the original state of the document as it was loaded into the workspace
+                originalDocuments[name] = deepClone(clonedRawInputDocument);
+                // Store the intermediate document state for local edits
+                // This is used to track the last saved state of the document
+                // It allows us to differentiate between the original document and the latest saved version
+                // This is important for local edits that are not yet synced with the remote registry
+                // The intermediate document is used to store the latest saved state of the document
+                // This allows us to track changes and revert to the last saved state if needed
+                intermediateDocuments[name] = deepClone(clonedRawInputDocument);
+                // Store the overrides for this document, or an empty object if none are provided
+                overrides[name] = input.overrides ?? {};
+                // Store extra document configurations that can not be persisted
+                extraDocumentConfigurations[name] = { fetch: input.fetch };
+            }
+        });
+        const loaders = [
+            fetchUrls({
+                fetch: extraDocumentConfigurations[name]?.fetch ?? workspaceProps?.fetch,
+            }),
+        ];
+        // If a file loader plugin is provided, use it to resolve local file references
+        // This is useful for non browser environments
+        if (workspaceProps?.fileLoader) {
+            loaders.push(workspaceProps.fileLoader);
+        }
+        // AsyncAPI ingestion: skip the OpenAPI-specific upgrade and validation pipeline.
+        // The OpenAPI `coerce` step would otherwise inject an empty `openapi: ''` field
+        // and break the type discriminator. We still run the AsyncAPI-specific upgrader so
+        // 1.x/2.x documents are converted to the 3.x shape the renderer and traversal expect
+        // (e.g. lifting channel `publish`/`subscribe` into top-level `operations`).
+        if (isAsyncApiDocument(clonedRawInputDocument)) {
+            // Capture the original version before the upgrader bumps `asyncapi` to the latest.
+            const originalAasVersion = clonedRawInputDocument.asyncapi;
+            // The upgrader is typed against the loose `UnknownObject` shape; the result is a valid
+            // 3.x AsyncAPI document, so cast it back so the spread below still satisfies `AsyncApiDocument`.
+            const upgradedAsyncApiDocument = withMeasurementSync('upgrade', () => upgradeAsyncApi(deepClone(clonedRawInputDocument)));
+            const asyncApiDocument = createMagicProxy({
+                ...upgradedAsyncApiDocument,
+                ...meta,
+                'x-original-aas-version': originalAasVersion,
+                'x-scalar-original-document-hash': input.documentHash,
+                'x-scalar-original-source-url': input.documentSource,
+            });
+            await withMeasurementAsync('bundle', async () => await bundle(getRaw(asyncApiDocument), {
+                treeShake: false,
+                plugins: loaders,
+                urlMap: true,
+                origin: input.documentSource, // use the document origin (if provided) as the base URL for resolution
+            }));
+            // We coerce the values only when the document is not preprocessed by the server-side-store
+            const coerced = withMeasurementSync('coerceValue', () => coerce(asyncApiObjectSchema, deepClone(getRaw(asyncApiDocument))));
+            withMeasurementSync('mergeObjects', () => mergeObjects(asyncApiDocument, coerced));
+            if (asyncApiDocument[extensions.document.navigation] === undefined) {
+                const navigation = traverseAsyncApiDocument(name, asyncApiDocument, navigationOptions);
+                asyncApiDocument[extensions.document.navigation] = navigation;
+            }
+            workspace.documents[name] = createOverridesProxy(asyncApiDocument, {
+                overrides: unpackProxyObject(overrides[name]),
+            });
+            return;
+        }
+        const inputDocument = withMeasurementSync('upgrade', () => upgrade(deepClone(clonedRawInputDocument), '3.1'));
+        const strictDocument = createMagicProxy({
+            ...inputDocument,
+            ...meta,
+            'x-original-oas-version': originalDocuments[name]?.openapi ?? originalDocuments[name]?.swagger,
+            'x-scalar-original-document-hash': input.documentHash,
+            'x-scalar-original-source-url': input.documentSource,
+        }, { showInternal: true });
+        // If the document navigation is not already present, bundle the entire document to resolve all references.
+        // This typically applies when the document is not preprocessed by the server and needs local reference resolution.
+        // We need to bundle document first before we validate, so we can also validate the external references
+        if (strictDocument[extensions.document.navigation] === undefined) {
+            await withMeasurementAsync('bundle', async () => await bundle(getRaw(strictDocument), {
+                treeShake: false,
+                plugins: [
+                    ...loaders,
+                    normalizeRefs(),
+                    externalValueResolver(),
+                    refsEverywhere(),
+                    normalizeAuthSchemes(),
+                    syncPathParameters(),
+                ],
+                urlMap: true,
+                origin: input.documentSource, // use the document origin (if provided) as the base URL for resolution
+            }));
+            // We coerce the values only when the document is not preprocessed by the server-side-store
+            const coerced = withMeasurementSync('coerceValue', () => coerce(openapiSchema, deepClone(strictDocument)));
+            withMeasurementSync('mergeObjects', () => mergeObjects(strictDocument, coerced));
+        }
+        const isValid = Value.Check(OpenAPIDocumentSchemaStrict, strictDocument);
+        if (!isValid) {
+            const validationErrors = Array.from(Value.Errors(OpenAPIDocumentSchemaStrict, strictDocument));
+            console.warn('document validation errors: ');
+            console.warn(validationErrors.map((error) => ({
+                message: error.message,
+                path: error.path,
+                schema: error.schema,
+                value: error.value,
+            })));
+        }
+        // Skip navigation generation if the document already has a server-side generated navigation structure
+        if (strictDocument[extensions.document.navigation] === undefined) {
+            const navigation = createNavigation(name, strictDocument, navigationOptions);
+            strictDocument[extensions.document.navigation] = navigation;
+        }
+        // Create a proxied document with magic proxy and apply any overrides, then store it in the workspace documents map
+        // We create a new proxy here in order to hide internal properties after validation and processing
+        // This ensures that the workspace document only exposes the intended OpenAPI properties and extensions
+        workspace.documents[name] = createOverridesProxy(createMagicProxy(getRaw(strictDocument)), {
+            overrides: unpackProxyObject(overrides[name]),
+        });
+    }
+    // Asynchronously adds a new document to the workspace by loading and validating the input.
+    // If loading fails, a placeholder error document is added instead.
+    async function addDocument(input, navigationOptions) {
+        const { name, meta } = input;
+        /** Ensure we use the active proxy to fetch documents unless we have a custom fetch override */
+        const fetch = getFetch({
+            fetch: input.fetch ?? workspaceProps?.fetch,
+            proxyUrl: workspace['x-scalar-active-proxy'] ?? undefined,
+        });
+        const resolve = await withMeasurementAsync('loadDocument', async () => await loadDocument({ ...input, fetch, fileLoader: workspaceProps?.fileLoader }));
+        // Log the time taken to add a document
+        return await withMeasurementAsync('addDocument', async () => {
+            if (!resolve.ok) {
+                console.error(`Failed to fetch document '${name}': request was not successful`);
+                workspace.documents[name] = {
+                    ...meta,
+                    openapi: '3.1.0',
+                    info: {
+                        title: `Document '${name}' could not be loaded`,
+                        version: 'unknown',
+                    },
+                    'x-scalar-original-document-hash': 'not-a-hash',
+                };
+                return false;
+            }
+            if (!isObject(resolve.data)) {
+                console.error(`Failed to load document '${name}': response data is not a valid object`);
+                workspace.documents[name] = {
+                    ...meta,
+                    openapi: '3.1.0',
+                    info: {
+                        title: `Document '${name}' could not be loaded`,
+                        version: 'unknown',
+                    },
+                    'x-scalar-original-document-hash': 'not-a-hash',
+                };
+                return false;
+            }
+            await addInMemoryDocument({
+                ...input,
+                document: resolve.data,
+                documentSource: getDocumentSource(input),
+                documentHash: generateHash(resolve.raw),
+            }, navigationOptions);
+            return true;
+        });
+    }
+    const getOriginalDocument = (documentName) => {
+        const rawDocument = unpackProxyObject(originalDocuments[documentName], { depth: 1 });
+        if (!rawDocument) {
+            return null;
+        }
+        return rawDocument;
+    };
+    const getIntermediateDocument = (documentName) => {
+        const rawDocument = unpackProxyObject(intermediateDocuments[documentName], { depth: 1 });
+        if (!rawDocument) {
+            return null;
+        }
+        return rawDocument;
+    };
+    /**
+     * Promotes the intermediate document to the original document so the
+     * current intermediate becomes the new baseline.
+     *
+     * The intermediate layer is deprecated: `saveDocument` now writes
+     * directly into `originalDocuments`, so by the time anyone could call
+     * this method the original map already holds the latest saved baseline.
+     * Copying the (now stale) intermediate over the original would clobber
+     * the user's save, so this is a no-op for existing documents and only
+     * reports `false` when the document does not exist at all.
+     */
+    const promoteIntermediateToOriginal = (documentName) => {
+        return Boolean(intermediateDocuments[documentName]);
+    };
+    /**
+     * Retrieves an editable clone of a workspace document.
+     *
+     * - Unpacks the proxied document from the workspace.
+     * - Reverses all external references, restoring original $refs.
+     * - Removes transient/in-memory keys defined in EXCLUDE_KEYS.
+     *
+     * @param documentName The name of the document to retrieve.
+     * @returns The editable document object, or null if not found.
+     */
+    const getEditableDocument = async (documentName) => {
+        const rawDocument = unpackProxyObject(workspace.documents[documentName], { depth: 1 });
+        if (!rawDocument) {
+            // If the document does not exist, return null
+            return null;
+        }
+        // Reverse all external references and restore original $refs
+        const original = (await bundle(deepClone(rawDocument), {
+            plugins: [restoreOriginalRefs(), removeExtraScalarKeys()],
+            treeShake: false,
+            urlMap: true,
+        }));
+        return purgeInternalDocumentKeys(original);
+    };
+    /**
+     * Builds (or updates) the navigation sidebar for the specified document.
+     *
+     * This method generates the sidebar navigation structure for a workspace document,
+     * and attaches it to the document's metadata under the navigation extension key.
+     * The document is unpacked to avoid assigning proxy objects as direct property references.
+     *
+     * - Only the top-level object is proxied; all child objects should be unproxied.
+     * - This approach enables safe unpacking of the proxy object without recursively traversing the full object tree.
+     *
+     * @param documentName - The name/key of the document whose sidebar should be built.
+     * @returns {boolean} True if the sidebar was built successfully, false if the document does not exist.
+     */
+    const buildSidebar = (documentName) => {
+        const document = workspace.documents[documentName];
+        if (!document) {
+            // Log and exit if the document does not exist in the workspace
+            console.error(`Document '${documentName}' does not exist in the workspace.`);
+            return false;
+        }
+        // Sidebar navigation is OpenAPI-only for now.
+        if (!isOpenApiDocument(document)) {
+            return false;
+        }
+        // Generate the navigation structure for the sidebar.
+        const navigation = createNavigation(documentName, document);
+        // Set the computed navigation structure on the document metadata.
+        document[extensions.document.navigation] = navigation;
+        return true;
+    };
+    // Cache to track visited nodes during reference resolution to prevent bundling the same subtree multiple times
+    // This is needed because we are doing partial bundle operations
+    const visitedNodesCache = new Set();
+    return {
+        get workspace() {
+            return workspace;
+        },
+        get history() {
+            return history;
+        },
+        get auth() {
+            return auth;
+        },
+        update(key, value) {
+            preventPollution(key);
+            Object.assign(workspace, { [key]: value });
+        },
+        getEditableDocument,
+        getOriginalDocument,
+        getIntermediateDocument,
+        updateDocument(name, key, value) {
+            const currentDocument = workspace.documents[name === 'active' ? getActiveDocumentName() : name];
+            if (!currentDocument) {
+                return false;
+            }
+            preventPollution(key);
+            Object.assign(currentDocument, { [key]: value });
+            return true;
+        },
+        async replaceDocument(documentName, input) {
+            // Used to preserve the original metadata of the document (we need to unpack so we don't store a proxy object)
+            const currentDocument = unpackProxyObject(workspace.documents[documentName], { depth: 1 });
+            if (!currentDocument) {
+                return console.error(`Document '${documentName}' does not exist in the workspace.`);
+            }
+            // Replace the whole document
+            await addInMemoryDocument({
+                name: documentName,
+                document: input,
+                // Preserve the current metadata. Source url, document hash, and
+                // registry meta are typed identically on the OpenAPI and AsyncAPI
+                // document shapes, so the union access does not need narrowing.
+                documentSource: currentDocument['x-scalar-original-source-url'],
+                documentHash: currentDocument['x-scalar-original-document-hash'],
+                meta: {
+                    // Preserve the registry meta
+                    'x-scalar-registry-meta': currentDocument['x-scalar-registry-meta'],
+                    // Set the document as dirty
+                    'x-scalar-is-dirty': true,
+                    // Clear the navigation to trigger a rebuild
+                    'x-scalar-navigation': undefined,
+                },
+                initialize: false,
+            });
+        },
+        resolve: (path) => {
+            const activeDocument = workspace.activeDocument;
+            const target = getValueAtPath(activeDocument, path);
+            if (!isObject(target)) {
+                console.error(`Invalid path provided for resolution. Path: [${path.join(', ')}]. Found value of type: ${typeof target}. Expected an object.`);
+                return Promise.resolve();
+            }
+            // Bundle the target document with the active document as root, resolving any external references
+            // and tracking resolution status through hooks
+            return bundle(target, {
+                root: activeDocument,
+                treeShake: false,
+                plugins: [fetchUrls(), loadingStatus(), externalValueResolver()],
+                urlMap: true,
+                visitedNodes: visitedNodesCache,
+            });
+        },
+        addDocument,
+        /**
+         * Deletes a document from the workspace and all associated data.
+         *
+         * This function removes the document and all related data structures.
+         * If the deleted document was active, it automatically selects the first remaining document.
+         */
+        deleteDocument: (documentName) => {
+            // Check if the document exists before attempting deletion
+            if (!workspace.documents[documentName]) {
+                return;
+            }
+            // Delete the document from the workspace (this will trigger change detection events)
+            delete workspace.documents[documentName];
+            // Clean up all associated data structures
+            delete originalDocuments[documentName];
+            delete intermediateDocuments[documentName];
+            delete overrides[documentName];
+            delete extraDocumentConfigurations[documentName];
+            history.clearDocumentHistory(documentName);
+            auth.clearDocumentAuth(documentName);
+            // Get remaining documents before deletion to properly set the active document
+            const remainingDocuments = Object.keys(workspace.documents);
+            const wasActiveDocument = workspace['x-scalar-active-document'] === documentName;
+            // Reset the active document to the first remaining one if the deleted document was the active one
+            if (wasActiveDocument) {
+                workspace['x-scalar-active-document'] = remainingDocuments[0] ?? undefined;
+            }
+            // Fire the deleteDocument event
+            fireWorkspaceChange({
+                type: 'deleteDocument',
+                documentName,
+            });
+        },
+        exportDocument,
+        exportActiveDocument: (format, minify) => exportDocument(getActiveDocumentName(), format, minify),
+        buildSidebar,
+        saveDocument,
+        promoteIntermediateToOriginal,
+        async revertDocumentChanges(documentName) {
+            // Used to preserve the original metadata of the document (we need to unpack so we don't store a proxy object)
+            const workspaceDocument = unpackProxyObject(workspace.documents[documentName], { depth: 1 });
+            // Restore from the original (last saved) snapshot. `saveDocument`
+            // writes here, so this reliably rolls back to whatever the user
+            // last persisted - matching the soft-deprecation path away from the
+            // intermediate document layer.
+            const baseline = unpackProxyObject(originalDocuments[documentName], { depth: 1 });
+            if (!workspaceDocument || !baseline) {
+                return;
+            }
+            // Keep the deprecated intermediate map aligned with the original so
+            // any consumer still reading from `getIntermediateDocument` sees the
+            // post-revert state instead of the pre-revert one.
+            intermediateDocuments[documentName] = deepClone(baseline);
+            await addInMemoryDocument({
+                name: documentName,
+                document: baseline,
+                documentSource: workspaceDocument['x-scalar-original-source-url'],
+                documentHash: workspaceDocument['x-scalar-original-document-hash'],
+                initialize: false,
+                meta: {
+                    // Preserve the registry meta
+                    'x-scalar-registry-meta': workspaceDocument['x-scalar-registry-meta'],
+                },
+            });
+        },
+        commitDocument(documentName) {
+            // TODO: Implement commit logic
+            console.warn(`Commit operation for document '${documentName}' is not implemented yet.`);
+        },
+        exportWorkspace() {
+            const { activeDocument: _, documents, ...meta } = unpackProxyObject(workspace);
+            return {
+                documents: {
+                    ...Object.fromEntries(Object.entries(documents).map(([name, doc]) => [
+                        name,
+                        // Get the raw document without any proxies
+                        unpackProxyObject(doc),
+                    ])),
+                },
+                meta: unpackProxyObject(meta) ?? {},
+                originalDocuments: unpackProxyObject(originalDocuments),
+                intermediateDocuments: unpackProxyObject(intermediateDocuments),
+                overrides: unpackProxyObject(overrides),
+                history: history.export(),
+                auth: auth.export(),
+            };
+        },
+        loadWorkspace(input) {
+            safeAssign(workspace.documents, Object.fromEntries(Object.entries(input.documents).map(([name, doc]) => [
+                name,
+                createOverridesProxy(createMagicProxy(doc), {
+                    overrides: input.overrides[name],
+                }),
+            ])));
+            safeAssign(originalDocuments, input.originalDocuments);
+            safeAssign(intermediateDocuments, input.intermediateDocuments);
+            safeAssign(overrides, input.overrides);
+            safeAssign(workspace, input.meta);
+            history.load(input.history);
+            auth.load(input.auth);
+        },
+        importWorkspaceFromSpecification: (specification) => {
+            const { documents, overrides, info: _info, workspace: _workspaceVersion, ...meta } = specification;
+            // Assign workspace metadata
+            safeAssign(workspace, meta);
+            // Add workspace documents
+            return Promise.all(Object.entries(documents ?? {}).map(([name, doc]) => addDocument({ url: doc.$ref, name, overrides: overrides?.[name] })));
+        },
+        rebaseDocument: async (input) => {
+            const { name } = input;
+            // ---- Get the current documents
+            // The intermediate snapshot has been deprecated. Rebase now reasons
+            // about exactly two local snapshots: the original (last saved
+            // baseline, written by `saveDocument`) and the active in-memory
+            // document (with any unsaved edits on top).
+            const originalDocument = unpackProxyObject(originalDocuments[name], { depth: 1 });
+            // raw version without any proxies
+            const activeDocumentRaw = unpackProxyObject(workspace.documents[name], { depth: 1 });
+            // editable version of the document (reversing bundling and also remove internal metadata)
+            const activeDocument = await getEditableDocument(name);
+            if (!originalDocument || !activeDocument || !activeDocumentRaw) {
+                // If any required document state is missing, do nothing
+                return {
+                    ok: false,
+                    type: 'CORRUPTED_STATE',
+                    message: `Cannot rebase document '${name}': missing original or active document state`,
+                };
+            }
+            // ---- Resolve input document
+            const resolve = await withMeasurementAsync('loadDocument', async () => await loadDocument({
+                ...input,
+                fetch: input.fetch ?? workspaceProps?.fetch,
+                fileLoader: workspaceProps?.fileLoader,
+            }));
+            if (!resolve.ok || !isObject(resolve.data)) {
+                return {
+                    ok: false,
+                    type: 'FETCH_FAILED',
+                    message: `Failed to fetch document '${name}': request was not successful or returned invalid data`,
+                };
+            }
+            // Compare document hashes to see if the document has changed
+            // When the hashes match, we can skip the rebase process
+            const newHash = generateHash(resolve.raw);
+            if (activeDocumentRaw['x-scalar-original-document-hash'] === newHash) {
+                return {
+                    ok: false,
+                    type: 'NO_CHANGES_DETECTED',
+                    message: `No changes detected for document '${name}': document hash matches the active document`,
+                };
+            }
+            const newDocumentOrigin = resolve.data;
+            // ---- Override the configurations and metadata
+            overrides[name] = input.overrides ?? {};
+            extraDocumentConfigurations[name] = { fetch: input.fetch };
+            // ---- Compute the merge between upstream and local edits
+            // Two-way merge anchored on the original (last saved) snapshot:
+            //   - changelogIncoming: changes the registry made on top of the
+            //     original (what we want to pull in)
+            //   - changelogLocal: changes the user has made on top of the
+            //     original since the last save (what we want to keep)
+            const changelogIncoming = diff(originalDocument, newDocumentOrigin);
+            // When there are no changes, we can return early since we don't need to do anything
+            // This is not supposed to happen due to the hash check above, but just in case
+            if (changelogIncoming.length === 0) {
+                return {
+                    ok: false,
+                    type: 'NO_CHANGES_DETECTED',
+                    message: `No changes detected for document '${name}' after fetching the latest version.`,
+                };
+            }
+            const changelogLocal = diff(originalDocument, activeDocument);
+            const merged = merge(changelogIncoming, changelogLocal);
+            return {
+                ok: true,
+                conflicts: merged.conflicts,
+                changes: merged.diffs,
+                applyChanges: async (applyChangesInput) => {
+                    // Helper function to compute the new active document based on
+                    // resolved conflicts or a resolved document. With the
+                    // intermediate layer gone, the merged result *is* the new
+                    // active document - there is no longer an intermediate hop.
+                    const getNewActiveDocument = () => {
+                        if ('resolvedConflicts' in applyChangesInput) {
+                            const changeset = merged.diffs.concat(applyChangesInput.resolvedConflicts);
+                            // Apply the merged changes (diffs + resolved conflicts) to the original document
+                            return apply(deepClone(originalDocument), changeset);
+                        }
+                        // If the caller provided a fully resolved document, use it as-is.
+                        return applyChangesInput.resolvedDocument;
+                    };
+                    const mergedDocument = getNewActiveDocument();
+                    // Detect whether the rebase folded in any local edits. When the
+                    // merged result matches the upstream snapshot the pull was
+                    // effectively a fast-forward (no unsaved local work to carry
+                    // over), so the document is clean relative to the registry.
+                    // When it differs we still hold unpushed changes locally - flag
+                    // the document as dirty so the push flow can surface them, the
+                    // same way `git pull --rebase` leaves you "ahead of origin"
+                    // once your local commits get replayed on top.
+                    const hasLocalChangesAgainstUpstream = diff(newDocumentOrigin, mergedDocument).length > 0;
+                    // The merged result becomes the new saved baseline so a subsequent
+                    // revert restores to the post-rebase state, not to the
+                    // pre-rebase original. Mirror the same content into the
+                    // deprecated intermediate map so any lingering consumer reads
+                    // the post-rebase state too. We do not coerce against the strict
+                    // OpenAPI schema here — `addInMemoryDocument` re-runs the full
+                    // ingestion pipeline (which handles AsyncAPI vs OpenAPI separately
+                    // and coerces OpenAPI documents internally), and pre-coercing
+                    // would inject OpenAPI fields into AsyncAPI documents and break
+                    // the document type discriminator.
+                    originalDocuments[name] = mergedDocument;
+                    intermediateDocuments[name] = deepClone(mergedDocument);
+                    // Document-level UI settings never come from the upstream source and
+                    // would otherwise be wiped on every rebase. Carry over only the keys
+                    // that are actually set so we don't spread `undefined` into the
+                    // rebuilt document. The strict document type does not declare every
+                    // x-scalar-* UI extension, so read them through an untyped view.
+                    const isOpenApi = isOpenApiDocument(activeDocumentRaw);
+                    const environments = isOpenApi ? activeDocumentRaw['x-scalar-environments'] : undefined;
+                    const order = isOpenApi ? activeDocumentRaw['x-scalar-order'] : undefined;
+                    // Keep user-configured servers when the merged document has none
+                    // (build-time generated specs typically declare no servers). When the
+                    // merged result already carries servers — whether from upstream or
+                    // preserved local edits — those stay authoritative.
+                    const mergedServers = mergedDocument.servers;
+                    const activeServers = activeDocumentRaw.servers;
+                    const mergedHasServers = Array.isArray(mergedServers) && mergedServers.length > 0;
+                    const activeHasServers = Array.isArray(activeServers) && activeServers.length > 0;
+                    const preservedServers = !isAsyncApiDocument(mergedDocument) && !mergedHasServers && activeHasServers
+                        ? deepClone(activeServers)
+                        : undefined;
+                    // add the new active document to the workspace but don't re-initialize
+                    await addInMemoryDocument({
+                        ...input,
+                        document: {
+                            ...mergedDocument,
+                            // force regeneration of navigation
+                            // when we are rebasing, we want to ensure that the navigation is always up to date
+                            [extensions.document.navigation]: undefined,
+                        },
+                        documentSource: getDocumentSource(input),
+                        // Update the original document hash
+                        documentHash: generateHash(resolve.raw),
+                        initialize: false,
+                        meta: {
+                            ...input.meta,
+                            // Preserve the registry meta
+                            'x-scalar-registry-meta': activeDocumentRaw['x-scalar-registry-meta'],
+                            // Preserve document-level UI settings (see note above).
+                            'x-scalar-watch-mode': activeDocumentRaw['x-scalar-watch-mode'],
+                            'x-scalar-selected-server': activeDocumentRaw['x-scalar-selected-server'],
+                            ...(environments !== undefined ? { 'x-scalar-environments': environments } : {}),
+                            ...(order !== undefined ? { 'x-scalar-order': order } : {}),
+                            ...(preservedServers !== undefined ? { servers: preservedServers } : {}),
+                            // Flag local edits that need pushing - see note above.
+                            'x-scalar-is-dirty': hasLocalChangesAgainstUpstream,
+                        },
+                    });
+                },
+            };
+        },
+    };
+};
+// biome-ignore lint/performance/noBarrelFile: It's a package entry point
+export { generateClientMutators } from './mutators/index.js';

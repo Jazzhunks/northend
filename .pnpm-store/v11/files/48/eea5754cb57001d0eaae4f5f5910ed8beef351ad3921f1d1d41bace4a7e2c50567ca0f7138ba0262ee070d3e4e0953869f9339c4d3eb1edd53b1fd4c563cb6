@@ -1,0 +1,42 @@
+//#region src/code-example/helpers/get-custom-code-samples.ts
+var e = (e, t) => Object.entries(e ?? {}).map(([e, n]) => ({
+	lang: e,
+	source: n,
+	...t ? { label: t } : {}
+})), t = (t) => t ? (Array.isArray(t) ? t : [t]).flatMap((t) => e(t.request, t.title)) : [], n = (e) => (e ?? []).map((e) => ({
+	lang: e.language,
+	source: e.code,
+	...e.name ? { label: e.name } : {}
+})), r = "SDK", i = "Code Examples", a = (a) => {
+	let o = a["x-scalar-examples"] ?? [];
+	if (o.length) return {
+		label: r,
+		samples: o
+	};
+	let s = e(a["x-stainless-snippets"]);
+	if (s.length) return {
+		label: r,
+		samples: s
+	};
+	let c = t(a["x-stainless-examples"]);
+	if (c.length) return {
+		label: r,
+		samples: c
+	};
+	let l = n(a["x-readme"]?.["code-samples"]);
+	return l.length ? {
+		label: i,
+		samples: l
+	} : {
+		label: i,
+		samples: [
+			"x-custom-examples",
+			"x-codeSamples",
+			"x-code-samples"
+		].flatMap((e) => a[e] ?? [])
+	};
+};
+//#endregion
+export { i as CODE_EXAMPLES_GROUP_LABEL, a as getCustomCodeSamples };
+
+//# sourceMappingURL=get-custom-code-samples.js.map

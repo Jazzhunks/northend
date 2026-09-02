@@ -1,0 +1,26 @@
+import { h as GenerateTypeTableOptions, m as BaseTypeTableProps, n as ShikiOptions, o as Generator } from "../markdown-CM2iLQC-.js";
+import * as JsxRuntime from "react/jsx-runtime";
+import { ComponentProps, ReactNode } from "react";
+
+//#region src/ui/auto-type-table.d.ts
+interface AutoTypeTableProps extends BaseTypeTableProps, ComponentProps<'div'> {
+  generator: Generator;
+  /** Shiki configuration when using default `renderMarkdown` & `renderType` */
+  shiki?: ShikiOptions;
+  options?: GenerateTypeTableOptions;
+  renderMarkdown?: (md: string) => Promise<ReactNode>;
+  renderType?: (type: string) => Promise<ReactNode>;
+}
+declare function AutoTypeTable({
+  generator,
+  options,
+  renderType,
+  renderMarkdown,
+  shiki,
+  name,
+  path,
+  type,
+  ...props
+}: AutoTypeTableProps): Promise<Promise<JsxRuntime.JSX.Element>[]>;
+//#endregion
+export { AutoTypeTable, AutoTypeTableProps };

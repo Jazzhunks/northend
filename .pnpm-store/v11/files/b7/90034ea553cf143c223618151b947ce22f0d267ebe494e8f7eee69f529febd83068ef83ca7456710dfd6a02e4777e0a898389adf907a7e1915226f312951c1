@@ -1,0 +1,149 @@
+import DataTableInputSelect_default from "./DataTableInputSelect.vue.js";
+import CodeInputLite_default from "../code-input/CodeInputLite.vue.js";
+import DataTableCell_default from "./DataTableCell.vue.js";
+import { Fragment, computed, createBlock, createCommentVNode, createElementBlock, createElementVNode, createTextVNode, defineComponent, mergeProps, normalizeClass, openBlock, ref, renderSlot, unref, useTemplateRef, withCtx } from "vue";
+import { ScalarIconEye, ScalarIconEyeSlash, ScalarIconX } from "@scalar/icons";
+import { ScalarIconButton } from "@scalar/components/icon-button";
+//#region src/v2/components/data-table/DataTableInput.vue?vue&type=script&setup=true&lang.ts
+var _hoisted_1 = ["for"];
+var _hoisted_2 = { class: "relative flex min-w-0 flex-1" };
+var _hoisted_3 = [
+	"readOnly",
+	"type",
+	"value"
+];
+var _hoisted_4 = {
+	key: 1,
+	class: "centered-y text-orange absolute right-7 text-xs"
+};
+var DataTableInput_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	inheritAttrs: false,
+	__name: "DataTableInput",
+	props: {
+		id: {},
+		type: {},
+		containerClass: {},
+		required: {
+			type: Boolean,
+			default: false
+		},
+		modelValue: {},
+		canAddCustomEnumValue: {
+			type: Boolean,
+			default: true
+		},
+		readOnly: {
+			type: Boolean,
+			default: false
+		},
+		enum: {},
+		environment: {},
+		description: {},
+		withFakeData: {
+			type: Boolean,
+			default: true
+		}
+	},
+	emits: [
+		"update:modelValue",
+		"inputFocus",
+		"inputBlur",
+		"selectVariable"
+	],
+	setup(__props, { emit: __emit }) {
+		const props = __props;
+		const emit = __emit;
+		const mask = ref(true);
+		const interactingWithDropdown = ref(false);
+		const codeInput = useTemplateRef("codeInput");
+		const handleBlur = () => !interactingWithDropdown.value && emit("inputBlur");
+		const inputType = computed(() => props.type === "password" ? "text" : props.type ?? "text");
+		const handleLabelClick = () => {
+			if (!props.enum?.length && !props.readOnly) codeInput.value?.focus();
+		};
+		return (_ctx, _cache) => {
+			return openBlock(), createBlock(DataTableCell_default, { class: normalizeClass(["relative flex", __props.containerClass]) }, {
+				default: withCtx(() => [
+					_ctx.$slots.default ? (openBlock(), createElementBlock("div", {
+						key: 0,
+						class: "text-c-1 flex items-center pr-0 pl-3",
+						for: __props.id ?? "",
+						onClick: handleLabelClick
+					}, [renderSlot(_ctx.$slots, "default", {}, void 0, true), _cache[6] || (_cache[6] = createTextVNode(": ", -1))], 8, _hoisted_1)) : createCommentVNode("", true),
+					createElementVNode("div", _hoisted_2, [props.enum && props.enum.length ? (openBlock(), createBlock(DataTableInputSelect_default, {
+						key: 0,
+						canAddCustomValue: props.canAddCustomEnumValue,
+						modelValue: props.modelValue,
+						value: props.enum,
+						"onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => emit("update:modelValue", $event))
+					}, null, 8, [
+						"canAddCustomValue",
+						"modelValue",
+						"value"
+					])) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [mask.value && __props.type === "password" ? (openBlock(), createElementBlock("input", mergeProps({ key: 0 }, __props.id ? {
+						..._ctx.$attrs,
+						id: __props.id
+					} : _ctx.$attrs, {
+						autocomplete: "off",
+						class: ["text-c-1 disabled:text-c-2 peer w-full min-w-0 border-none px-2 py-1.25 -outline-offset-1", { "scalar-password-input": __props.type === "password" }],
+						"data-1p-ignore": "",
+						readOnly: __props.readOnly,
+						spellcheck: "false",
+						type: inputType.value,
+						value: __props.modelValue,
+						onInput: _cache[1] || (_cache[1] = ($event) => emit("update:modelValue", $event.target.value ?? ""))
+					}), null, 16, _hoisted_3)) : (openBlock(), createBlock(unref(CodeInputLite_default), mergeProps({ key: 1 }, _ctx.$attrs, {
+						id: __props.id,
+						ref_key: "codeInput",
+						ref: codeInput,
+						class: ["text-c-1 disabled:text-c-2 peer w-full min-w-0 border-none -outline-offset-1", [
+							__props.type === "password" && __props.description && "pr-12",
+							__props.description && "pr-8",
+							__props.type === "password" && "scalar-password-input"
+						]],
+						environment: __props.environment,
+						modelValue: __props.modelValue ?? "",
+						readOnly: __props.readOnly,
+						required: Boolean(__props.required),
+						type: inputType.value,
+						withFakeData: __props.withFakeData,
+						onBlur: handleBlur,
+						onFocus: _cache[2] || (_cache[2] = ($event) => emit("inputFocus")),
+						"onUpdate:modelValue": _cache[3] || (_cache[3] = (value) => emit("update:modelValue", value))
+					}), null, 16, [
+						"id",
+						"class",
+						"environment",
+						"modelValue",
+						"readOnly",
+						"required",
+						"type",
+						"withFakeData"
+					]))], 64))]),
+					_ctx.$slots.warning ? (openBlock(), createElementBlock("div", _hoisted_4, [renderSlot(_ctx.$slots, "warning", {}, void 0, true)])) : createCommentVNode("", true),
+					renderSlot(_ctx.$slots, "icon", {}, void 0, true),
+					__props.modelValue ? (openBlock(), createBlock(unref(ScalarIconButton), {
+						key: 2,
+						class: "-ml-.25 h-6 w-6 self-center p-1.25",
+						icon: unref(ScalarIconX),
+						label: "Clear Value",
+						onClick: _cache[4] || (_cache[4] = ($event) => emit("update:modelValue", ""))
+					}, null, 8, ["icon"])) : createCommentVNode("", true),
+					__props.type === "password" ? (openBlock(), createBlock(unref(ScalarIconButton), {
+						key: 3,
+						class: "-ml-.5 mr-1.25 h-6 w-6 self-center p-1.25",
+						"data-testid": "data-table-password-toggle",
+						icon: mask.value ? unref(ScalarIconEye) : unref(ScalarIconEyeSlash),
+						label: mask.value ? "Show Password" : "Hide Password",
+						onClick: _cache[5] || (_cache[5] = ($event) => mask.value = !mask.value)
+					}, null, 8, ["icon", "label"])) : createCommentVNode("", true)
+				]),
+				_: 3
+			}, 8, ["class"]);
+		};
+	}
+});
+//#endregion
+export { DataTableInput_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=DataTableInput.vue.script.js.map

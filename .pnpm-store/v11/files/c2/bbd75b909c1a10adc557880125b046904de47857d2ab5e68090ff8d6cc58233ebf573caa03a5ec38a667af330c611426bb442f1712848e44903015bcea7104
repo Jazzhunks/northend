@@ -1,0 +1,61 @@
+import { generateClientOptions as e } from "./helpers/generate-client-options.js";
+import t from "./components/CodeExample.vue.js";
+import { createApp as n, h as r, reactive as i } from "vue";
+import { createWorkspaceEventBus as a } from "@scalar/workspace-store/events";
+import { getResolvedRef as o } from "@scalar/workspace-store/helpers/get-resolved-ref";
+import { ScalarTeleportRoot as s } from "@scalar/components/teleport";
+import { getFirstServer as c } from "@scalar/workspace-store/helpers/get-first-server";
+import { generateClientMutators as l } from "@scalar/workspace-store/mutators";
+//#region src/code-example/mount.ts
+var u = (e) => ["scalar-app", e === !0 ? "dark-mode" : e === !1 ? "light-mode" : ""].filter(Boolean).join(" "), d = (d, f) => {
+	let p = typeof d == "string" ? document.querySelector(d) : d;
+	if (!p) throw Error(`Element not found: ${d}`);
+	let m = a(), h = e(), g = l(f.store), _ = m.on("workspace:update:selected-client", (e) => g.workspace().workspace.updateSelectedClient(e)), v = m.on("workspace:update:selected-example", (e) => g.workspace().workspace.updateSelectedExample(e)), y = () => {
+		let e = f.store.workspace.activeDocument;
+		if (!e || !("paths" in e)) return;
+		let t = o(e.paths?.[f.path]), n = o(t?.[f.method]);
+		if (n) return {
+			operation: n,
+			server: c(n.servers ?? null, t?.servers ?? null, e.servers ?? null)
+		};
+	};
+	if (!y()) throw Error(`Operation not found: ${f.method.toUpperCase()} ${f.path}`);
+	let b, x = () => {
+		let e = y();
+		return e && (b = e), e ?? b;
+	}, S = i({
+		get operation() {
+			return x().operation;
+		},
+		get method() {
+			return f.method;
+		},
+		get path() {
+			return f.path;
+		},
+		clientOptions: h,
+		eventBus: m,
+		get securitySchemes() {
+			return f.securitySchemes ?? [];
+		},
+		get selectedClient() {
+			return f.store.workspace["x-scalar-default-client"] ?? f.selectedClient;
+		},
+		get selectedExample() {
+			return f.store.workspace["x-scalar-default-example"] ?? f.selectedExample;
+		},
+		get selectedServer() {
+			return f.selectedServer === void 0 ? x().server : f.selectedServer;
+		}
+	}), C = () => r("span", { class: "font-code text-c-2 min-w-0 truncate" }, f.path), w = n(() => r("div", { class: u(f.darkMode) }, [r(s, null, { default: () => r(t, S, { header: C }) })]));
+	return w.mount(p), {
+		app: w,
+		destroy: () => {
+			_(), v(), w.unmount();
+		}
+	};
+};
+//#endregion
+export { d as createCodeExample };
+
+//# sourceMappingURL=mount.js.map

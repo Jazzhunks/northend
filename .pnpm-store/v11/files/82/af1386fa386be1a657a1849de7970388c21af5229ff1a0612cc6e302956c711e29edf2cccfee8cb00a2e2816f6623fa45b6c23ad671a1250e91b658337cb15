@@ -1,0 +1,1 @@
+{"version":3,"file":"get-clients.d.ts","sourceRoot":"","sources":["../../../src/code-example/helpers/get-clients.ts"],"names":[],"mappings":"AACA,OAAO,KAAK,EAAE,WAAW,EAAE,MAAM,sDAAsD,CAAA;AAKvF,OAAO,KAAK,EAAE,iBAAiB,EAAsB,uBAAuB,EAAE,MAAM,UAAU,CAAA;AAE9F;;;;;;;GAOG;AACH,eAAO,MAAM,UAAU,GACrB,mBAAmB,WAAW,EAAE,EAChC,eAAe,iBAAiB,EAAE,EAClC,QAAO,MAAkC,KACxC,uBAAuB,EA+BzB,CAAA"}

@@ -1,0 +1,24 @@
+import type { SchemaObject } from '../schemas/v3.1/strict/schema.js';
+/**
+ * The dynamic scope, ordered outermost-first.
+ *
+ * Each entry is a schema resource on the current evaluation path. When a `$dynamicRef` is resolved,
+ * the outermost entry that declares a matching `$dynamicAnchor` wins.
+ */
+export type DynamicScope = SchemaObject[];
+/** Narrow a schema to one that carries a `$dynamicRef`. */
+export declare const isDynamicRef: (schema: unknown) => schema is SchemaObject & {
+    $dynamicRef: string;
+};
+export declare const collectDynamicAnchors: (resource: SchemaObject) => Map<string, SchemaObject>;
+/** Append a schema to the dynamic scope when it could hold a `$dynamicAnchor`, otherwise return it unchanged. */
+export declare const pushDynamicScope: (scope: DynamicScope, schema: SchemaObject) => DynamicScope;
+/**
+ * Resolve a `$dynamicRef` fragment against the dynamic scope.
+ *
+ * Scans the scope outermost-first and returns the first resource that declares a `$dynamicAnchor` with
+ * the referenced name. Returns `undefined` when nothing matches, in which case callers should leave the
+ * reference unresolved (the schema renders as it did before, with no regression).
+ */
+export declare const resolveDynamicRef: (dynamicRef: string, scope: DynamicScope) => SchemaObject | undefined;
+//# sourceMappingURL=dynamic-ref.d.ts.map

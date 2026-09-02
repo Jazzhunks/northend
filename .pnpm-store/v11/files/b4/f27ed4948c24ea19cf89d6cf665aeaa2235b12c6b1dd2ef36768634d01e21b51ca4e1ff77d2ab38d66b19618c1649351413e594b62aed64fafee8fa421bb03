@@ -1,0 +1,20 @@
+import _plugin_vue_export_helper_default from "../_virtual/_plugin-vue_export-helper.js";
+/* empty css                            */
+import { createElementBlock, createElementVNode, createTextVNode, openBlock } from "vue";
+//#region src/components/RequestFailed.vue
+var _sfc_main = {};
+var _hoisted_1 = { class: "requestFailed" };
+function _sfc_render(_ctx, _cache) {
+	return openBlock(), createElementBlock("div", _hoisted_1, [..._cache[0] || (_cache[0] = [createElementVNode("i", { class: "requestFailedIcon" }, [createElementVNode("svg", {
+		fill: "currentColor",
+		height: "100%",
+		viewBox: "0 0 256 256",
+		width: "100%",
+		xmlns: "http://www.w3.org/2000/svg"
+	}, [createElementVNode("path", { d: "M216,48V208a16,16,0,0,1-16,16H160a16,16,0,0,1-16-16V48a16,16,0,0,1,16-16h40A16,16,0,0,1,216,48ZM96,32H56A16,16,0,0,0,40,48V208a16,16,0,0,0,16,16H96a16,16,0,0,0,16-16V48A16,16,0,0,0,96,32Z" })])], -1), createTextVNode(" Request Failed ", -1)])]);
+}
+var RequestFailed_default = /* @__PURE__ */ _plugin_vue_export_helper_default(_sfc_main, [["render", _sfc_render], ["__scopeId", "data-v-29140773"]]);
+//#endregion
+export { RequestFailed_default as default };
+
+//# sourceMappingURL=RequestFailed.vue.js.map

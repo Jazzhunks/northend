@@ -1,0 +1,1 @@
+{"version":3,"file":"ScalarCardFooter.vue.d.ts","sourceRoot":"","sources":["../../../src/components/ScalarCard/ScalarCardFooter.vue"],"names":[],"mappings":"AAiCA;;;;;;;;GAQG;wBACkB,OAAO,YAAY;AAAxC,wBAAyC;AAGzC,QAAA,MAAM,YAAY;cAoCJ,CAAC,KAAK,IAAgB,KAAK,GAAG;EAQxC,CAAC;AACL,KAAK,eAAe,CAAC,CAAC,EAAE,CAAC,IAAI,CAAC,GAAG;IAChC,QAAO;QACN,MAAM,EAAE,CAAC,CAAC;KACV,CAAA;CACD,CAAC"}

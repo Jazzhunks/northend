@@ -1,0 +1,9 @@
+import _plugin_vue_export_helper_default from "../_virtual/_plugin-vue_export-helper.js";
+import SidebarHttpBadge_vue_vue_type_script_setup_true_lang_default from "./SidebarHttpBadge.vue.script.js";
+/* empty css                               */
+//#region src/components/SidebarHttpBadge.vue
+var SidebarHttpBadge_default = /* @__PURE__ */ _plugin_vue_export_helper_default(SidebarHttpBadge_vue_vue_type_script_setup_true_lang_default, [["__scopeId", "data-v-bdef8365"]]);
+//#endregion
+export { SidebarHttpBadge_default as default };
+
+//# sourceMappingURL=SidebarHttpBadge.vue.js.map

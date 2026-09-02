@@ -1,0 +1,7 @@
+import ScalarIconDotsThreeCircleVertical_vue_vue_type_script_setup_true_lang_default from "./ScalarIconDotsThreeCircleVertical.vue.script.js";
+//#region src/components/ScalarIconDotsThreeCircleVertical.vue
+var ScalarIconDotsThreeCircleVertical_default = ScalarIconDotsThreeCircleVertical_vue_vue_type_script_setup_true_lang_default;
+//#endregion
+export { ScalarIconDotsThreeCircleVertical_default as default };
+
+//# sourceMappingURL=ScalarIconDotsThreeCircleVertical.js.map

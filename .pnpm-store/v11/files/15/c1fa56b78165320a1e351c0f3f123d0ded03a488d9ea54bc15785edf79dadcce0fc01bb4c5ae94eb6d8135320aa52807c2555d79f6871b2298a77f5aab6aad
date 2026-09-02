@@ -1,0 +1,14 @@
+import * as React$1 from "react";
+import * as Primitive from "@radix-ui/react-navigation-menu";
+//#region src/components/ui/navigation-menu.d.ts
+type NavigationMenuContentProps = Primitive.NavigationMenuContentProps;
+type NavigationMenuTriggerProps = Primitive.NavigationMenuTriggerProps;
+declare const NavigationMenu: React$1.ForwardRefExoticComponent<Primitive.NavigationMenuProps & React$1.RefAttributes<HTMLElement>>;
+declare const NavigationMenuList: React$1.ForwardRefExoticComponent<Primitive.NavigationMenuListProps & React$1.RefAttributes<HTMLUListElement>>;
+declare function NavigationMenuItem({ className, children, ...props }: React$1.ComponentProps<typeof Primitive.NavigationMenuItem>): React$1.JSX.Element;
+declare function NavigationMenuTrigger({ className, children, ...props }: React$1.ComponentProps<typeof Primitive.Trigger>): React$1.JSX.Element;
+declare function NavigationMenuContent({ className, ...props }: React$1.ComponentProps<typeof Primitive.Content>): React$1.JSX.Element;
+declare const NavigationMenuLink: React$1.ForwardRefExoticComponent<Primitive.NavigationMenuLinkProps & React$1.RefAttributes<HTMLAnchorElement>>;
+declare function NavigationMenuViewport({ className, ref, ...props }: React$1.ComponentProps<typeof Primitive.Viewport>): React$1.JSX.Element;
+//#endregion
+export { NavigationMenu, NavigationMenuContent, NavigationMenuContentProps, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger, NavigationMenuTriggerProps, NavigationMenuViewport };

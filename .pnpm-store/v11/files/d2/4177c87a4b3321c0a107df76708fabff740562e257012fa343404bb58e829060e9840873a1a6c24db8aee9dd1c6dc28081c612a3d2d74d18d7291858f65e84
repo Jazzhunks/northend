@@ -1,0 +1,139 @@
+import type { HttpMethod as HttpMethodType } from '@scalar/helpers/http/http-methods';
+import { type WorkspaceEventBus } from '@scalar/workspace-store/events';
+import type { SecuritySchemeObjectSecret } from '@scalar/workspace-store/request-example';
+import type { XScalarCookie } from '@scalar/workspace-store/schemas/extensions/general/x-scalar-cookies';
+import type { OperationObject, ServerObject } from '@scalar/workspace-store/schemas/v3.1/strict/openapi-document';
+import type { ClientOptionGroup } from '../types';
+export type CodeExampleProps = {
+    /**
+     * Integration type: determines if the code sample is displayed in a client environment
+     * or in an API reference environment.
+     */
+    integration?: 'client' | 'reference';
+    /**
+     * List of all http clients formatted into option groups for the client selector
+     */
+    clientOptions: ClientOptionGroup[];
+    /**
+     * Pre-selected client, this will determine which client is initially selected in the dropdown.
+     * Either a built-in client id (e.g. `js/fetch`) or a custom sample id (e.g. `custom/python`).
+     *
+     * Typed as a plain string: unioning the (large) client-id union with the `custom/...`
+     * ids overflows TypeScript's union-complexity limit inside this component's `defineProps`.
+     *
+     * @defaults to a custom sample if one is available, otherwise shell/curl
+     */
+    selectedClient?: string;
+    /**
+     * Which server from the spec to use for the code example
+     */
+    selectedServer?: ServerObject | null;
+    /**
+     * The selected content type from the requestBody.content, this will determine which examples are available
+     * as well as the content type of the code example
+     *
+     * @defaults to the first content type if not provided
+     */
+    selectedContentType?: string;
+    /**
+     * Example name to use for resolving example values for parameters AND requestBody.
+     *
+     * This is the document-wide selection: it is honored only when this operation defines an example
+     * with the same key, so picking an example on one operation syncs the rest without blanking out
+     * operations that do not share that key.
+     *
+     * @example "limited"
+     * ```ts
+     * parameters: {
+     *   name: 'foobar',
+     *   in: 'query',
+     *   examples: {
+     *     limited: {
+     *       dataValue: 10,
+     *     }
+     *   }
+     * },
+     * body: {
+     *   content: {
+     *     'application/json': {
+     *       examples: {
+     *         limited: {
+     *           dataValue: { foo: 'bar' },
+     *         }
+     *       }
+     *     }
+     *   }
+     * }
+     *
+     * ```
+     */
+    selectedExample?: string;
+    /**
+     * Event bus
+     */
+    eventBus: WorkspaceEventBus;
+    /**
+     * The security schemes which are applicable to this operation
+     */
+    securitySchemes: SecuritySchemeObjectSecret[];
+    /**
+     * HTTP method of the operation
+     */
+    method: HttpMethodType;
+    /**
+     * Path of the operation
+     */
+    path: string;
+    /**
+     * De-referenced OpenAPI Operation object
+     */
+    operation: OperationObject;
+    /**
+     * If true and there's no example, we will display a small card with the method and path only
+     */
+    fallback?: boolean;
+    /**
+     * A method to generate the label of the block, should return an html string
+     */
+    generateLabel?: () => string;
+    /**
+     * If true, render this as a webhook request example
+     */
+    isWebhook?: boolean;
+    /**
+     * Workspace + document cookies
+     */
+    globalCookies?: XScalarCookie[];
+    /**
+     * When the request body schema uses oneOf/anyOf, use these selected variants
+     * for the example snippet (e.g. from the schema dropdowns in the API reference).
+     */
+    requestBodyCompositionSelection?: Record<string, number>;
+};
+/**
+ * Request Example
+ *
+ * The core component for rendering a request example block,
+ * this component does not have much of its own state but operates on props and custom events
+ *
+ * @event workspace:update:selected-client - Emitted when the selected client changes
+ * @event workspace:update:selected-example - Emitted when the selected example changes, so other operations can sync
+ */
+declare const _default: typeof __VLS_export;
+export default _default;
+declare const __VLS_export: __VLS_WithSlots<import("vue").DefineComponent<CodeExampleProps, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {} & {
+    "update:exampleKey": (value: string) => any;
+}, string, import("vue").PublicProps, Readonly<CodeExampleProps> & Readonly<{
+    "onUpdate:exampleKey"?: ((value: string) => any) | undefined;
+}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>, {
+    header: () => unknown;
+    footer: ({ exampleName }: {
+        exampleName: string;
+    }) => unknown;
+}>;
+type __VLS_WithSlots<T, S> = T & {
+    new (): {
+        $slots: S;
+    };
+};
+//# sourceMappingURL=CodeExample.vue.d.ts.map

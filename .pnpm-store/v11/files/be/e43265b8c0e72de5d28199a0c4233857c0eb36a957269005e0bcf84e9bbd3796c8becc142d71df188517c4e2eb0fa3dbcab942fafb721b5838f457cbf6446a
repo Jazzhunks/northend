@@ -1,0 +1,1 @@
+{"version":3,"file":"extensions.d.ts","sourceRoot":"","sources":["../../../src/mutators/operation/extensions.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,eAAe,EAAE,MAAM,UAAU,CAAA;AAI/C,OAAO,KAAK,EAAE,iBAAiB,EAAE,MAAM,WAAW,CAAA;AAGlD;;;;;;;;;;;GAWG;AACH,eAAO,MAAM,wBAAwB,GACnC,UAAU,iBAAiB,GAAG,IAAI,EAClC,mBAAmB,eAAe,CAAC,4BAA4B,CAAC,SAWjE,CAAA"}

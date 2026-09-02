@@ -1,0 +1,18 @@
+import type { ParameterObject } from '@scalar/workspace-store/schemas/v3.1/strict/openapi-document';
+import type { TableRow } from '../components/RequestTableRow.vue.js';
+/**
+ * Turns a single OpenAPI parameter into one or more table rows.
+ *
+ * For object-typed query parameters with `form`/`explode: true` (the default) or `deepObject`
+ * serialization, each property becomes its own row so the user can edit them individually,
+ * matching how tools like Postman present the same parameter. Every other parameter passes
+ * through as a single row.
+ */
+export declare const createParameterRows: (parameter: ParameterObject, exampleKey: string, options?: {
+    hiddenValuePaths?: readonly string[][];
+    renamedValuePaths?: readonly {
+        from: string[];
+        to: string[];
+    }[];
+}) => TableRow[];
+//# sourceMappingURL=create-parameter-rows.d.ts.map

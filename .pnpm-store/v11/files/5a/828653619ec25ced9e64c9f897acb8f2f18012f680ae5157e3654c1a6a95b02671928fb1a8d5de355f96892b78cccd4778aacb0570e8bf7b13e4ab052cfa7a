@@ -1,0 +1,25 @@
+import { __exportAll } from "../../../_virtual/_rolldown/runtime.js";
+import { createElementBlock, createElementVNode, openBlock } from "vue";
+//#region src/components/ScalarIcon/icons/Collection.svg?component
+var Collection_exports = /* @__PURE__ */ __exportAll({
+	default: () => Collection_default,
+	render: () => render$1
+});
+var _hoisted_1 = {
+	xmlns: "http://www.w3.org/2000/svg",
+	fill: "none",
+	viewBox: "0 0 24 24"
+};
+function render$1(_ctx, _cache) {
+	return openBlock(), createElementBlock("svg", _hoisted_1, [..._cache[0] || (_cache[0] = [createElementVNode("path", {
+		stroke: "currentColor",
+		"stroke-linecap": "round",
+		"stroke-linejoin": "round",
+		d: "M20.86 16.6c0 .32-.16.64-.47.72l-6.3 2.83a.93.93 0 0 1-.8-.08c-.23-.16-.38-.4-.38-.63V4.56c0-.24.15-.55.39-.63.24-.16.47-.16.79-.08l6.3 2.83c.31.16.47.4.47.71v9.22zM10.7 19.52a.77.77 0 0 1-.7-.08.72.72 0 0 1-.32-.63V5.35c0-.24.15-.56.4-.63.23-.16.46-.16.78-.08M7.43 18.73a.77.77 0 0 1-.7-.08.72.72 0 0 1-.32-.63V6.05c0-.23.16-.55.4-.63.23-.15.47-.15.78-.07m-3.43 12.6a.77.77 0 0 1-.7-.08.72.72 0 0 1-.32-.63V6.84c0-.23.16-.55.4-.63.23-.16.47-.16.78-.08"
+	}, null, -1)])]);
+}
+var Collection_default = { render: render$1 };
+//#endregion
+export { Collection_exports };
+
+//# sourceMappingURL=Collection.svg.virtual.js.map

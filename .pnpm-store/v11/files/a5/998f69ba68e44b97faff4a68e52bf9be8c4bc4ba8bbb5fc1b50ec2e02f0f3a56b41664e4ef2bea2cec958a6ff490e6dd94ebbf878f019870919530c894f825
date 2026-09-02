@@ -1,0 +1,2 @@
+import { t as tscEmit } from "./tsc-KtFHcISk.mjs";
+export { tscEmit };

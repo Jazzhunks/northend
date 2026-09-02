@@ -1,0 +1,1 @@
+{"version":3,"file":"analytics.d.ts","sourceRoot":"","sources":["../../../src/events/definitions/analytics.ts"],"names":[],"mappings":"AAAA,sDAAsD;AACtD,MAAM,MAAM,eAAe,GAAG;IAC5B;;OAEG;IACH,wBAAwB,EAAE;QACxB,wCAAwC;QACxC,EAAE,EAAE,MAAM,CAAA;KACX,CAAA;IACD;;OAEG;IACH,qBAAqB,EAAE,SAAS,CAAA;CACjC,CAAA"}

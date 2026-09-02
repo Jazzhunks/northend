@@ -1,0 +1,52 @@
+{
+  "name": "@scalar/themes",
+  "description": "the default CSS variables for all Scalar packages",
+  "license": "MIT",
+  "author": "Scalar (https://github.com/scalar)",
+  "homepage": "https://github.com/scalar/scalar",
+  "bugs": "https://github.com/scalar/scalar/issues/new/choose",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/scalar/scalar.git",
+    "directory": "packages/themes"
+  },
+  "keywords": [
+    "css",
+    "css-variables",
+    "scalar"
+  ],
+  "version": "0.17.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./tailwind.css": "./dist/tailwind.css",
+    "./style.css": "./dist/style.css",
+    "./fonts.css": "./dist/fonts/fonts.css"
+  },
+  "files": [
+    "dist",
+    "skills",
+    "CHANGELOG.md"
+  ],
+  "dependencies": {
+    "nanoid": "^5.1.6"
+  },
+  "devDependencies": {
+    "tailwindcss": "^4.1.18",
+    "vite": "8.0.0"
+  },
+  "scripts": {
+    "build": "vite build && tsc -p tsconfig.build.json",
+    "types:check": "tsgo --noEmit"
+  }
+}

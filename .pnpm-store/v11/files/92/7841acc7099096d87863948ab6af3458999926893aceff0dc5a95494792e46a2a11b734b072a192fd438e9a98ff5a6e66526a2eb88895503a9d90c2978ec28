@@ -1,0 +1,34 @@
+import * as Layer from "effect/Layer";
+import * as Worker from "effect/unstable/workers/Worker";
+/**
+ * Creates browser worker layers by combining the default `WorkerPlatform` with a spawner for `Worker`, `SharedWorker`, or `MessagePort` instances.
+ *
+ * **When to use**
+ *
+ * Use when you need both the browser `WorkerPlatform` and a `Spawner` from one
+ * layer.
+ *
+ * **Details**
+ *
+ * The `spawn` callback receives the numeric worker id and may return a
+ * `Worker`, `SharedWorker`, or `MessagePort`.
+ *
+ * **Gotchas**
+ *
+ * Scope finalization sends the worker close protocol over the port. Dedicated
+ * workers created by `spawn` are not terminated by this layer.
+ *
+ * @see {@link layerPlatform} for providing only the browser worker platform
+ *
+ * @category layers
+ * @since 4.0.0
+ */
+export declare const layer: (spawn: (id: number) => Worker | SharedWorker | MessagePort) => Layer.Layer<Worker.WorkerPlatform | Worker.Spawner>;
+/**
+ * Layer that provides the browser `WorkerPlatform` for `Worker`, `SharedWorker`, and `MessagePort` communication.
+ *
+ * @category layers
+ * @since 4.0.0
+ */
+export declare const layerPlatform: Layer.Layer<Worker.WorkerPlatform>;
+//# sourceMappingURL=BrowserWorker.d.ts.map

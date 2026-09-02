@@ -1,0 +1,134 @@
+import DataTable_default from "../../../components/data-table/DataTable.vue.js";
+import DataTableRow_default from "../../../components/data-table/DataTableRow.vue.js";
+import CollapsibleSection_default from "../../../components/layout/CollapsibleSection.vue.js";
+import { computed, createBlock, createElementVNode, createTextVNode, createVNode, defineComponent, normalizeClass, openBlock, ref, toDisplayString, unref, vShow, watch, withCtx, withDirectives } from "vue";
+import { ScalarButton } from "@scalar/components/button";
+import { ScalarIconCaretDown } from "@scalar/icons";
+import { ScalarCombobox } from "@scalar/components/combobox";
+import { findClient, generateCodeSnippet, getClients, getCustomCodeSamples, getSecrets } from "@scalar/blocks/code-example";
+import { ScalarErrorBoundary } from "@scalar/components/error-boundary";
+import { ScalarCodeBlock } from "@scalar/components/code-block";
+//#region src/v2/blocks/request-block/components/RequestCodeSnippet.vue?vue&type=script&setup=true&lang.ts
+var _hoisted_1 = { class: "flex flex-1" };
+var _hoisted_2 = { class: "overflow-hidden" };
+var RequestCodeSnippet_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	__name: "RequestCodeSnippet",
+	props: {
+		integration: {},
+		clientOptions: {},
+		selectedClient: {},
+		selectedServer: { default: null },
+		selectedContentType: {},
+		selectedExample: {},
+		eventBus: {},
+		securitySchemes: {},
+		method: {},
+		path: {},
+		operation: {},
+		fallback: { type: Boolean },
+		generateLabel: { type: Function },
+		isWebhook: { type: Boolean },
+		globalCookies: {},
+		requestBodyCompositionSelection: {}
+	},
+	setup(__props) {
+		/** Grab any custom code samples from the operation */
+		const customCodeSamples = computed(() => getCustomCodeSamples(__props.operation));
+		/** Merge custom code samples with the client options */
+		const clients = computed(() => getClients(customCodeSamples.value.samples, __props.clientOptions, customCodeSamples.value.label));
+		/**
+		* The locally selected client which would include code samples from this operation only
+		* Must be local state because it contains custom code samples from this operation only
+		*/
+		const localSelectedClient = ref(findClient(clients.value, __props.selectedClient));
+		/**
+		* Re-resolve the local client whenever the global selection or the available
+		* clients change. Watching `clients` matters when navigating between operations:
+		* the stored id stays the same, but the matching option (e.g. a custom sample)
+		* differs per operation, so without this the snippet could go stale.
+		*/
+		watch([() => __props.selectedClient, clients], ([newClient]) => {
+			const client = findClient(clients.value, newClient);
+			if (client) localSelectedClient.value = client;
+		});
+		/** Block secrets from being shown in the code block */
+		const secretCredentials = computed(() => getSecrets(__props.securitySchemes ?? []));
+		/** Handle client change */
+		const handleClientChange = (option) => {
+			localSelectedClient.value = option;
+			if (option) __props.eventBus.emit("workspace:update:selected-client", option.id);
+		};
+		/** Generate the code snippet for the selected example */
+		const generatedCode = computed(() => generateCodeSnippet({
+			defaultDisabledParameters: true,
+			clientId: localSelectedClient.value?.id,
+			customCodeSamples: customCodeSamples.value.samples,
+			operation: __props.operation,
+			method: __props.method,
+			path: __props.path,
+			contentType: __props.selectedContentType,
+			server: __props.selectedServer,
+			securitySchemes: __props.securitySchemes,
+			example: __props.selectedExample,
+			globalCookies: __props.globalCookies,
+			includeDefaultHeaders: __props.integration === "client"
+		}));
+		/** Check if there are any clients available (built-in or custom code samples) */
+		const hasClients = computed(() => clients.value.some((group) => group.options.length > 0));
+		return (_ctx, _cache) => {
+			return withDirectives((openBlock(), createBlock(unref(CollapsibleSection_default), {
+				class: "group/preview w-full border-t",
+				defaultOpen: false
+			}, {
+				title: withCtx(() => [..._cache[1] || (_cache[1] = [createTextVNode("Code Snippet", -1)])]),
+				actions: withCtx(() => [createElementVNode("div", _hoisted_1, [createVNode(unref(ScalarCombobox), {
+					modelValue: localSelectedClient.value,
+					options: clients.value,
+					placement: "bottom-end",
+					"onUpdate:modelValue": _cache[0] || (_cache[0] = (ev) => handleClientChange(ev))
+				}, {
+					default: withCtx(({ open }) => [createVNode(unref(ScalarButton), {
+						class: "text-c-2 hover:text-c-1 flex h-full w-fit gap-1.5 px-0.5 py-0 text-base font-normal",
+						"data-testid": "client-picker",
+						variant: "ghost"
+					}, {
+						default: withCtx(() => [createTextVNode(toDisplayString(localSelectedClient.value?.title) + " ", 1), createVNode(unref(ScalarIconCaretDown), {
+							class: normalizeClass(["mt-0.25 size-3 transition-transform duration-100", open && "rotate-180"]),
+							weight: "bold"
+						}, null, 8, ["class"])]),
+						_: 2
+					}, 1024)]),
+					_: 1
+				}, 8, ["modelValue", "options"])])]),
+				default: withCtx(() => [createVNode(unref(ScalarErrorBoundary), null, {
+					default: withCtx(() => [createVNode(unref(DataTable_default), {
+						columns: [""],
+						presentational: ""
+					}, {
+						default: withCtx(() => [createVNode(unref(DataTableRow_default), null, {
+							default: withCtx(() => [createElementVNode("div", _hoisted_2, [createVNode(unref(ScalarCodeBlock), {
+								class: "text-base",
+								content: generatedCode.value,
+								hideCredentials: secretCredentials.value,
+								lang: localSelectedClient.value?.lang ?? "plaintext",
+								lineNumbers: ""
+							}, null, 8, [
+								"content",
+								"hideCredentials",
+								"lang"
+							])])]),
+							_: 1
+						})]),
+						_: 1
+					})]),
+					_: 1
+				})]),
+				_: 1
+			}, 512)), [[vShow, hasClients.value]]);
+		};
+	}
+});
+//#endregion
+export { RequestCodeSnippet_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=RequestCodeSnippet.vue.script.js.map

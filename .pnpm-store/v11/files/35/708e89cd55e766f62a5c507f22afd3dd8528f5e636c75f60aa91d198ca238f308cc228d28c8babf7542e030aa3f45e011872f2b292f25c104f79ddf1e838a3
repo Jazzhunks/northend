@@ -1,0 +1,12 @@
+import { Writable, WritableOptions } from 'node:stream';
+export default class BufferWritable extends Writable {
+    #private;
+    constructor(options: WritableOptions);
+    _write(chunk: Buffer, encoding: string, callback?: () => void): void;
+    _writev(chunks: Array<{
+        chunk: Buffer;
+        encoding: string;
+    }>, callback?: () => void): void;
+    _final(callback?: () => void): void;
+    getBuffer(): Buffer;
+}

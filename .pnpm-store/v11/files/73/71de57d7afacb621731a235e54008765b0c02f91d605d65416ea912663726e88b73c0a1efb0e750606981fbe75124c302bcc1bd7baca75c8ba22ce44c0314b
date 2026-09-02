@@ -1,0 +1,399 @@
+import DataTableInputSelect_default from "../data-table/DataTableInputSelect.vue.js";
+import EnvironmentVariablesDropdown_default from "../../features/environments/components/EnvironmentVariablesDropdown.vue.js";
+import { backspaceCommand, pillPlugin } from "./code-variable-widget.js";
+import { Fragment, computed, createBlock, createCommentVNode, createElementBlock, createElementVNode, createTextVNode, defineComponent, mergeProps, normalizeClass, openBlock, ref, renderSlot, toDisplayString, toRef, unref, useAttrs, watch, withKeys, withModifiers } from "vue";
+import { isDefined } from "@scalar/helpers/array/is-defined";
+import { colorPicker, useCodeMirror, useDropdown } from "@scalar/use-codemirror";
+import { CONTEXT_FUNCTION_NAMES, getContextFunctionComment, isContextFunctionName } from "@scalar/workspace-store/request-example";
+import { nanoid } from "nanoid";
+//#region src/v2/components/code-input/CodeInput.vue?vue&type=script&setup=true&lang.ts
+var _hoisted_1 = { class: "whitespace-nowrap" };
+var _hoisted_2 = ["id"];
+var _hoisted_3 = {
+	key: 0,
+	class: "z-context text-c-2 absolute right-1.5 bottom-1 hidden font-sans group-has-[:focus-visible]/input:block",
+	role: "alert"
+};
+var _hoisted_4 = {
+	key: 5,
+	class: "centered-y text-orange absolute right-7 text-xs"
+};
+var _hoisted_5 = {
+	key: 6,
+	class: "centered-y absolute right-0 flex h-full items-center p-1.5 group-has-[.cm-focused]:z-1"
+};
+var _hoisted_6 = {
+	key: 7,
+	class: "required centered-y text-xxs text-c-3 group-[.error]:text-red bg-b-1 pointer-events-none absolute right-0 mr-0.5 pt-px pr-2 opacity-100 shadow-[-8px_0_4px_var(--scalar-background-1)] transition-opacity duration-150 group-[.alert]:bg-transparent group-[.alert]:shadow-none group-[.error]:bg-transparent group-[.error]:shadow-none peer-has-[.cm-focused]:opacity-0"
+};
+var CodeInput_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	inheritAttrs: false,
+	__name: "CodeInput",
+	props: {
+		modelValue: { type: [
+			String,
+			Number,
+			Boolean,
+			Array,
+			Object
+		] },
+		environment: {},
+		type: {},
+		disabled: {
+			type: Boolean,
+			default: false
+		},
+		error: {
+			type: Boolean,
+			default: false
+		},
+		layout: { default: "desktop" },
+		enum: {},
+		examples: {},
+		default: { type: [
+			String,
+			Number,
+			Boolean,
+			Array,
+			Object
+		] },
+		nullable: {
+			type: Boolean,
+			default: false
+		},
+		placeholder: {},
+		required: { type: Boolean },
+		colorPicker: {
+			type: Boolean,
+			default: false
+		},
+		lineNumbers: {
+			type: Boolean,
+			default: false
+		},
+		lint: {
+			type: Boolean,
+			default: false
+		},
+		lineWrapping: {
+			type: Boolean,
+			default: false
+		},
+		language: {},
+		extensions: { default: () => [] },
+		disableTabIndent: {
+			type: Boolean,
+			default: false
+		},
+		disableEnter: {
+			type: Boolean,
+			default: false
+		},
+		disableCloseBrackets: {
+			type: Boolean,
+			default: false
+		},
+		emitOnBlur: {
+			type: Boolean,
+			default: true
+		},
+		withVariables: {
+			type: Boolean,
+			default: true
+		},
+		withFakeData: {
+			type: Boolean,
+			default: false
+		},
+		alwaysEmitChange: {
+			type: Boolean,
+			default: false
+		},
+		handleFieldChange: { type: Function },
+		handleFieldSubmit: { type: Function },
+		linethrough: { type: Boolean }
+	},
+	emits: [
+		"update:modelValue",
+		"submit",
+		"navigate",
+		"blur"
+	],
+	setup(__props, { expose: __expose, emit: __emit }) {
+		const emit = __emit;
+		const attrs = useAttrs();
+		const componentId = attrs.id || `id-${nanoid()}`;
+		const isFocused = ref(false);
+		/**
+		* Determines if we should render a select dropdown for boolean types.
+		*/
+		const isBooleanMode = computed(() => {
+			if (__props.enum?.length) return false;
+			return __props.type === "boolean" || Array.isArray(__props.type) && __props.type.includes("boolean");
+		});
+		/**
+		* Options for boolean select mode.
+		*/
+		const booleanOptions = computed(() => __props.nullable ? [
+			"true",
+			"false",
+			"null"
+		] : ["true", "false"]);
+		/**
+		* Default type when dealing with type arrays.
+		* Finds the first non-null type.
+		*/
+		const defaultType = computed(() => {
+			if (Array.isArray(__props.type)) return __props.type.find((t) => t !== "null") ?? "string";
+			return __props.type;
+		});
+		/**
+		* Handles value changes during typing.
+		*/
+		const handleChange = (value) => {
+			if (!__props.alwaysEmitChange && value === serializeValue(__props.modelValue)) return;
+			if (__props.handleFieldChange) __props.handleFieldChange(value);
+			else emit("update:modelValue", value);
+		};
+		/**
+		* Handles form submission (enter key or blur with emitOnBlur).
+		*/
+		const handleSubmit = (value, event) => {
+			if (__props.handleFieldSubmit) __props.handleFieldSubmit(value);
+			else emit("submit", value, event);
+		};
+		/**
+		* Handles input blur event.
+		*/
+		const handleBlur = (value, event) => {
+			isFocused.value = false;
+			if (__props.emitOnBlur && __props.modelValue) handleSubmit(value, event);
+			emit("blur", value, event);
+		};
+		/**
+		* Handles model value updates from select components.
+		*/
+		const handleSelectChange = (value) => emit("update:modelValue", value);
+		/**
+		* Build extensions array.
+		* Note: Extensions are not reactive after initialization.
+		*/
+		const buildExtensions = () => {
+			const extensionsList = [...__props.extensions];
+			if (__props.colorPicker) extensionsList.push(colorPicker);
+			return extensionsList;
+		};
+		/**
+		* Reactive pill plugin for environment variable visualization.
+		*/
+		const contextFunctionDropdownItems = computed(() => __props.withFakeData ? CONTEXT_FUNCTION_NAMES.map((key) => ({
+			key,
+			description: getContextFunctionComment(key)
+		})) : []);
+		const pillPluginExtension = computed(() => pillPlugin({
+			environment: __props.environment,
+			isContextFunctionName,
+			isReadOnly: __props.layout === "modal"
+		}));
+		/**
+		* Combined extensions for CodeMirror.
+		*/
+		const codeMirrorExtensions = computed(() => [
+			...buildExtensions(),
+			pillPluginExtension.value,
+			backspaceCommand
+		]);
+		const codeMirrorRef = ref(null);
+		/** Converts the model value to a string for CodeMirror */
+		const serializeValue = (value) => {
+			if (typeof value === "string") return value;
+			return JSON.stringify(value);
+		};
+		const { codeMirror, setCodeMirrorContent } = useCodeMirror({
+			content: toRef(() => serializeValue(__props.modelValue)),
+			onChange: (value) => {
+				handleChange(value);
+				updateDropdownVisibility();
+			},
+			onFocus: () => {
+				isFocused.value = true;
+			},
+			onBlur: handleBlur,
+			codeMirrorRef,
+			disableTabIndent: toRef(() => __props.disableTabIndent),
+			disableEnter: toRef(() => __props.disableEnter),
+			disableCloseBrackets: toRef(() => __props.disableCloseBrackets),
+			lineNumbers: toRef(() => __props.lineNumbers),
+			language: toRef(() => __props.language),
+			lint: toRef(() => __props.lint),
+			extensions: codeMirrorExtensions,
+			placeholder: toRef(() => __props.placeholder)
+		});
+		/**
+		* Handle autofocus attribute.
+		*/
+		watch(codeMirror, () => {
+			if (codeMirror.value && Object.hasOwn(attrs, "autofocus")) codeMirror.value.focus();
+		});
+		const showDropdown = ref(false);
+		const dropdownQuery = ref("");
+		const dropdownPosition = ref({
+			left: 0,
+			top: 0
+		});
+		const dropdownRef = ref(null);
+		const { handleDropdownSelect, updateDropdownVisibility } = useDropdown({
+			codeMirror,
+			query: dropdownQuery,
+			showDropdown,
+			dropdownPosition
+		});
+		/**
+		* Determines if the environment variable dropdown should be visible.
+		* Shows when environment is defined (for env vars) or withFakeData is true (for context functions)
+		*/
+		const displayVariablesDropdown = computed(() => {
+			return showDropdown.value && __props.withVariables && __props.layout !== "modal" && (Boolean(__props.environment) || __props.withFakeData);
+		});
+		/**
+		* Handles keyboard navigation for dropdown and form submission.
+		*/
+		const handleKeyDown = (key, event) => {
+			if (showDropdown.value) {
+				if (key === "down" || key === "up") {
+					event.preventDefault();
+					dropdownRef.value?.handleArrowKey(key);
+				} else if (key === "enter") {
+					event.preventDefault();
+					dropdownRef.value?.handleSelect();
+				}
+				return;
+			}
+			if (key === "escape" && !__props.disableTabIndent) event.stopPropagation();
+			if (key === "enter" && event.target instanceof HTMLDivElement) handleSubmit(codeMirror.value?.state.doc.toString() ?? "", event);
+		};
+		__expose({
+			focus: (position) => {
+				if (!codeMirror.value) return;
+				codeMirror.value.focus();
+				if (!isDefined(position)) return;
+				const anchor = (() => {
+					if (position === "start") return 0;
+					if (position === "end") return codeMirror.value.state.doc.length;
+					return position;
+				})();
+				codeMirror.value.dispatch({
+					selection: { anchor },
+					scrollIntoView: true
+				});
+			},
+			isFocused,
+			handleChange,
+			handleSubmit,
+			handleBlur,
+			booleanOptions,
+			codeMirror,
+			codeMirrorRef,
+			modelValue: __props.modelValue,
+			setCodeMirrorContent,
+			cursorPosition: () => codeMirror.value?.state.selection.main.head,
+			serializeValue
+		});
+		return (_ctx, _cache) => {
+			return openBlock(), createElementBlock(Fragment, null, [
+				__props.disabled ? (openBlock(), createElementBlock("div", {
+					key: 0,
+					class: normalizeClass(["text-c-2 flex cursor-default items-center justify-center", {
+						"font-code pr-2 pl-1 text-base": __props.layout === "modal",
+						"px-2": __props.layout !== "modal",
+						"line-through": __props.linethrough
+					}]),
+					"data-testid": "code-input-disabled"
+				}, [createElementVNode("span", _hoisted_1, toDisplayString(__props.modelValue), 1)], 2)) : __props.enum?.length ? (openBlock(), createBlock(DataTableInputSelect_default, {
+					key: 1,
+					default: __props.default,
+					modelValue: __props.modelValue,
+					type: defaultType.value,
+					value: __props.enum,
+					"onUpdate:modelValue": handleSelectChange
+				}, null, 8, [
+					"default",
+					"modelValue",
+					"type",
+					"value"
+				])) : isBooleanMode.value ? (openBlock(), createBlock(DataTableInputSelect_default, {
+					key: 2,
+					default: __props.default,
+					modelValue: __props.modelValue,
+					value: booleanOptions.value,
+					"onUpdate:modelValue": handleSelectChange
+				}, null, 8, [
+					"default",
+					"modelValue",
+					"value"
+				])) : __props.examples?.length ? (openBlock(), createBlock(DataTableInputSelect_default, {
+					key: 3,
+					default: __props.default,
+					modelValue: __props.modelValue,
+					value: __props.examples,
+					"onUpdate:modelValue": handleSelectChange
+				}, null, 8, [
+					"default",
+					"modelValue",
+					"value"
+				])) : (openBlock(), createElementBlock("div", mergeProps({
+					key: 4,
+					id: unref(componentId)
+				}, _ctx.$attrs, {
+					ref_key: "codeMirrorRef",
+					ref: codeMirrorRef,
+					class: ["group/input group-[.alert]:outline-orange group-[.error]:outline-red font-code peer relative w-full overflow-hidden text-xs leading-[1.44] whitespace-nowrap -outline-offset-1 has-[:focus-visible]:rounded-[4px] has-[:focus-visible]:outline", {
+						"line-wrapping has-[:focus-visible]:bg-b-1 has-[:focus-visible]:absolute has-[:focus-visible]:z-1": __props.lineWrapping,
+						"flow-code-input--error": __props.error,
+						"line-through": __props.linethrough
+					}],
+					onKeydown: [
+						_cache[0] || (_cache[0] = withKeys(withModifiers(($event) => handleKeyDown("down", $event), ["stop"]), ["down"])),
+						_cache[1] || (_cache[1] = withKeys(($event) => handleKeyDown("enter", $event), ["enter"])),
+						_cache[2] || (_cache[2] = withKeys(($event) => handleKeyDown("escape", $event), ["escape"])),
+						_cache[3] || (_cache[3] = withKeys(withModifiers(($event) => handleKeyDown("up", $event), ["stop"]), ["up"]))
+					]
+				}), [!__props.disableTabIndent ? (openBlock(), createElementBlock("div", _hoisted_3, [..._cache[6] || (_cache[6] = [
+					createTextVNode(" Press ", -1),
+					createElementVNode("kbd", { class: "-mx-0.25 rounded border px-0.5 font-mono" }, "Esc", -1),
+					createTextVNode(" then ", -1),
+					createElementVNode("kbd", { class: "-mx-0.25 rounded border px-0.5 font-mono" }, "Tab", -1),
+					createTextVNode(" to exit ", -1)
+				])])) : createCommentVNode("", true)], 16, _hoisted_2)),
+				_ctx.$slots.warning ? (openBlock(), createElementBlock("div", _hoisted_4, [renderSlot(_ctx.$slots, "warning", {}, void 0, true)])) : createCommentVNode("", true),
+				_ctx.$slots.icon ? (openBlock(), createElementBlock("div", _hoisted_5, [renderSlot(_ctx.$slots, "icon", {}, void 0, true)])) : createCommentVNode("", true),
+				__props.required ? (openBlock(), createElementBlock("div", _hoisted_6, " Required ")) : createCommentVNode("", true),
+				displayVariablesDropdown.value ? (openBlock(), createBlock(EnvironmentVariablesDropdown_default, {
+					key: 8,
+					ref_key: "dropdownRef",
+					ref: dropdownRef,
+					contextFunctionItems: contextFunctionDropdownItems.value,
+					dropdownPosition: dropdownPosition.value,
+					environment: __props.environment,
+					query: dropdownQuery.value,
+					onClose: _cache[4] || (_cache[4] = ($event) => showDropdown.value = false),
+					onRedirect: _cache[5] || (_cache[5] = ($event) => emit("navigate", {
+						page: "document",
+						path: "environment"
+					})),
+					onSelect: unref(handleDropdownSelect)
+				}, null, 8, [
+					"contextFunctionItems",
+					"dropdownPosition",
+					"environment",
+					"query",
+					"onSelect"
+				])) : createCommentVNode("", true)
+			], 64);
+		};
+	}
+});
+//#endregion
+export { CodeInput_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=CodeInput.vue.script.js.map

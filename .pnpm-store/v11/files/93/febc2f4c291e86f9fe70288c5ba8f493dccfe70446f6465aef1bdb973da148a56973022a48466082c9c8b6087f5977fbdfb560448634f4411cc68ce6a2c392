@@ -1,0 +1,33 @@
+import { useBindCx } from "@scalar/use-hooks/useBindCx";
+import { createCommentVNode, createElementBlock, createElementVNode, createTextVNode, createVNode, defineComponent, mergeProps, openBlock, renderSlot, toDisplayString, unref } from "vue";
+import { ScalarIconMagnifyingGlass } from "@scalar/icons";
+//#region src/components/ScalarSidebar/ScalarSidebarSearchButton.vue?vue&type=script&setup=true&lang.ts
+var _hoisted_1 = { class: "flex-1 text-start leading-none" };
+var _hoisted_2 = {
+	key: 0,
+	class: "uppercase text-sidebar-c-2 leading-none py-1 px-1.25 rounded text-xs font-medium border"
+};
+var _hoisted_3 = { class: "sr-only" };
+var _hoisted_4 = { dir: "ltr" };
+var ScalarSidebarSearchButton_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	inheritAttrs: false,
+	__name: "ScalarSidebarSearchButton",
+	props: { shortcutLabel: { default: "Keyboard Shortcut:" } },
+	setup(__props) {
+		const { cx } = useBindCx();
+		return (_ctx, _cache) => {
+			return openBlock(), createElementBlock("button", mergeProps({
+				role: "search",
+				type: "button"
+			}, unref(cx)("flex items-center rounded border text-base h-8 gap-1 pl-2 pr-1", "bg-sidebar-b-search border-sidebar-border-search text-sidebar-c-search")), [
+				createVNode(unref(ScalarIconMagnifyingGlass), { class: "size-4" }),
+				createElementVNode("span", _hoisted_1, [renderSlot(_ctx.$slots, "default", {}, () => [_cache[0] || (_cache[0] = createTextVNode("Search...", -1))])]),
+				_ctx.$slots.shortcut ? (openBlock(), createElementBlock("span", _hoisted_2, [createElementVNode("span", _hoisted_3, toDisplayString(__props.shortcutLabel), 1), createElementVNode("kbd", _hoisted_4, [renderSlot(_ctx.$slots, "shortcut")])])) : createCommentVNode("", true)
+			], 16);
+		};
+	}
+});
+//#endregion
+export { ScalarSidebarSearchButton_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=ScalarSidebarSearchButton.vue.script.js.map

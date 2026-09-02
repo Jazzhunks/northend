@@ -1,0 +1,25 @@
+export declare const XScalarLinksSchema: import("@scalar/typebox").TObject<{
+    'x-scalar-links': import("@scalar/typebox").TOptional<import("@scalar/typebox").TArray<import("@scalar/typebox").TObject<{
+        name: import("@scalar/typebox").TString;
+        url: import("@scalar/typebox").TString;
+    }>>>;
+}>;
+export type XScalarLinks = {
+    /**
+     * Additional named links to display alongside the API info, for example a privacy policy or an
+     * imprint. This is handy for the legal texts that some countries require on public websites.
+     */
+    'x-scalar-links'?: {
+        /** The label to display for the link. */
+        name: string;
+        /** The URL the link points to. */
+        url: string;
+    }[];
+};
+export declare const XScalarLinks: import("@scalar/validation").ObjectSchema<{
+    'x-scalar-links': import("@scalar/validation").OptionalSchema<import("@scalar/validation").ArraySchema<import("@scalar/validation").ObjectSchema<{
+        name: import("@scalar/validation").StringSchema;
+        url: import("@scalar/validation").StringSchema;
+    }>>>;
+}>;
+//# sourceMappingURL=x-scalar-links.d.ts.map

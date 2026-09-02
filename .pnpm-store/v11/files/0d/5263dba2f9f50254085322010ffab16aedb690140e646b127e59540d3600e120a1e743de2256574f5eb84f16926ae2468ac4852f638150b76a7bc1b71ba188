@@ -1,0 +1,11 @@
+import type { CollectionType, WorkspaceEventBus } from '@scalar/workspace-store/events';
+import type { XScalarEnvironment } from '@scalar/workspace-store/schemas/extensions/document/x-scalar-environments';
+type __VLS_Props = {
+    environment: XScalarEnvironment;
+    environmentName: string;
+    eventBus: WorkspaceEventBus;
+} & CollectionType;
+declare const __VLS_export: import("vue").DefineComponent<__VLS_Props, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").PublicProps, Readonly<__VLS_Props> & Readonly<{}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;
+declare const _default: typeof __VLS_export;
+export default _default;
+//# sourceMappingURL=EnvironmentVariablesTable.vue.d.ts.map

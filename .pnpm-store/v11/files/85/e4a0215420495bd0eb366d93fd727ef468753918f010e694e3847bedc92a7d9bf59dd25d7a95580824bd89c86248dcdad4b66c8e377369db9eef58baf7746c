@@ -1,0 +1,74 @@
+import { getResolvedRef, mergeSiblingReferences } from '../helpers/get-resolved-ref.js';
+import { unpackProxyObject } from '../helpers/unpack-proxy.js';
+/** Narrow a schema to one that carries a `$dynamicRef`. */
+export const isDynamicRef = (schema) => typeof schema === 'object' &&
+    schema !== null &&
+    '$dynamicRef' in schema &&
+    typeof schema.$dynamicRef === 'string';
+/**
+ * Whether a schema introduces something a `$dynamicRef` could later bind to.
+ *
+ * We only grow the dynamic scope with schemas that could hold a `$dynamicAnchor`: those declaring one
+ * directly, or resource boundaries (`$id`) / definition containers (`$defs`) that may hold one. Plain
+ * subschemas are skipped to keep the scope small.
+ */
+const carriesDynamicAnchor = (schema) => '$dynamicAnchor' in schema || '$id' in schema || '$defs' in schema;
+/**
+ * Collect the `$dynamicAnchor` declarations of a single schema resource, keyed by anchor name.
+ *
+ * Anchors are looked for at the resource root and inside `$defs` — the two placements used by the
+ * common generic and recursive patterns. Anchors nested deeper are not collected (a documented v1
+ * limitation). Each target is dereferenced so callers receive the concrete schema the anchor points to.
+ */
+const anchorCache = new WeakMap();
+export const collectDynamicAnchors = (resource) => {
+    // Cache per raw schema object so repeated lookups during a walk stay cheap.
+    const cacheTarget = unpackProxyObject(resource, { depth: 1 });
+    const cached = anchorCache.get(cacheTarget);
+    if (cached) {
+        return cached;
+    }
+    const anchors = new Map();
+    const add = (node) => {
+        if (!node || typeof node !== 'object') {
+            return;
+        }
+        const anchor = node.$dynamicAnchor;
+        if (typeof anchor === 'string' && !anchors.has(anchor)) {
+            // Resolve any sibling `$ref` so the stored target is the concrete schema (e.g. `User`).
+            anchors.set(anchor, getResolvedRef(node, mergeSiblingReferences));
+        }
+    };
+    add(resource);
+    const defs = resource.$defs;
+    if (defs && typeof defs === 'object') {
+        for (const key of Object.keys(defs)) {
+            add(defs[key]);
+        }
+    }
+    anchorCache.set(cacheTarget, anchors);
+    return anchors;
+};
+/** Append a schema to the dynamic scope when it could hold a `$dynamicAnchor`, otherwise return it unchanged. */
+export const pushDynamicScope = (scope, schema) => carriesDynamicAnchor(schema) ? [...scope, schema] : scope;
+/**
+ * Resolve a `$dynamicRef` fragment against the dynamic scope.
+ *
+ * Scans the scope outermost-first and returns the first resource that declares a `$dynamicAnchor` with
+ * the referenced name. Returns `undefined` when nothing matches, in which case callers should leave the
+ * reference unresolved (the schema renders as it did before, with no regression).
+ */
+export const resolveDynamicRef = (dynamicRef, scope) => {
+    // Only plain-name fragments (`#itemType`) are supported; a non-fragment URI is not a dynamic anchor.
+    const name = dynamicRef.startsWith('#') ? dynamicRef.slice(1) : undefined;
+    if (!name || name.startsWith('/')) {
+        return undefined;
+    }
+    for (const resource of scope) {
+        const match = collectDynamicAnchors(resource).get(name);
+        if (match) {
+            return match;
+        }
+    }
+    return undefined;
+};

@@ -1,0 +1,33 @@
+import { useScalarIcon } from "../hooks/useScalarIcon.js";
+import { createCommentVNode, createElementBlock, createElementVNode, defineComponent, mergeProps, openBlock, renderSlot, unref } from "vue";
+//#region src/components/ScalarIconParagraph.vue?vue&type=script&setup=true&lang.ts
+var _hoisted_1 = { key: 0 };
+var _hoisted_2 = { key: 1 };
+var _hoisted_3 = { key: 2 };
+var _hoisted_4 = { key: 3 };
+var _hoisted_5 = { key: 4 };
+var _hoisted_6 = { key: 5 };
+var ScalarIconParagraph_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	name: "ScalarIconParagraph",
+	props: {
+		label: {},
+		weight: {}
+	},
+	setup(__props) {
+		const { bind, weight } = useScalarIcon(__props);
+		return (_ctx, _cache) => {
+			return openBlock(), createElementBlock("svg", mergeProps({
+				xmlns: "http://www.w3.org/2000/svg",
+				viewBox: "0 0 256 256",
+				fill: "currentColor"
+			}, unref(bind)), [renderSlot(_ctx.$slots, "default"), unref(weight) === "bold" ? (openBlock(), createElementBlock("g", _hoisted_1, [..._cache[0] || (_cache[0] = [createElementVNode("path", { d: "M208,36H96a68,68,0,0,0,0,136h36v36a12,12,0,0,0,24,0V60h16V208a12,12,0,0,0,24,0V60h12a12,12,0,0,0,0-24ZM132,148H96a44,44,0,0,1,0-88h36Z" }, null, -1)])])) : unref(weight) === "duotone" ? (openBlock(), createElementBlock("g", _hoisted_2, [..._cache[1] || (_cache[1] = [createElementVNode("path", {
+				d: "M144,48V160H96A56,56,0,0,1,96,48Z",
+				opacity: "0.2"
+			}, null, -1), createElementVNode("path", { d: "M208,40H96a64,64,0,0,0,0,128h40v40a8,8,0,0,0,16,0V56h24V208a8,8,0,0,0,16,0V56h16a8,8,0,0,0,0-16ZM136,152H96a48,48,0,0,1,0-96h40Z" }, null, -1)])])) : unref(weight) === "fill" ? (openBlock(), createElementBlock("g", _hoisted_3, [..._cache[2] || (_cache[2] = [createElementVNode("path", { d: "M216,48a8,8,0,0,1-8,8H192V208a8,8,0,0,1-16,0V56H152V208a8,8,0,0,1-16,0V168H96A64,64,0,0,1,96,40H208A8,8,0,0,1,216,48Z" }, null, -1)])])) : unref(weight) === "light" ? (openBlock(), createElementBlock("g", _hoisted_4, [..._cache[3] || (_cache[3] = [createElementVNode("path", { d: "M208,42H96a62,62,0,0,0,0,124h42v42a6,6,0,0,0,12,0V54h28V208a6,6,0,0,0,12,0V54h18a6,6,0,0,0,0-12ZM138,154H96A50,50,0,0,1,96,54h42Z" }, null, -1)])])) : unref(weight) === "regular" ? (openBlock(), createElementBlock("g", _hoisted_5, [..._cache[4] || (_cache[4] = [createElementVNode("path", { d: "M208,40H96a64,64,0,0,0,0,128h40v40a8,8,0,0,0,16,0V56h24V208a8,8,0,0,0,16,0V56h16a8,8,0,0,0,0-16ZM136,152H96a48,48,0,0,1,0-96h40Z" }, null, -1)])])) : unref(weight) === "thin" ? (openBlock(), createElementBlock("g", _hoisted_6, [..._cache[5] || (_cache[5] = [createElementVNode("path", { d: "M208,44H96a60,60,0,0,0,0,120h44v44a4,4,0,0,0,8,0V52h32V208a4,4,0,0,0,8,0V52h20a4,4,0,0,0,0-8ZM140,156H96A52,52,0,0,1,96,52h44Z" }, null, -1)])])) : createCommentVNode("", true)], 16);
+		};
+	}
+});
+//#endregion
+export { ScalarIconParagraph_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=ScalarIconParagraph.vue.script.js.map

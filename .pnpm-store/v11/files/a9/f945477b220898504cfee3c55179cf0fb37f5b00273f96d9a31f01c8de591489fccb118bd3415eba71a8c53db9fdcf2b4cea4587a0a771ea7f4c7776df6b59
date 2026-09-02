@@ -1,0 +1,85 @@
+import type { DraggingItem, HoveredItem, UseDraggableOptions } from '../hooks/use-draggable.js';
+import type { Item, Layout, SidebarOptions } from '../types';
+type __VLS_Props = {
+    /**
+     * Layout type for the sidebar.
+     * Determines whether the sidebar should behave in 'client' or 'reference' mode.
+     */
+    layout: Layout;
+    /**
+     * List of items to render in the sidebar.
+     */
+    items: Item[];
+    /**
+     * Function to determine whether a given item (by id) is currently selected.
+     */
+    isSelected: (id: string) => boolean;
+    /**
+     * Function to determine whether a given item (by id) is currently expanded (open to show children).
+     */
+    isExpanded: (id: string) => boolean;
+    /**
+     * Sidebar configuration options.
+     * - operationTitleSource: sets whether operations show their path or summary as the display title.
+     */
+    options?: SidebarOptions;
+    /**
+     * The indentation in pixels to apply to nested items/groups in the sidebar.
+     */
+    indent?: number;
+    /**
+     * Prevents this item from being dragged.
+     *
+     * @default true
+     */
+    isDraggable?: UseDraggableOptions['isDraggable'];
+    /**
+     * Prevents this item from being hovered and dropped into. Can be either a function or a boolean.
+     *
+     * @default true
+     */
+    isDroppable?: UseDraggableOptions['isDroppable'];
+};
+type __VLS_Slots = {
+    /** Overrides the main items list */
+    default?(): unknown;
+    /** Adds an optional decorator for each item like an edit menu */
+    decorator?(props: {
+        item: Item;
+    }): unknown;
+    /** Places content at the top of the sidebar outside of the items list */
+    header?(): unknown;
+    /** Places content between the header and the items list */
+    spacer?(): unknown;
+    /** Places content at the bottom of the sidebar outside of the items list */
+    footer?(): unknown;
+    /** Places content before the first item in the items list */
+    before?(): unknown;
+    /** Places content when an item is empty */
+    empty?(props: {
+        item: Item;
+    }): unknown;
+    /** Places content when an item is empty */
+    icon?(props: {
+        item: Item;
+        open: boolean;
+    }): unknown;
+};
+declare const __VLS_base: import("vue").DefineComponent<__VLS_Props, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {} & {
+    selectItem: (id: string) => any;
+    toggleGroup: (id: string) => any;
+    reorder: (draggingItem: DraggingItem, hoveredItem: HoveredItem) => any;
+}, string, import("vue").PublicProps, Readonly<__VLS_Props> & Readonly<{
+    onSelectItem?: ((id: string) => any) | undefined;
+    onToggleGroup?: ((id: string) => any) | undefined;
+    onReorder?: ((draggingItem: DraggingItem, hoveredItem: HoveredItem) => any) | undefined;
+}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;
+declare const __VLS_export: __VLS_WithSlots<typeof __VLS_base, __VLS_Slots>;
+declare const _default: typeof __VLS_export;
+export default _default;
+type __VLS_WithSlots<T, S> = T & {
+    new (): {
+        $slots: S;
+    };
+};
+//# sourceMappingURL=ScalarSidebar.vue.d.ts.map

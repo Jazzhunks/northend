@@ -1,0 +1,1 @@
+{"version":3,"file":"DocSettings.vue.d.ts","sourceRoot":"","sources":["../../../src/views/Settings/DocSettings.vue"],"names":[],"mappings":"AAiFA,OAAO,KAAK,EAAE,eAAe,EAAE,MAAM,8DAA8D,CAAA;AAOnG,KAAK,WAAW,GAAG;IACjB,QAAQ,EAAE,eAAe,CAAA;IACzB,IAAI,EAAE,MAAM,CAAA;CACb,CAAC;AA6FF,QAAA,MAAM,YAAY,kSAEhB,CAAC;wBACkB,OAAO,YAAY;AAAxC,wBAAyC"}

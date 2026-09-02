@@ -1,0 +1,232 @@
+import CodeInputLite_default from "../../../components/code-input/CodeInputLite.vue.js";
+import DataTableCell_default from "../../../components/data-table/DataTableCell.vue.js";
+import DataTableCheckbox_default from "../../../components/data-table/DataTableCheckbox.vue.js";
+import DataTableRow_default from "../../../components/data-table/DataTableRow.vue.js";
+import { getFileName } from "../helpers/files.js";
+import { validateParameter } from "../helpers/validate-parameter.js";
+import RequestTableTooltip_default from "./RequestTableTooltip.vue.js";
+import { Fragment, computed, createBlock, createCommentVNode, createElementBlock, createElementVNode, createVNode, defineComponent, normalizeClass, openBlock, ref, toDisplayString, unref, watch, withCtx } from "vue";
+import { ScalarButton } from "@scalar/components/button";
+import { ScalarIconGlobe, ScalarIconTrash } from "@scalar/icons";
+import { ScalarIcon } from "@scalar/components/icon";
+import { ScalarIconButton } from "@scalar/components/icon-button";
+import { unpackProxyObject } from "@scalar/workspace-store/helpers/unpack-proxy";
+import { resolve } from "@scalar/workspace-store/resolve";
+//#region src/v2/blocks/request-block/components/RequestTableRow.vue?vue&type=script&setup=true&lang.ts
+var _hoisted_1 = { class: "text-c-2 filemask flex w-full max-w-[100%] items-center justify-center overflow-hidden p-1" };
+var _hoisted_2 = {
+	key: 1,
+	class: "p-0.5"
+};
+var RequestTableRow_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	__name: "RequestTableRow",
+	props: {
+		data: {},
+		hasCheckboxDisabled: { type: Boolean },
+		invalidParams: {},
+		label: {},
+		environment: {},
+		showUploadButton: { type: Boolean }
+	},
+	emits: [
+		"upsertRow",
+		"deleteRow",
+		"uploadFile",
+		"removeFile",
+		"navigate"
+	],
+	setup(__props, { emit: __emit }) {
+		const emit = __emit;
+		/**
+		* Track local state for the row
+		*
+		* Now this is required because of the way we get default values from the schema.
+		* If we have a default value in data.value, then we update isDisabled to true. We lose the default value since now
+		* we have an example where value: ''. This is why we need to track the local state and update all of the params at the
+		* same time.
+		*/
+		const name = ref(__props.data.name ?? "");
+		const value = ref(unpackProxyObject(__props.data.value) ?? "");
+		const isDisabled = ref(__props.data.isDisabled ?? false);
+		watch(() => __props.data.name, (newName) => name.value = newName ?? "");
+		watch(() => __props.data.value, (newValue) => value.value = unpackProxyObject(newValue) ?? "");
+		watch(() => __props.data.isDisabled, (newIsDisabled) => isDisabled.value = newIsDisabled ?? false);
+		/** Check if the value is a File instance */
+		const isFile = computed(() => value.value instanceof File);
+		/** Display value handles File instances and shows filename instead */
+		const displayValue = computed(() => (isFile.value ? getFileName(value.value) : value.value) ?? "");
+		const defaultValue = computed(() => __props.data.schema?.default);
+		/** See if we can extract enum values from the schema */
+		const enumValue = computed(() => {
+			if (!__props.data.schema) return [];
+			if (__props.data.schema.enum) return __props.data.schema.enum.map((item) => String(item));
+			if ("items" in __props.data.schema) {
+				const resolved = resolve.schema(__props.data.schema.items);
+				if (resolved?.enum) return resolved.enum.map((item) => String(item));
+			}
+			return [];
+		});
+		const typeValue = computed(() => __props.data.schema && "type" in __props.data.schema ? __props.data.schema.type : void 0);
+		const validationResult = computed(() => validateParameter(__props.data.schema, value.value));
+		/** Handle row updates while preserving existing properties */
+		const handleUpdateRow = (payload, options = {}) => {
+			if (payload.name !== void 0) name.value = payload.name;
+			if (payload.value !== void 0) value.value = payload.value;
+			isDisabled.value = payload.isDisabled ?? false;
+			if (payload.name !== void 0 && __props.data.sourceParameterValuePath && !options.shouldRenameExpandedRow) return;
+			emit("upsertRow", {
+				name: name.value,
+				value: value.value,
+				isDisabled: isDisabled.value,
+				...options.shouldRenameExpandedRow ? { shouldRenameExpandedRow: true } : {}
+			});
+		};
+		/**
+		* Commit a key edit when the input loses focus. Expanded-object rows defer their rename to blur (see
+		* handleUpdateRow), so we only emit when the key actually changed — focusing and blurring the field
+		* without typing should not re-emit the row or silently reset its disabled state. The current
+		* disabled state is passed through so a renamed row keeps it.
+		*/
+		const handleKeyBlur = (newName) => {
+			if (newName === __props.data.name) return;
+			handleUpdateRow({
+				name: newName,
+				isDisabled: isDisabled.value
+			}, { shouldRenameExpandedRow: Boolean(__props.data.sourceParameterValuePath) });
+		};
+		return (_ctx, _cache) => {
+			return openBlock(), createBlock(unref(DataTableRow_default), {
+				id: __props.data.name,
+				class: normalizeClass({
+					alert: validationResult.value.ok === false,
+					error: validationResult.value.ok === false && __props.invalidParams?.has(__props.data.name)
+				})
+			}, {
+				default: withCtx(() => [
+					createVNode(unref(DataTableCheckbox_default), {
+						class: "!border-r",
+						disabled: __props.hasCheckboxDisabled ?? false,
+						modelValue: !isDisabled.value,
+						"onUpdate:modelValue": _cache[0] || (_cache[0] = (v) => handleUpdateRow({ isDisabled: !v }))
+					}, null, 8, ["disabled", "modelValue"]),
+					createVNode(unref(DataTableCell_default), null, {
+						default: withCtx(() => [createVNode(unref(CodeInputLite_default), {
+							"aria-label": `${__props.label} Key`,
+							disabled: __props.data.isReadonly,
+							environment: __props.environment,
+							modelValue: name.value,
+							placeholder: "Key",
+							required: Boolean(__props.data.isRequired),
+							onBlur: _cache[1] || (_cache[1] = (v) => handleKeyBlur(v)),
+							onNavigate: _cache[2] || (_cache[2] = (route) => emit("navigate", route)),
+							"onUpdate:modelValue": _cache[3] || (_cache[3] = (v) => handleUpdateRow({ name: v }))
+						}, null, 8, [
+							"aria-label",
+							"disabled",
+							"environment",
+							"modelValue",
+							"required"
+						])]),
+						_: 1
+					}),
+					createVNode(unref(DataTableCell_default), null, {
+						default: withCtx(() => [createVNode(unref(CodeInputLite_default), {
+							"aria-label": `${__props.label} Value`,
+							class: "pr-6 group-hover:pr-10 group-has-[.code-input-lite__editor:focus]:pr-10",
+							default: defaultValue.value,
+							disabled: __props.data.isReadonly,
+							enum: enumValue.value,
+							environment: __props.environment,
+							examples: __props.data.schema?.examples?.map((example) => String(example)) ?? [],
+							linethrough: __props.data.isOverridden,
+							modelValue: displayValue.value,
+							placeholder: "Value",
+							type: typeValue.value,
+							withFakeData: "",
+							onNavigate: _cache[6] || (_cache[6] = (route) => emit("navigate", route)),
+							"onUpdate:modelValue": _cache[7] || (_cache[7] = (v) => handleUpdateRow({ value: v }))
+						}, {
+							icon: withCtx(() => [
+								Boolean(__props.data.name || value.value) && !__props.data.isRequired && __props.data.isReadonly !== true ? (openBlock(), createBlock(unref(ScalarButton), {
+									key: 0,
+									class: "text-c-2 hover:text-c-1 hover:bg-b-2 z-context -mr-0.5 hidden h-fit rounded p-1 group-hover:flex group-has-[.code-input-lite__editor:focus]:flex",
+									size: "sm",
+									variant: "ghost",
+									onClick: _cache[4] || (_cache[4] = ($event) => emit("deleteRow"))
+								}, {
+									default: withCtx(() => [createVNode(unref(ScalarIconTrash), { class: "size-3.5" })]),
+									_: 1
+								})) : createCommentVNode("", true),
+								__props.data.globalRoute !== void 0 ? (openBlock(), createBlock(unref(ScalarIconButton), {
+									key: 1,
+									class: "text-c-2 hover:text-c-1 hover:bg-b-2 z-context -mr-0.5 h-fit",
+									icon: unref(ScalarIconGlobe),
+									label: "Global cookies are shared across the whole workspace. Click to navigate.",
+									size: "xs",
+									tooltip: "top",
+									variant: "ghost",
+									onClick: _cache[5] || (_cache[5] = ($event) => emit("navigate", __props.data.globalRoute))
+								}, null, 8, ["icon"])) : createCommentVNode("", true),
+								__props.data.isReadonly ? (openBlock(), createBlock(RequestTableTooltip_default, {
+									key: 2,
+									description: "This is a readonly property and you can not modify it! If you want to change it you have to override it or disable it using the checkbox",
+									value: null
+								})) : __props.data.schema ? (openBlock(), createBlock(RequestTableTooltip_default, {
+									key: 3,
+									description: __props.data.description,
+									schema: __props.data.schema,
+									value: value.value
+								}, null, 8, [
+									"description",
+									"schema",
+									"value"
+								])) : createCommentVNode("", true)
+							]),
+							_: 1
+						}, 8, [
+							"aria-label",
+							"default",
+							"disabled",
+							"enum",
+							"environment",
+							"examples",
+							"linethrough",
+							"modelValue",
+							"type"
+						])]),
+						_: 1
+					}),
+					__props.showUploadButton ? (openBlock(), createBlock(unref(DataTableCell_default), {
+						key: 0,
+						class: "group/upload flex items-center justify-center whitespace-nowrap"
+					}, {
+						default: withCtx(() => [isFile.value ? (openBlock(), createElementBlock(Fragment, { key: 0 }, [createElementVNode("div", _hoisted_1, [createElementVNode("span", null, toDisplayString(displayValue.value), 1)]), createElementVNode("button", {
+							class: "bg-b-2 mt-1 block rounded p-0.5 text-center text-xs font-medium md:pointer-events-none md:absolute md:inset-x-1 md:top-1/2 md:mt-0 md:-translate-y-1/2 md:opacity-0 md:group-hover/upload:pointer-events-auto md:group-hover/upload:opacity-100",
+							type: "button",
+							onClick: _cache[8] || (_cache[8] = ($event) => emit("removeFile"))
+						}, " Delete ")], 64)) : (openBlock(), createElementBlock("div", _hoisted_2, [createVNode(unref(ScalarButton), {
+							class: "bg-b-2 hover:bg-b-3 text-c-2 h-fit border-0 py-px shadow-none",
+							size: "sm",
+							variant: "outlined",
+							onClick: _cache[9] || (_cache[9] = ($event) => emit("uploadFile"))
+						}, {
+							default: withCtx(() => [_cache[10] || (_cache[10] = createElementVNode("span", null, "Select File", -1)), createVNode(unref(ScalarIcon), {
+								class: "ml-1",
+								icon: "Upload",
+								size: "xs",
+								thickness: "2.5"
+							})]),
+							_: 1
+						})]))]),
+						_: 1
+					})) : createCommentVNode("", true)
+				]),
+				_: 1
+			}, 8, ["id", "class"]);
+		};
+	}
+});
+//#endregion
+export { RequestTableRow_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=RequestTableRow.vue.script.js.map

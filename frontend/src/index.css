@@ -1,0 +1,296 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600;700;800;900&family=Manrope:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========================================================================== */
+/* STANDARDIZED LAYOUT & COLOR DESIGN TOKENS — CLAYMORPHISM LIGHT THEME */
+/* Primary: #1380d0 | Secondary: #3c4952 | Accent: #08BD80 | BG: Pure White */
+/* ========================================================================== */
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 204 15% 28%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 204 15% 28%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 204 15% 28%;
+
+  --primary: 205 83% 45%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 204 15% 28%;
+  --secondary-foreground: 0 0% 100%;
+
+  --muted: 210 20% 96%;
+  --muted-foreground: 215 16% 35%;
+
+  --accent: 160 92% 38%;
+  --accent-foreground: 0 0% 100%;
+
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 205 83% 45% / 0.15;
+  --input: 0 0% 98%;
+  --ring: 205 83% 45%;
+
+  --radius: 1.5rem;
+
+  --glass-bg: rgba(255, 255, 255, 0.90);
+  --glass-border: rgba(19, 128, 208, 0.15);
+
+  --glass-elevated-bg: #ffffff;
+  --glass-elevated-border: rgba(19, 128, 208, 0.20);
+
+  --container-width: 1280px;
+
+  color-scheme: light;
+}
+
+/* Claymorphism 3D Light Utilities */
+.clay-card {
+  background: #ffffff;
+  border-radius: var(--radius);
+  box-shadow:
+    6px 6px 20px rgba(60, 73, 82, 0.08),
+    -4px -4px 14px rgba(255, 255, 255, 0.95),
+    inset 1px 1px 2px rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(19, 128, 208, 0.14);
+  backdrop-filter: blur(20px);
+}
+
+.clay-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 2.75rem;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  background: linear-gradient(135deg, #08BD80 0%, #06a36e 100%);
+  color: #ffffff;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  box-shadow:
+    4px 4px 12px rgba(8, 189, 128, 0.30),
+    -2px -2px 8px rgba(255, 255, 255, 0.8),
+    inset 1px 1px 2px rgba(255, 255, 255, 0.4);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.clay-btn:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    6px 8px 18px rgba(8, 189, 128, 0.40),
+    -2px -2px 8px rgba(255, 255, 255, 0.9);
+}
+
+.clay-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 2.75rem;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  background: linear-gradient(135deg, #1380d0 0%, #0f6bb0 100%);
+  color: #ffffff;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  box-shadow:
+    4px 4px 12px rgba(19, 128, 208, 0.30),
+    -2px -2px 8px rgba(255, 255, 255, 0.8),
+    inset 1px 1px 2px rgba(255, 255, 255, 0.4);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.clay-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    6px 8px 18px rgba(19, 128, 208, 0.40),
+    -2px -2px 8px rgba(255, 255, 255, 0.9);
+}
+
+.clay-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  background: rgba(19, 128, 208, 0.08);
+  border-radius: 9999px;
+  border: 1px solid rgba(19, 128, 208, 0.18);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #1380d0;
+}
+
+.clay-nav-shell {
+  background: rgba(255, 255, 255, 0.94);
+  border-radius: 9999px;
+  box-shadow:
+    0 10px 25px rgba(60, 73, 82, 0.08),
+    0 2px 6px rgba(19, 128, 208, 0.06);
+  border: 1px solid rgba(19, 128, 208, 0.15);
+  backdrop-filter: blur(20px);
+}
+
+/* Base Styles */
+@layer base {
+  * {
+    box-sizing: border-box;
+    border-color: hsl(var(--border));
+  }
+
+  html {
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+  }
+
+  html,
+  body,
+  #root,
+  .App {
+    min-height: 100%;
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+
+    position: relative;
+    isolation: isolate;
+
+    font-family:
+      'Manrope',
+      -apple-system,
+      BlinkMacSystemFont,
+      sans-serif;
+
+    background: #ffffff;
+    color: #3c4952;
+
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  .font-display {
+    font-family: 'Outfit', sans-serif;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    color: #3c4952;
+  }
+
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  a, span, p, div {
+    overflow-wrap: anywhere;
+  }
+}
+
+/* Glass Panels */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 20px rgba(60, 73, 82, 0.05);
+}
+
+.glass-elevated {
+  background: #ffffff;
+  border: 1px solid rgba(19, 128, 208, 0.15);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgba(60, 73, 82, 0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.glass-elevated:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 35px rgba(19, 128, 208, 0.12);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(60, 73, 82, 0.18);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(19, 128, 208, 0.4);
+}
+
+/* ========================================================================== */
+/* STANDARDIZED LAYOUT UTILITIES */
+/* ========================================================================== */
+
+.container-custom {
+  width: 100%;
+  max-width: var(--container-width);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .container-custom {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container-custom {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+.section-padding {
+  padding-top: 3.5rem;
+  padding-bottom: 3.5rem;
+}
+
+@media (min-width: 1024px) {
+  .section-padding {
+    padding-top: 5rem;
+    padding-bottom: 5rem;
+  }
+}

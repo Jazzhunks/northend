@@ -1,0 +1,28 @@
+/**
+ * Scalar Sidebar Search Button component
+ *
+ * A styled button that serves as a search trigger in the sidebar.
+ * Displays a magnifying glass icon and an optional keyboard shortcut.
+ *
+ * @example
+ * <ScalarSidebarSearchButton>
+ *   <template #shortcut>⌘K</template>
+ * </ScalarSidebarSearchButton>
+ */
+declare const _default: typeof __VLS_export;
+export default _default;
+declare const __VLS_export: __VLS_WithSlots<import("vue").DefineComponent<{
+    shortcutLabel?: string;
+}, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").PublicProps, Readonly<{
+    shortcutLabel?: string;
+}> & Readonly<{}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>, {
+    default?: (props: {}) => any;
+} & {
+    shortcut?: (props: {}) => any;
+}>;
+type __VLS_WithSlots<T, S> = T & {
+    new (): {
+        $slots: S;
+    };
+};
+//# sourceMappingURL=ScalarSidebarSearchButton.vue.d.ts.map

@@ -1,0 +1,1 @@
+{"version":3,"file":"BunHttpServerRequest.js","names":["toBunServerRequest","self","source"],"sources":["../src/BunHttpServerRequest.ts"],"sourcesContent":[null],"mappings":"AAWA;;;;;;AAMA,OAAO,MAAMA,kBAAkB,GAA+BC,IAAuB,IAClFA,IAAY,CAACC,MAAM","ignoreList":[]}

@@ -1,0 +1,61 @@
+{
+  "name": "@scalar/use-hooks",
+  "description": "Utility hooks for Scalar",
+  "license": "MIT",
+  "author": "Scalar (https://github.com/scalar)",
+  "homepage": "https://github.com/scalar/scalar",
+  "bugs": "https://github.com/scalar/scalar/issues/new/choose",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/scalar/scalar.git",
+    "directory": "packages/use-hooks"
+  },
+  "version": "0.4.9",
+  "engines": {
+    "node": ">=22"
+  },
+  "type": "module",
+  "exports": {
+    "./useBindCx": {
+      "import": "./dist/useBindCx/index.js",
+      "types": "./dist/useBindCx/index.d.ts",
+      "default": "./dist/useBindCx/index.js"
+    },
+    "./useBreakpoints": {
+      "import": "./dist/useBreakpoints/index.js",
+      "types": "./dist/useBreakpoints/index.d.ts",
+      "default": "./dist/useBreakpoints/index.js"
+    },
+    "./useClipboard": {
+      "import": "./dist/useClipboard/index.js",
+      "types": "./dist/useClipboard/index.d.ts",
+      "default": "./dist/useClipboard/index.js"
+    },
+    "./useColorMode": {
+      "import": "./dist/useColorMode/index.js",
+      "types": "./dist/useColorMode/index.d.ts",
+      "default": "./dist/useColorMode/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "CHANGELOG.md"
+  ],
+  "dependencies": {
+    "@vueuse/core": "13.9.0",
+    "cva": "1.0.0-beta.4",
+    "tailwind-merge": "3.5.0",
+    "vue": "^3.5.30",
+    "@scalar/use-toasts": "0.10.4",
+    "@scalar/validation": "0.6.2"
+  },
+  "devDependencies": {
+    "@vue/test-utils": "2.4.6",
+    "jsdom": "27.4.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
+    "test": "vitest --run",
+    "types:check": "vue-tsc --noEmit"
+  }
+}

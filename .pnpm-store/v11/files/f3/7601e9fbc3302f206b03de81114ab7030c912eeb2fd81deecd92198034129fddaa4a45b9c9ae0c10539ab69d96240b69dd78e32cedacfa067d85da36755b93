@@ -1,0 +1,65 @@
+{
+  "name": "@scalar/icons",
+  "description": "Scalar Icons",
+  "license": "MIT",
+  "author": "Scalar (https://github.com/scalar)",
+  "homepage": "https://github.com/scalar/scalar",
+  "bugs": "https://github.com/scalar/scalar/issues/new/choose",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/scalar/scalar.git",
+    "directory": "packages/icons"
+  },
+  "version": "0.7.5",
+  "engines": {
+    "node": ">=22"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js",
+      "default": "./dist/types.js"
+    },
+    "./library": {
+      "import": "./dist/library/index.js",
+      "types": "./dist/library/index.d.ts",
+      "default": "./dist/library/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "dependencies": {
+    "@phosphor-icons/core": "^2.1.1",
+    "@types/node": "^24.1.0",
+    "chalk": "^5.6.2",
+    "vue": "^3.5.30"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.3",
+    "@vue/test-utils": "2.4.6",
+    "jsdom": "27.4.0",
+    "svglint": "^4.2.1",
+    "vite": "8.0.0",
+    "vite-svg-loader": "5.1.1",
+    "vitest": "4.1.0"
+  },
+  "scripts": {
+    "build": "vite build && vue-tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
+    "generate:icons": "tsx ./scripts/generate-icons.ts",
+    "lint:check": "pnpm lint:icons",
+    "lint:icons": "svglint src/library/icons/*.svg --config src/library/.svglintrc.js",
+    "test": "vitest --run",
+    "types:check": "vue-tsc --noEmit"
+  }
+}

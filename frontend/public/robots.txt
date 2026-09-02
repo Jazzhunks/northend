@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Explicitly tell search bots where to find your sitemap file
+Sitemap: https://northendedu.com/sitemap.xml

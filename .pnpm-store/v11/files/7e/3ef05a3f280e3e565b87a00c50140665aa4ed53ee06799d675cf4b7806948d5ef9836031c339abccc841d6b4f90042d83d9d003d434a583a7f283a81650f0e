@@ -1,0 +1,9 @@
+import _plugin_vue_export_helper_default from "../../_virtual/_plugin-vue_export-helper.js";
+import ScalarVirtualText_vue_vue_type_script_setup_true_lang_default from "./ScalarVirtualText.vue.script.js";
+/* empty css                                */
+//#region src/components/ScalarVirtualText/ScalarVirtualText.vue
+var ScalarVirtualText_default = /* @__PURE__ */ _plugin_vue_export_helper_default(ScalarVirtualText_vue_vue_type_script_setup_true_lang_default, [["__scopeId", "data-v-77b9d685"]]);
+//#endregion
+export { ScalarVirtualText_default as default };
+
+//# sourceMappingURL=ScalarVirtualText.vue.js.map

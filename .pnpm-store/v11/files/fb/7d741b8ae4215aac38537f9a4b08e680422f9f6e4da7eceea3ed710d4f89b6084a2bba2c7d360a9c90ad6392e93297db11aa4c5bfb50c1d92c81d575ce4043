@@ -1,0 +1,27 @@
+import { useSignupLink } from "../hooks/use-signup-link.js";
+import { createElementBlock, createElementVNode, createStaticVNode, createTextVNode, createVNode, defineComponent, openBlock, unref } from "vue";
+import { ScalarIconInfo } from "@scalar/icons";
+//#region src/components/PaymentSection.vue?vue&type=script&setup=true&lang.ts
+var _hoisted_1 = { class: "paymentSection" };
+var _hoisted_2 = { class: "approvalText flex items-center gap-1.5" };
+var _hoisted_3 = { class: "paymentContainer" };
+var PaymentSection_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	__name: "PaymentSection",
+	setup(__props) {
+		const { navigateToSignup } = useSignupLink();
+		return (_ctx, _cache) => {
+			return openBlock(), createElementBlock("div", _hoisted_1, [createElementVNode("strong", _hoisted_2, [createVNode(unref(ScalarIconInfo), {
+				class: "text-blue size-4",
+				weight: "bold"
+			}), _cache[1] || (_cache[1] = createTextVNode(" You've used up your complimentary Scalar Credits. Sign up to get free Credits. ", -1))]), createElementVNode("div", _hoisted_3, [createElementVNode("button", {
+				class: "actionButton approveButton",
+				type: "button",
+				onClick: _cache[0] || (_cache[0] = (...args) => unref(navigateToSignup) && unref(navigateToSignup)(...args))
+			}, " Sign up "), _cache[2] || (_cache[2] = createStaticVNode("<div class=\"paymentInfo\" data-v-9d163ea1><h3 data-v-9d163ea1>$0 <span data-v-9d163ea1>/ month</span></h3><div class=\"paymentInfoSection\" data-v-9d163ea1><div class=\"paymentInfoItem\" data-v-9d163ea1><span data-v-9d163ea1>Credits</span><span data-v-9d163ea1>100</span></div><div class=\"paymentInfoItem\" data-v-9d163ea1><span data-v-9d163ea1>MCP Servers</span><span data-v-9d163ea1>Unlimited</span></div><div class=\"paymentInfoItem\" data-v-9d163ea1><span data-v-9d163ea1>Base monthly total</span><span data-v-9d163ea1>$0.00</span></div></div><div class=\"paymentInfoSection\" data-v-9d163ea1><div class=\"paymentInfoItem\" data-v-9d163ea1><span data-v-9d163ea1>Additional Credits</span><span data-v-9d163ea1>+ $0.02 per Credit</span></div></div></div>", 1))])]);
+		};
+	}
+});
+//#endregion
+export { PaymentSection_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=PaymentSection.vue.script.js.map

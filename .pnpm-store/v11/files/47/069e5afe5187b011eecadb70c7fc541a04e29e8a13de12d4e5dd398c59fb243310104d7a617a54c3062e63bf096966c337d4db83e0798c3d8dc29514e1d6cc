@@ -1,0 +1,10 @@
+import type { CodeInputModelValue } from '../CodeInput.vue.js';
+/**
+ * Convert any model value to a string suitable for the editor's serialized form.
+ *
+ * Strings pass through untouched, nullish values become an empty string, and
+ * everything else is JSON-stringified so booleans, numbers, arrays, and
+ * objects round-trip predictably through the editor.
+ */
+export declare const serializeValue: (value: CodeInputModelValue) => string;
+//# sourceMappingURL=serialize-value.d.ts.map

@@ -1,0 +1,38 @@
+{
+  "summary": "Iteration 3 (Emergent storage uploads, admit-card PDF, Gmail SMTP emails) tested end-to-end. Backend: 52/52 pytest passing (38 prior + 14 new). Frontend: scholarship submission + PDF admit card download verified, Enroll FileUpload works (green checkmark + filename + Uploaded! toast), Jobs FileUpload replaced plain resume URL Input and submission succeeds, floating-whatsapp data-testid present on Scholarship/Enroll/Jobs.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "background email_admin_notification", "issue": "Gmail SMTP intermittently returns '421 4.3.0 Temporary System Problem' for the admin notify recipient. Logged as ERROR but BackgroundTasks does not break HTTP response (endpoints still 200 < 5s). User-facing template emails (enrollment/scholarship/job-app receipts) succeeded in the same window. No code change needed."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_iteration3.py",
+    "/app/test_reports/pytest/iteration_3.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py is ~725 lines and growing — consider splitting routes into routers/<domain>.py for maintainability before adding more features.",
+    "/api/upload is intentionally public; OK for unauthenticated applicants but consider a per-IP rate limit to prevent storage abuse.",
+    "storage_client.put_object/get_object are sync requests inside async FastAPI handlers — for ~10MB files this blocks the event loop; consider httpx.AsyncClient or run_in_executor in a future iteration.",
+    "MAX_UPLOAD_BYTES check happens AFTER the full body is read into memory; for 10MB this is acceptable, but a Content-Length pre-check would fail fast on hostile clients.",
+    "email_client uses smtplib synchronously inside BackgroundTasks (background tasks for sync funcs run in threadpool, which is fine). SMTP_PASSWORD is committed to backend/.env in plaintext — fine for preview but flag for production secret manager.",
+    "Frontend FileUpload reads file via FormData and sets manual fetch — good. No client-side size cap mirroring backend's 10MB; user gets a generic toast on 413. Minor UX nit."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration3.py (new)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "admin@northend.edu / Admin@2025 (seeded). Student auto-registered per pid in tests.",
+  "seed_data_creation": "Several TEST_-prefixed scholarship/enrollment/job applications and uploaded files were created during testing. Cleanup not performed but data is namespaced.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iteration 3 is fully green. /app/backend/tests/test_iteration3.py covers /api/upload (415/400/200), /api/files/{id}, /api/scholarship-applications/{no}/admit-card (PDF magic + 404), and email-side-effect endpoints (response < 15s with valid course_id/job_id, 404 for invalid). Combined regression: pytest /app/backend/tests/ → 52 passed in ~8s. Frontend verified via Playwright on /scholarship, /enroll, /jobs. Storage init logs 'Storage init OK' at startup. Gmail SMTP can flake with 421 for the admin recipient; this is benign because emails are fired via BackgroundTasks.",
+  "rca of the issue": "No bugs requiring RCA in this iteration."
+}

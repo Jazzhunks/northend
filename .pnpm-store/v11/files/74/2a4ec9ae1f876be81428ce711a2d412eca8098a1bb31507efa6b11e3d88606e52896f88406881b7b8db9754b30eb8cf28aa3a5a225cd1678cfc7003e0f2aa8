@@ -1,0 +1,28 @@
+import { getCustomClientIds as e } from "./generate-client-options.js";
+import { formatLanguage as t } from "./format-language.js";
+import { CODE_EXAMPLES_GROUP_LABEL as n } from "./get-custom-code-samples.js";
+//#region src/code-example/helpers/get-clients.ts
+var r = (r, i, a = n) => {
+	if (r.length) {
+		let n = e(r);
+		return [{
+			label: a,
+			key: "custom",
+			options: r.map((e, r) => {
+				let i = n[r] ?? `custom/${r}`, a = e.label || t(e.lang) || i;
+				return {
+					id: i,
+					lang: e.lang || "plaintext",
+					title: a,
+					label: a,
+					clientKey: "custom"
+				};
+			})
+		}, ...i];
+	}
+	return i;
+};
+//#endregion
+export { r as getClients };
+
+//# sourceMappingURL=get-clients.js.map

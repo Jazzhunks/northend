@@ -1,0 +1,21 @@
+//#region src/code-example/helpers/filter-clients-by-query.ts
+var e = (e, t) => {
+	let n = t.toLowerCase();
+	return e.label.toLowerCase().includes(n) || e.clientKey.toLowerCase().includes(n) || e.lang.toLowerCase().includes(n);
+}, t = (e, t) => {
+	let n = t.toLowerCase();
+	return e.label.toLowerCase().includes(n) || e.key.toLowerCase().includes(n);
+}, n = ((n, r, i) => {
+	if (n === "") return r;
+	let a = n.toLowerCase(), o = i ? i.filter((e) => e.label && e.options.length > 0).length : 0;
+	if (i && o > 1) {
+		let n = [];
+		for (let r of i) t(r, a) ? n.push(...r.options) : n.push(...r.options.filter((t) => e(t, a)));
+		return n;
+	}
+	return r.filter((t) => e(t, a));
+});
+//#endregion
+export { n as filterClientsByQuery };
+
+//# sourceMappingURL=filter-clients-by-query.js.map

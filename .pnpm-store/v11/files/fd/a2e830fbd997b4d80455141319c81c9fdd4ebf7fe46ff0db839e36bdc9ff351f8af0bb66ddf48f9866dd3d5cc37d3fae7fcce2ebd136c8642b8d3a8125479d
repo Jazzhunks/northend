@@ -1,0 +1,39 @@
+import type { ErrorResponse } from '@scalar/helpers/errors/normalize-error';
+import { type Static } from '@scalar/typebox';
+import type { CustomFetch } from '../../../../v2/blocks/operation-block/helpers/send-request.js';
+/**
+ * OpenID Connect Discovery Document (subset)
+ * Represents the metadata fields consumed by the auth selector flow conversion.
+ *
+ * @see https://openid.net/specs/openid-connect-discovery-1_0.html
+ */
+declare const OpenIDConnectDiscoverySchema: import("@scalar/typebox").TObject<{
+    /** URL of the OAuth 2.0 Authorization Endpoint */
+    authorization_endpoint: import("@scalar/typebox").TOptional<import("@scalar/typebox").TString>;
+    /** URL of the OAuth 2.0 Token Endpoint */
+    token_endpoint: import("@scalar/typebox").TOptional<import("@scalar/typebox").TString>;
+    /** List of OAuth 2.0 scope values that this server supports */
+    scopes_supported: import("@scalar/typebox").TOptional<import("@scalar/typebox").TArray<import("@scalar/typebox").TString>>;
+    /** List of OAuth 2.0 grant type values that this server supports */
+    grant_types_supported: import("@scalar/typebox").TOptional<import("@scalar/typebox").TArray<import("@scalar/typebox").TString>>;
+    /** Supported PKCE code challenge methods (RFC 7636) */
+    code_challenge_methods_supported: import("@scalar/typebox").TOptional<import("@scalar/typebox").TArray<import("@scalar/typebox").TString>>;
+}>;
+export type OpenIDConnectDiscovery = Static<typeof OpenIDConnectDiscoverySchema>;
+/**
+ * The required scope for OpenID Connect requests.
+ * If this scope is present, the request is an OIDC request; otherwise, it is a standard OAuth 2.0 request.
+ */
+export declare const OPENID_SCOPE = "openid";
+/**
+ * Fetches the OpenID Connect discovery document from the specified URL.
+ * Supports both full discovery URLs and issuer URLs.
+ *
+ * @param url - The OpenID Connect discovery URL or issuer URL
+ * @param proxyUrl - Optional CORS proxy to route the request through
+ * @param customFetch - Fetch used for the discovery request; the desktop app passes an IPC-backed fetch so it leaves the renderer's network stack.
+ * @returns The discovery document or an error
+ */
+export declare const fetchOpenIDConnectDiscovery: (url: string, proxyUrl: string, customFetch?: CustomFetch) => Promise<ErrorResponse<OpenIDConnectDiscovery>>;
+export {};
+//# sourceMappingURL=fetch-openid-connect-discovery.d.ts.map

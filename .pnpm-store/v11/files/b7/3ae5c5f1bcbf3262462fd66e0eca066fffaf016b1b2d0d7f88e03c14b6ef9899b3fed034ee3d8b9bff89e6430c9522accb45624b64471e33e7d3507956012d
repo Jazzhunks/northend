@@ -1,0 +1,114 @@
+import { useLocalization } from "../../../features/localization/use-localization.js";
+import { getFeaturedClients, isFeaturedClient } from "../helpers/featured-clients.js";
+import ClientDropdown_default from "./ClientDropdown.vue.js";
+import { Fragment, computed, createBlock, createCommentVNode, createElementBlock, createElementVNode, createTextVNode, createVNode, defineComponent, openBlock, ref, renderList, toDisplayString, unref, useId, useTemplateRef, watch, withCtx } from "vue";
+import { TabGroup, TabList, TabPanel, TabPanels } from "@headlessui/vue";
+import { DEFAULT_CLIENT } from "@scalar/blocks/code-example";
+//#region src/blocks/scalar-client-selector-block/components/ClientSelector.vue?vue&type=script&setup=true&lang.ts
+var _hoisted_1 = {
+	key: 0,
+	ref: "wrapper-ref"
+};
+var _hoisted_2 = ["id"];
+var _hoisted_3 = ["id"];
+var ClientSelector_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	__name: "ClientSelector",
+	props: {
+		clientOptions: {},
+		selectedClient: { default: () => DEFAULT_CLIENT },
+		eventBus: {}
+	},
+	setup(__props, { expose: __expose }) {
+		const headingId = useId();
+		const morePanel = useId();
+		const { translate } = useLocalization();
+		/**
+		* Whether a selection is a custom code sample (e.g. `custom/python`) rather than
+		* a built-in client. Custom samples are matched by the `custom/` id prefix, which
+		* mirrors the `^custom/` pattern enforced on the stored default client.
+		*/
+		const isCustomSelection = (client) => Boolean(client?.startsWith("custom/"));
+		/**
+		* The generic client this selector actually displays.
+		*
+		* The introduction selector only represents the built-in HTTP clients. Custom
+		* code samples are operation-specific and "always just have the generic
+		* clients", so when one is selected globally we keep showing the last generic
+		* client here instead of switching to (and failing to render) a custom sample.
+		*/
+		const activeClient = ref(isCustomSelection(__props.selectedClient) ? DEFAULT_CLIENT : __props.selectedClient);
+		watch(() => __props.selectedClient, (newClient) => {
+			if (!isCustomSelection(newClient)) activeClient.value = newClient;
+		});
+		/** Grab the option for the currently selected Http Client */
+		const selectedClientOption = computed(() => __props.clientOptions.flatMap((optionGroup) => optionGroup.options.find((option) => option.id === activeClient.value) ?? [])[0]);
+		/** List of featured clients */
+		const featuredClients = computed(() => getFeaturedClients(__props.clientOptions));
+		/** Currently selected tab index */
+		const tabIndex = computed(() => featuredClients.value.findIndex((featuredClient) => activeClient.value === featuredClient.id));
+		const wrapper = useTemplateRef("wrapper-ref");
+		/** Emit the selected client event on tab */
+		const onTabSelect = (i) => {
+			const client = featuredClients.value[i];
+			if (!client || !wrapper.value) return;
+			__props.eventBus.emit("workspace:update:selected-client", client.id);
+		};
+		__expose({ selectedClientOption });
+		return (_ctx, _cache) => {
+			return __props.clientOptions.length ? (openBlock(), createElementBlock("div", _hoisted_1, [createVNode(unref(TabGroup), {
+				manual: "",
+				selectedIndex: tabIndex.value,
+				onChange: onTabSelect
+			}, {
+				default: withCtx(() => [
+					createElementVNode("div", {
+						id: unref(headingId),
+						class: "client-libraries-heading"
+					}, toDisplayString(unref(translate)("clientLibraries.heading")), 9, _hoisted_2),
+					createVNode(unref(TabList), {
+						"aria-labelledby": unref(headingId),
+						class: "client-libraries-list"
+					}, {
+						default: withCtx(() => [createVNode(ClientDropdown_default, {
+							clientOptions: __props.clientOptions,
+							eventBus: __props.eventBus,
+							featuredClients: featuredClients.value,
+							morePanel: unref(morePanel),
+							selectedClient: activeClient.value
+						}, null, 8, [
+							"clientOptions",
+							"eventBus",
+							"featuredClients",
+							"morePanel",
+							"selectedClient"
+						])]),
+						_: 1
+					}, 8, ["aria-labelledby"]),
+					createVNode(unref(TabPanels), null, {
+						default: withCtx(() => [unref(isFeaturedClient)(activeClient.value) ? (openBlock(true), createElementBlock(Fragment, { key: 0 }, renderList(featuredClients.value, (client) => {
+							return openBlock(), createBlock(unref(TabPanel), {
+								key: client.id,
+								class: "selected-client card-footer -outline-offset-2"
+							}, {
+								default: withCtx(() => [createTextVNode(toDisplayString(client.title), 1)]),
+								_: 2
+							}, 1024);
+						}), 128)) : (openBlock(), createElementBlock("div", {
+							key: 1,
+							id: unref(morePanel),
+							class: "selected-client card-footer -outline-offset-2",
+							role: "tabpanel",
+							tabindex: "0"
+						}, toDisplayString(selectedClientOption.value?.title), 9, _hoisted_3))]),
+						_: 1
+					})
+				]),
+				_: 1
+			}, 8, ["selectedIndex"])], 512)) : createCommentVNode("", true);
+		};
+	}
+});
+//#endregion
+export { ClientSelector_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=ClientSelector.vue.script.js.map
