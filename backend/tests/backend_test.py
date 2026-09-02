@@ -134,26 +134,28 @@ class TestPublicSubmissions:
     def test_scholarship_application(self):
         scholarships = requests.get(f"{API}/scholarships", timeout=20).json()
         active = next((s for s in scholarships if s.get("active")), scholarships[0])
+        uniq = os.getpid()
         r = requests.post(f"{API}/scholarship-applications", json={
-            "name": "TEST_App", "email": "t1@test.com", "phone": "9999900001",
+            "name": "TEST_App", "email": f"t1_{uniq}@test.com", "phone": f"99999{uniq:05d}"[:10],
             "school": "TEST School", "standard": "12", "target_exam": "NEET", "city": "Srinagar",
             "scholarship_id": active["id"]
         }, timeout=20)
-        assert r.status_code == 200
+        assert r.status_code == 200, f"{r.status_code}: {r.text}"
         d = r.json()
-        assert d.get("application_no", "").startswith("NEW-SCH-")
+        assert len(d.get("application_no", "")) == 8
         assert d["status"] == "pending"
 
     def test_enrollment(self):
         courses = requests.get(f"{API}/courses", timeout=20).json()
         cid = courses[0]["id"]
+        uniq = os.getpid()
         r = requests.post(f"{API}/enrollments", json={
-            "course_id": cid, "name": "TEST_Enroll", "email": "te@test.com",
-            "phone": "9999900002", "address": "Lal Chowk", "center": "Srinagar"
+            "course_id": cid, "name": "TEST_Enroll", "email": f"te_{uniq}@test.com",
+            "phone": f"99998{uniq:05d}"[:10], "address": "Lal Chowk", "center": "Srinagar"
         }, timeout=20)
         assert r.status_code == 200
         d = r.json()
-        assert d.get("receipt_no", "").startswith("NEW-ENR-")
+        assert d.get("receipt_no", "").startswith("UAC-ENR-")
 
     def test_job_application(self):
         jobs = requests.get(f"{API}/jobs", timeout=20).json()
@@ -277,11 +279,14 @@ class TestValidation:
     def test_status_update_invalid_enum_scholarship(self, admin_token):
         scholarships = requests.get(f"{API}/scholarships", timeout=20).json()
         active = next((s for s in scholarships if s.get("active")), scholarships[0])
-        sa = requests.post(f"{API}/scholarship-applications", json={
-            "name": "TEST_AppS", "email": "ts@test.com", "phone": "9999900061",
+        uniq = os.getpid()
+        r_app = requests.post(f"{API}/scholarship-applications", json={
+            "name": "TEST_AppS", "email": f"ts_{uniq}@test.com", "phone": f"99997{uniq:05d}"[:10],
             "school": "S", "standard": "12", "target_exam": "NEET", "city": "Srinagar",
             "scholarship_id": active["id"]
-        }, timeout=20).json()
+        }, timeout=20)
+        assert r_app.status_code == 200, f"create app failed: {r_app.text}"
+        sa = r_app.json()
         sid = sa["id"]
         r = requests.put(f"{API}/scholarship-applications/{sid}/status",
                          headers=auth_h(admin_token),

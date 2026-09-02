@@ -55,6 +55,42 @@ ALLOWED_UPLOAD_TYPES = {
 }
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 
+# ---------- Rate Limiter & Security Lockout ----------
+_rate_limit_store: dict[str, list[float]] = {}
+_failed_login_store: dict[str, list[float]] = {}
+_lockout_until: dict[str, float] = {}
+
+def check_rate_limit(key: str, max_requests: int = 30, window_seconds: int = 60):
+    now = datetime.now(timezone.utc).timestamp()
+    timestamps = [t for t in _rate_limit_store.get(key, []) if now - t < window_seconds]
+    if len(timestamps) >= max_requests:
+        raise HTTPException(status_code=429, detail="Too many requests. Please try again later.")
+    timestamps.append(now)
+    _rate_limit_store[key] = timestamps
+
+def check_login_lockout(key: str):
+    now = datetime.now(timezone.utc).timestamp()
+    until = _lockout_until.get(key, 0)
+    if now < until:
+        remaining = int(until - now)
+        raise HTTPException(
+            status_code=429,
+            detail=f"Account temporarily locked due to repeated failed login attempts. Try again in {remaining} seconds."
+        )
+
+def record_failed_login(key: str, max_failures: int = 5, window_seconds: int = 900, lockout_seconds: int = 900):
+    now = datetime.now(timezone.utc).timestamp()
+    failures = [t for t in _failed_login_store.get(key, []) if now - t < window_seconds]
+    failures.append(now)
+    _failed_login_store[key] = failures
+    if len(failures) >= max_failures:
+        _lockout_until[key] = now + lockout_seconds
+        _failed_login_store.pop(key, None)
+
+def reset_login_failures(key: str):
+    _failed_login_store.pop(key, None)
+    _lockout_until.pop(key, None)
+
 def _sanitize_venue(venue: Optional[str]) -> str:
     """Sanitize standard venues or preserve custom school venue names. Merges Srinagar/90FT"""
     if not venue:
@@ -168,8 +204,8 @@ def create_refresh_token(uid: str) -> str:
     )
 
 def set_auth_cookies(response: Response, access: str, refresh: str):
-    response.set_cookie("access_token", access, httponly=True, secure=True, samesite="none", max_age=3600, path="/")
-    response.set_cookie("refresh_token", refresh, httponly=True, secure=True, samesite="none", max_age=604800, path="/")
+    response.set_cookie("access_token", access, httponly=True, secure=True, samesite="lax", max_age=3600, path="/")
+    response.set_cookie("refresh_token", refresh, httponly=True, secure=True, samesite="lax", max_age=604800, path="/")
 
 async def get_current_user(request: Request) -> dict:
     token = request.cookies.get("access_token")
@@ -424,9 +460,14 @@ async def register(payload: RegisterIn, response: Response):
     return {"user": doc, "access_token": access}
 
 @api.post("/auth/login")
-async def login(payload: LoginIn, response: Response):
+async def login(payload: LoginIn, request: Request, response: Response):
     email = payload.email.lower().strip()
+    client_ip = request.client.host if request.client else "unknown"
+    lockout_key = f"{email}:{client_ip}"
+    check_login_lockout(lockout_key)
+
     if len(email) > 254 or len(payload.password) > 128:
+        record_failed_login(lockout_key)
         raise HTTPException(401, "Invalid email or password")
 
     user = await db.users.find_one({"email": email})
@@ -435,8 +476,10 @@ async def login(payload: LoginIn, response: Response):
     password_correct = verify_password(payload.password, target_hash)
 
     if not user or not password_correct:
+        record_failed_login(lockout_key)
         raise HTTPException(401, "Invalid email or password")
         
+    reset_login_failures(lockout_key)
     access = create_access_token(user["id"], email, user["role"])
     refresh = create_refresh_token(user["id"])
     set_auth_cookies(response, access, refresh)
@@ -589,7 +632,9 @@ async def delete_scholarship(sid: str, _admin = Depends(require_admin)):
     return {"ok": True}
 
 @api.post("/scholarship-applications")
-async def apply_scholarship(payload: ScholarshipApplicationIn, background: BackgroundTasks):
+async def apply_scholarship(payload: ScholarshipApplicationIn, background: BackgroundTasks, request: Request):
+    client_ip = request.client.host if request.client else "unknown"
+    check_rate_limit(f"scholarship_app:{client_ip}", max_requests=15, window_seconds=60)
     campaign = await db.scholarships.find_one({"id": payload.scholarship_id}, {"_id": 0})
     if not campaign:
         raise HTTPException(404, "Scholarship campaign not found")
@@ -1543,7 +1588,9 @@ async def delete_testimonial(tid: str, _admin = Depends(require_admin)):
 
 # ---------- Contact ----------
 @api.post("/contact")
-async def contact(payload: ContactIn):
+async def contact(payload: ContactIn, request: Request):
+    client_ip = request.client.host if request.client else "unknown"
+    check_rate_limit(f"contact:{client_ip}", max_requests=10, window_seconds=60)
     doc = payload.model_dump()
     doc["id"] = new_id()
     doc["created_at"] = now_iso()
@@ -1572,7 +1619,9 @@ async def admin_summary(_admin = Depends(require_admin)):
 
 # ---------- File Upload & Download ----------
 @api.post("/upload")
-async def upload(file: UploadFile = File(...)):
+async def upload(request: Request, file: UploadFile = File(...)):
+    client_ip = request.client.host if request.client else "unknown"
+    check_rate_limit(f"upload:{client_ip}", max_requests=20, window_seconds=60)
     ctype = file.content_type or "application/octet-stream"
     if ctype not in ALLOWED_UPLOAD_TYPES:
         raise HTTPException(415, f"Unsupported type {ctype}. Allowed: pdf, jpg, png, webp.")
