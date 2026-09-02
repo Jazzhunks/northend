@@ -46,7 +46,7 @@ function Navbar() {
       data-testid="site-header"
     >
       <div className={`mx-auto transition-all duration-500 ${
-        scrolled ? "max-w-6xl glass-elevated rounded-2xl" : "max-w-7xl border-b border-white/[0.06] bg-background/40 backdrop-blur-xl"
+        scrolled ? "max-w-6xl clay-nav-shell rounded-2xl" : "max-w-7xl clay-nav-shell rounded-2xl"
       }`}>
         <div className="flex items-center justify-between px-4 lg:px-6 h-16">
           <Link to="/" className="flex items-center gap-3 group" data-testid="logo-link">
@@ -109,7 +109,7 @@ function Navbar() {
                   <motion.span
                     whileHover={{ y: -2 }}
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-accent text-accent-foreground text-xs font-bold uppercase tracking-[0.18em] glow-accent"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 clay-btn text-xs font-bold uppercase tracking-[0.18em]"
                     data-testid="enroll-nav-btn"
                   >
                     Enroll <ArrowUpRight weight="bold" size={14}/>

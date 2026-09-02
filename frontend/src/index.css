@@ -95,6 +95,27 @@
   border: 1px solid rgba(169, 142, 255, 0.25);
 }
 
+.clay-nav-shell {
+  background: linear-gradient(145deg, rgba(28, 22, 53, 0.95), rgba(18, 14, 38, 0.95));
+  border-radius: 2rem;
+  box-shadow:
+    10px 10px 30px rgba(8, 5, 20, 0.7),
+    -6px -6px 18px rgba(169, 142, 255, 0.15),
+    inset 1px 1px 3px rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(169, 142, 255, 0.25);
+  backdrop-filter: blur(24px);
+}
+
+.clay-input {
+  background: linear-gradient(145deg, rgba(20, 15, 40, 0.8), rgba(28, 22, 55, 0.8));
+  border-radius: 1.2rem;
+  box-shadow:
+    inset 3px 3px 6px rgba(0, 0, 0, 0.6),
+    inset -2px -2px 4px rgba(169, 142, 255, 0.12);
+  border: 1px solid rgba(169, 142, 255, 0.2);
+  color: #fff;
+}
+
 /* ========================================================================== */
 /* BASE */
 /* ========================================================================== */
