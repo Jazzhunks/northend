@@ -154,12 +154,12 @@ export default function ScholarshipDashboard() {
   return (
     <div className="min-h-screen bg-background text-foreground" data-testid="scholarship-dashboard">
       {/* Header */}
-      <header className="border-b border-white/[0.06] bg-background/60 backdrop-blur-xl sticky top-0 z-20">
+      <header className="border-b border-border bg-background/60 backdrop-blur-xl sticky top-0 z-20">
         <div className="max-w-5xl mx-auto px-4 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate("/")}
-              className="p-2 rounded-lg hover:bg-white/5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="p-2 rounded-lg hover:bg-muted/50 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               data-testid="back-btn"
               aria-label="Back to Home"
             >
@@ -189,7 +189,7 @@ export default function ScholarshipDashboard() {
             <button
               onClick={() => fetchStats(true)}
               disabled={refreshing}
-              className="text-xs font-bold uppercase tracking-[0.16em] px-3 py-2 rounded-lg border border-white/10 hover:bg-white/5 transition inline-flex items-center gap-2 disabled:opacity-50"
+              className="text-xs font-bold uppercase tracking-[0.16em] px-3 py-2 rounded-lg border border-border hover:bg-muted/50 transition inline-flex items-center gap-2 disabled:opacity-50"
               data-testid="refresh-btn"
             >
               <RefreshCw size={13} className={refreshing ? "animate-spin" : ""} />
@@ -206,7 +206,7 @@ export default function ScholarshipDashboard() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className="glass-elevated rounded-2xl border border-white/10 p-5 lg:p-7 bg-background/40 text-center"
+             className="glass-elevated rounded-2xl border border-border p-5 lg:p-7 bg-background/40 text-center"
             data-testid="kpi-total"
           >
             <span className="text-xs lg:text-sm text-muted-foreground font-medium">Total Registrations</span>
@@ -289,25 +289,25 @@ function VenueTable({ title, rightLabel, rows = [], rowKey, testid }) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="glass-elevated border border-white/10 rounded-2xl overflow-hidden bg-background/40"
+      className="glass-elevated border border-border rounded-2xl overflow-hidden bg-background/40"
       data-testid={testid}
     >
-      <div className="px-5 py-3 border-b border-white/10 bg-white/[0.02]">
+      <div className="px-5 py-3 border-b border-border bg-muted/50">
         <h2 className="text-sm font-medium text-foreground">{title}</h2>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-[10px] uppercase tracking-[0.18em] font-bold text-muted-foreground bg-white/[0.02]">
+            <tr className="text-[10px] uppercase tracking-[0.18em] font-bold text-muted-foreground bg-muted/50">
               <th scope="col" className="text-left px-5 py-2.5 w-1/2">Venue</th>
               <th scope="col" className="text-right px-5 py-2.5 w-1/2">{rightLabel}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/[0.05]">
+            <tbody className="divide-y divide-border">
             {rows.map((r) => {
               const testKey = r.venue ? r.venue.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase() : "unknown";
               return (
-                <tr key={r.venue} className="hover:bg-white/[0.02] transition">
+                <tr key={r.venue} className="hover:bg-muted/50 transition">
                   <td className="px-5 py-3 text-foreground/90">{r.venue}</td>
                   <td
                     className="px-5 py-3 text-right tabular-nums font-mono font-medium text-foreground"

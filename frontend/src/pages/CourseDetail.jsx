@@ -514,7 +514,7 @@ export default function CourseDetail() {
                     className="
                       relative z-10
                       mt-8
-                      border-t border-white/[0.08]
+                      border-t border-border
                       pt-7
                       space-y-5
                     "
@@ -615,15 +615,15 @@ function InfoRow({ Icon, label, value }) {
   return (
     <div className="flex items-center gap-4">
       <div
-        className="
-          w-11
-          h-11
-          rounded-full
-          grid
-          place-items-center
-          border border-white/10
-          bg-white/[0.03]
-        "
+                    className="
+                      w-11
+                      h-11
+                      rounded-full
+                      grid
+                      place-items-center
+                      border border-border
+                      bg-muted/50
+                    "
       >
         <Icon
           weight="duotone"
