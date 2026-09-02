@@ -58,9 +58,15 @@ class BranchUpdate(BaseModel):
 
 class StudentCreate(BaseModel):
     full_name: str
+    gender: Optional[str] = None
+    dob: Optional[str] = None
+    school_institute: Optional[str] = None
+    board: Optional[str] = None
+    category: Optional[str] = None
     parent_name: Optional[str] = None
     parent_phone: Optional[str] = None
     parent_email: Optional[EmailStr] = None
+    emergency_phone: Optional[str] = None
     contact_phone: str
     contact_email: Optional[EmailStr] = None
     address: Optional[str] = None
@@ -79,9 +85,15 @@ class StudentCreate(BaseModel):
 
 class StudentUpdate(BaseModel):
     full_name: Optional[str] = None
+    gender: Optional[str] = None
+    dob: Optional[str] = None
+    school_institute: Optional[str] = None
+    board: Optional[str] = None
+    category: Optional[str] = None
     parent_name: Optional[str] = None
     parent_phone: Optional[str] = None
     parent_email: Optional[EmailStr] = None
+    emergency_phone: Optional[str] = None
     contact_phone: Optional[str] = None
     contact_email: Optional[EmailStr] = None
     address: Optional[str] = None
@@ -121,13 +133,25 @@ class LeadCreate(BaseModel):
     name: str
     phone: str
     email: Optional[EmailStr] = None
+    gender: Optional[str] = None
+    dob: Optional[str] = None
+    school_institute: Optional[str] = None
+    city: Optional[str] = None
     target_exam: Optional[str] = None
+    preferred_batch: Optional[str] = None
+    source: Optional[str] = None
     branch_id: str
     counsellor_id: Optional[str] = None
     notes: Optional[str] = None
 
 class LeadUpdate(BaseModel):
     status: Optional[Literal["new", "contacted", "follow_up", "converted", "lost"]] = None
+    gender: Optional[str] = None
+    dob: Optional[str] = None
+    school_institute: Optional[str] = None
+    city: Optional[str] = None
+    preferred_batch: Optional[str] = None
+    source: Optional[str] = None
     counsellor_id: Optional[str] = None
     notes: Optional[str] = None
     next_followup_at: Optional[str] = None
@@ -748,11 +772,61 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
             raise HTTPException(403, "Cross-branch denied")
         if user["role"] == "counsellor" and l.get("counsellor_id") != user["id"]:
             raise HTTPException(403, "Not your lead")
+
         patch = {k: v for k, v in payload.dict(exclude_unset=True).items() if v is not None}
+
+        # Auto-enroll lead to student list when marked as 'converted'
+        converted_student = None
+        if patch.get("status") == "converted" and l.get("status") != "converted":
+            # Check if student already enrolled with same phone at branch
+            existing_student = await db.erp_students.find_one({
+                "contact_phone": l["phone"],
+                "branch_id": l["branch_id"]
+            })
+            if not existing_student:
+                # Find matching course for target_exam or select first course
+                target_exam = l.get("target_exam") or "NEET"
+                course = await db.courses.find_one({"category": target_exam}) or await db.courses.find_one({})
+                course_id = course["id"] if course else "default"
+                total_fee = float(course.get("fee", 50000)) if course else 50000.0
+
+                student_no = await gen_student_no(l["branch_id"])
+                student_doc = {
+                    "id": new_id(),
+                    "student_no": student_no,
+                    "full_name": l["name"],
+                    "contact_phone": l["phone"],
+                    "contact_email": l.get("email"),
+                    "branch_id": l["branch_id"],
+                    "course_id": course_id,
+                    "counsellor_id": l.get("counsellor_id") or user["id"],
+                    "status": "active",
+                    "total_fee": total_fee,
+                    "scholarship_percent": 0.0,
+                    "discount": 0.0,
+                    "admission_date": now_iso()[:10],
+                    "notes": f"Auto-converted from lead (ID: {lead_id}). " + (l.get("notes") or ""),
+                    "created_at": now_iso(),
+                    "created_by": user["id"],
+                }
+                await db.erp_students.insert_one(student_doc)
+                student_doc.pop("_id", None)
+                converted_student = student_doc
+                patch["converted_student_id"] = student_doc["id"]
+                patch["converted_at"] = now_iso()
+                await audit(user, "auto_enroll_from_lead", "student", student_doc["id"], l["branch_id"], {"lead_id": lead_id, "student_no": student_no})
+            else:
+                patch["converted_student_id"] = existing_student["id"]
+                patch["converted_at"] = now_iso()
+
         if patch:
             await db.erp_leads.update_one({"id": lead_id}, {"$set": patch})
         await audit(user, "update", "lead", lead_id, l["branch_id"], patch)
-        return await db.erp_leads.find_one({"id": lead_id}, {"_id": 0})
+
+        updated_lead = await db.erp_leads.find_one({"id": lead_id}, {"_id": 0})
+        if converted_student:
+            updated_lead["converted_student"] = converted_student
+        return updated_lead
 
     # ===== DASHBOARDS =====
     @erp.get("/dashboard/super")

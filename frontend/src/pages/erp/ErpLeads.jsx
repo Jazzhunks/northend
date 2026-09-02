@@ -200,12 +200,16 @@ function UpdateLeadModal({ lead, erpUser, onClose, onUpdated }) {
         combinedNotes = combinedNotes + formattedLogWrapper;
       }
 
-      await erp.updateLead(lead.id, {
+      const res = await erp.updateLead(lead.id, {
         status: currentStatus,
         notes: combinedNotes
       });
 
-      toast.success("Lead conversion profile status and engagement records appended");
+      if (currentStatus === "converted" && res?.converted_student) {
+        toast.success(`Lead Converted! Auto-enrolled student ${res.converted_student.student_no} (${res.converted_student.full_name}).`);
+      } else {
+        toast.success("Lead conversion profile status and engagement records appended");
+      }
       onUpdated();
     } catch (err) {
       toast.error(formatError(err.response?.data?.detail) || "Failed to commit conversion parameters modification loops");

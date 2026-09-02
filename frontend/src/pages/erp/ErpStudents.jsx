@@ -155,7 +155,8 @@ function CreateStudentModal({ erpUser, branches, onClose, onCreated }) {
   const [courses, setCourses] = useState([]);
   const [counsellors, setCounsellors] = useState([]);
   const [form, setForm] = useState({
-    full_name: "", contact_phone: "", contact_email: "", parent_name: "", parent_phone: "",
+    full_name: "", gender: "Male", dob: "", school_institute: "", board: "JKBOSE", category: "General",
+    contact_phone: "", contact_email: "", parent_name: "", parent_phone: "", emergency_phone: "",
     address: "", course_id: "", batch: "",
     branch_id: isSuper(erpUser) ? "" : erpUser.branch_id,
     counsellor_id: "", total_fee: "", scholarship_percent: 0, discount: 0
@@ -215,10 +216,19 @@ function CreateStudentModal({ erpUser, branches, onClose, onCreated }) {
 
         <div className="grid sm:grid-cols-2 gap-4 max-h-[55vh] overflow-y-auto px-1 custom-scrollbar">
           <Input label="Full Student Name" v={form.full_name} on={v => setForm({...form, full_name: v})} req placeholder="e.g. Suhail Ahmad" testid="cs-name" icon={User}/>
+          <Sel label="Gender" v={form.gender} on={v => setForm({...form, gender: v})} testid="cs-gender"
+            opts={[{v:"Male", l:"Male"}, {v:"Female", l:"Female"}, {v:"Other", l:"Other"}]}/>
+          <Input label="Date of Birth" type="date" v={form.dob} on={v => setForm({...form, dob: v})} testid="cs-dob"/>
+          <Input label="School / Last Institute" v={form.school_institute} on={v => setForm({...form, school_institute: v})} placeholder="e.g. DPS Srinagar" testid="cs-school"/>
+          <Sel label="Board" v={form.board} on={v => setForm({...form, board: v})} testid="cs-board"
+            opts={[{v:"JKBOSE", l:"JKBOSE"}, {v:"CBSE", l:"CBSE"}, {v:"ICSE", l:"ICSE"}, {v:"Other", l:"Other"}]}/>
+          <Sel label="Category" v={form.category} on={v => setForm({...form, category: v})} testid="cs-category"
+            opts={[{v:"General", l:"General"}, {v:"OBC", l:"OBC"}, {v:"SC/ST", l:"SC / ST"}, {v:"EWS", l:"EWS"}]}/>
           <Input label="Primary Phone String" v={form.contact_phone} on={v => setForm({...form, contact_phone: v})} req placeholder="10-digit sequence" testid="cs-phone" icon={Smartphone}/>
           <Input label="Email Address" type="email" v={form.contact_email} on={v => setForm({...form, contact_email: v})} placeholder="name@domain.com" testid="cs-email" icon={Mail}/>
           <Input label="Parent / Guardian Name" v={form.parent_name} on={v => setForm({...form, parent_name: v})} placeholder="Father/Mother Identity" testid="cs-pname" icon={Users}/>
-          <Input label="Parent Contact line" v={form.parent_phone} on={v => setForm({...form, parent_phone: v})} placeholder="Emergency mobile string" testid="cs-pphone" icon={Smartphone}/>
+          <Input label="Parent Contact Line" v={form.parent_phone} on={v => setForm({...form, parent_phone: v})} placeholder="Parent mobile" testid="cs-pphone" icon={Smartphone}/>
+          <Input label="Emergency Contact Phone" v={form.emergency_phone} on={v => setForm({...form, emergency_phone: v})} placeholder="Alternative phone" testid="cs-ephone" icon={Smartphone}/>
           <Input label="Batch Code Allocation" v={form.batch} on={v => setForm({...form, batch: v})} placeholder="NEET-2026-ALPHA" testid="cs-batch" icon={ClipboardList}/>
           
           <Sel label="Operation Branch Center" v={form.branch_id} on={v => setForm({...form, branch_id: v, counsellor_id: ""})} req disabled={!isSuper(erpUser)} testid="cs-branch"
