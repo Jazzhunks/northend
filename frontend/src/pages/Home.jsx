@@ -71,7 +71,7 @@ export default function Home() {
           </video>
 
           <div className="absolute inset-0 bg-background/60 bg-gradient-to-t from-background via-background/40 to-transparent z-0 pointer-events-none" />
-          <div className="relative z-10 ambient-orb ambient-orb--primary drift" style={{ width: 500, height: 500, top: "10%", left: "-100px" }} />
+          <div className="relative z-10 ambient-orb ambient-orb--primary drift pointer-events-none" style={{ width: 'min(80vw, 500px)', height: 'min(80vw, 500px)', top: "10%", left: "-100px" }} />
 
           <div className="relative z-10 max-w-7xl mx-auto px-4 lg:px-8 w-full grid lg:grid-cols-12 gap-8 items-center py-12 lg:py-24">
             <div className="lg:col-span-7">
@@ -182,13 +182,13 @@ export default function Home() {
         </section>
 
         {/* ============================== WATH FEATURED BANNER ============================== */}
-        <section className="relative section" data-testid="home-wath-banner">
+        <section className="relative section-padding" data-testid="home-wath-banner">
           <div className="max-w-7xl mx-auto px-4 lg:px-8">
             <Reveal>
               <Link to="/wath" className="block group">
                 <GlassPanel elevated className="relative overflow-hidden p-8 lg:p-14">
-                  <div className="ambient-orb ambient-orb--accent" style={{ width: 520, height: 520, top: "-120px", right: "-120px" }} />
-                  <div className="ambient-orb ambient-orb--primary" style={{ width: 420, height: 420, bottom: "-160px", left: "-80px", opacity: 0.5 }} />
+                  <div className="ambient-orb ambient-orb--accent pointer-events-none" style={{ width: 'min(90vw, 520px)', height: 'min(90vw, 520px)', top: "-120px", right: "-120px" }} />
+                  <div className="ambient-orb ambient-orb--primary pointer-events-none" style={{ width: 'min(90vw, 420px)', height: 'min(90vw, 420px)', bottom: "-160px", left: "-80px", opacity: 0.5 }} />
                   <div className="absolute inset-0 bg-grid opacity-20 pointer-events-none" />
 
                   <div className="absolute right-[6%] top-1/2 -translate-y-1/2 hidden lg:block pointer-events-none opacity-90">
@@ -240,8 +240,8 @@ export default function Home() {
         </section>
 
         {/* ============================== FEATURED COURSES ============================== */}
-        <section className="relative section">
-          <div className="ambient-orb ambient-orb--primary drift" style={{ width: 600, height: 600, top: "10%", right: "-200px" }} />
+        <section className="relative section-padding overflow-hidden">
+           <div className="ambient-orb ambient-orb--primary drift pointer-events-none" style={{ width: 'min(90vw, 600px)', height: 'min(90vw, 600px)', top: "10%", right: "-200px" }} />
           <div className="max-w-7xl mx-auto px-4 lg:px-8 relative">
             <div className="grid lg:grid-cols-12 gap-8 mb-14">
               <div className="lg:col-span-7">
@@ -278,7 +278,7 @@ export default function Home() {
         </section>
 
         {/* ============================== HOW IT WORKS — learning path ============================== */}
-        <section className="relative section">
+        <section className="relative section-padding">
           <div className="max-w-7xl mx-auto px-4 lg:px-8 relative">
             <div className="text-center mb-16">
               <Eyebrow className="justify-center">The journey</Eyebrow>
@@ -316,7 +316,7 @@ export default function Home() {
         {/* ============================== IMPACT — counter band ============================== */}
         <section className="relative py-24 lg:py-32 overflow-hidden">
           <div className="absolute inset-0 bg-grid opacity-30" />
-          <div className="ambient-orb ambient-orb--accent" style={{ width: 700, height: 700, top: "-200px", right: "-200px", opacity: 0.3 }} />
+          <div className="ambient-orb ambient-orb--accent pointer-events-none" style={{ width: 'min(90vw, 700px)', height: 'min(90vw, 700px)', top: "-200px", right: "-200px", opacity: 0.3 }} />
           <div className="max-w-7xl mx-auto px-4 lg:px-8 relative">
             <div className="grid lg:grid-cols-3 gap-8 items-center">
               <div>
@@ -348,7 +348,7 @@ export default function Home() {
 
         {/* ============================== STUDENT WALL OF FAME ============================== */}
         {results.length > 0 && (
-          <section className="relative section">
+          <section className="relative section-padding">
             <div className="max-w-7xl mx-auto px-4 lg:px-8">
               <div className="flex items-end justify-between flex-wrap gap-6 mb-12">
                 <div>
@@ -383,7 +383,7 @@ export default function Home() {
 
         {/* ============================== TESTIMONIALS ============================== */}
         {testimonials.length > 0 && (
-          <section className="relative section">
+          <section className="relative section-padding">
             <div className="max-w-7xl mx-auto px-4 lg:px-8">
               <div className="text-center mb-12">
                 <Eyebrow className="justify-center">Voices</Eyebrow>
@@ -412,11 +412,11 @@ export default function Home() {
         )}
 
         {/* ============================== SCHOLARSHIP CTA ============================== */}
-        <section className="relative section">
+        <section className="relative section-padding">
           <div className="max-w-6xl mx-auto px-4 lg:px-8">
             <Reveal>
               <GlassPanel elevated className="relative overflow-hidden p-10 lg:p-16">
-                <div className="ambient-orb ambient-orb--accent" style={{ width: 500, height: 500, top: "-100px", right: "-100px" }} />
+                <div className="ambient-orb ambient-orb--accent pointer-events-none" style={{ width: 'min(90vw, 500px)', height: 'min(90vw, 500px)', top: "-100px", right: "-100px" }} />
                 <div className="absolute inset-0 bg-grid opacity-20" />
                 <div className="relative grid lg:grid-cols-2 gap-10 items-center">
                   <div>
@@ -456,7 +456,7 @@ export default function Home() {
 
         {/* ============================== CENTERS QUICK MAP ============================== */}
         {centers.length > 0 && (
-          <section className="relative section">
+          <section className="relative section-padding">
             <div className="max-w-7xl mx-auto px-4 lg:px-8">
               <div className="grid lg:grid-cols-12 gap-8 mb-12">
                 <div className="lg:col-span-7">
@@ -492,7 +492,7 @@ export default function Home() {
         )}
 
         {/* ============================== FINAL CTA ============================== */}
-        <section className="relative section text-center">
+        <section className="relative section-padding text-center">
           <div className="max-w-3xl mx-auto px-4 lg:px-8">
             <Reveal>
               <h2 className="font-display text-5xl lg:text-6xl font-light tracking-tight leading-[0.95]">
