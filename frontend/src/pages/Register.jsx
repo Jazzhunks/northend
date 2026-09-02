@@ -44,8 +44,7 @@ export default function Register() {
       </div>
 
       <div className="relative flex items-center justify-center p-6 lg:p-12">
-        <div className="ambient-orb ambient-orb--accent" style={{ width: 400, height: 400, bottom: "-100px", left: "-100px", opacity: 0.3 }} />
-        <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="w-full max-w-md relative">
+         <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="w-full max-w-md relative">
           <div className="lg:hidden mb-8">
             <Eyebrow>Create account</Eyebrow>
             <h1 className="font-display text-4xl font-light tracking-tight mt-4">Get started.</h1>

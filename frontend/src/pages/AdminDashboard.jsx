@@ -1287,8 +1287,6 @@ export default function AdminDashboard() {
       />
 
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="ambient-orb ambient-orb--primary drift" style={{ width: 500, height: 500, top: "-150px", left: "10%" }} />
-        <div className="ambient-orb ambient-orb--accent" style={{ width: 380, height: 380, bottom: "10%", right: "5%", opacity: 0.25 }} />
         <div className="absolute inset-0 bg-grid opacity-20" />
       </div>
 

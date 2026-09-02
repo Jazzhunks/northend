@@ -59,8 +59,6 @@ export default function WATH() {
 
   return (
     <div className="relative" data-testid="wath-page">
-      <div className="ambient-orb ambient-orb--primary drift" style={{ width: 600, height: 600, top: "-100px", left: "-150px" }} />
-      <div className="ambient-orb ambient-orb--accent drift" style={{ width: 460, height: 460, top: "20%", right: "-100px", animationDelay: "-6s" }} />
       <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
 
       <HeroSection campaign={campaign} loading={loading} />
@@ -323,7 +321,6 @@ function SlabsSection() {
       <div className="max-w-6xl mx-auto px-4 lg:px-8">
         <Reveal>
           <GlassPanel elevated className="relative overflow-hidden p-8 lg:p-14">
-            <div className="ambient-orb ambient-orb--accent" style={{ width: 500, height: 500, top: "-100px", right: "-100px" }} />
             <div className="absolute inset-0 bg-grid opacity-20" />
             <div className="relative">
               <div className="text-center mb-10">
@@ -447,7 +444,6 @@ function RegisterSection({ campaign }) {
         {submitted ? (
           <div id="admit-card-block">
             <GlassPanel elevated className="p-8 lg:p-10 relative overflow-hidden" data-testid="wath-success">
-              <div className="ambient-orb ambient-orb--accent" style={{ width: 420, height: 420, top: "-100px", right: "-100px", opacity: 0.5 }} />
               <div className="relative">
                 <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-accent font-bold">
                   <Check weight="bold" size={14}/> Registration successful
@@ -571,7 +567,6 @@ function AdmitCardDownloadSection({ campaign }) {
         {appData && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mt-6">
             <GlassPanel elevated className="p-7 relative overflow-hidden" data-testid="admit-card-result">
-              <div className="ambient-orb ambient-orb--accent" style={{ width: 300, height: 300, top: "-60px", right: "-60px", opacity: 0.5 }} />
               <div className="relative">
                 <div className="text-[10px] uppercase tracking-[0.22em] text-accent font-bold flex items-center gap-2">
                   <IdentificationCard weight="duotone" size={16}/> Admit Card Ready
@@ -700,7 +695,6 @@ function ResultCheckSection() {
         {result && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mt-6">
             <GlassPanel elevated className="p-7 relative overflow-hidden" data-testid="res-block">
-              <div className="ambient-orb ambient-orb--accent" style={{ width: 300, height: 300, top: "-60px", right: "-60px", opacity: 0.5 }} />
               <div className="relative">
                 <div className="text-[10px] uppercase tracking-[0.22em] text-accent font-bold flex items-center gap-2">
                   <Certificate weight="duotone" size={14}/> {result.result_published ? "Result declared" : "Application on file"}

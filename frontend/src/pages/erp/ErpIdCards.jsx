@@ -86,7 +86,7 @@ export default function ErpIdCards() {
         }
 
         @media print {
-          .screen-only, aside, header, nav, button, input, select, .ambient-orb, .toast {
+          .screen-only, aside, header, nav, button, input, select, .toast {
             display: none !important;
             visibility: hidden !important;
             opacity: 0 !important;

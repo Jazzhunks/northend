@@ -100,8 +100,6 @@ California Residents (CCPA):
     <div data-testid="privacy-page" className="min-h-screen relative overflow-hidden pb-24">
       {/* Background Ambience */}
       <div className="absolute inset-0 bg-grid opacity-20 pointer-events-none" />
-      <div className="ambient-orb ambient-orb--primary drift" style={{ width: 600, height: 600, top: "-100px", right: "-200px", opacity: 0.4 }} />
-      <div className="ambient-orb ambient-orb--accent drift" style={{ width: 400, height: 400, top: "40%", left: "-150px", opacity: 0.3 }} />
 
       {/* ============================== HEADER ============================== */}
       <section className="relative pt-32 pb-16 lg:pt-40 lg:pb-20">

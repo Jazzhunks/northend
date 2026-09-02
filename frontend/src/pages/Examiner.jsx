@@ -143,7 +143,6 @@ export default function Examiner() {
 
   return (
     <div className="bg-background min-h-screen relative overflow-hidden">
-    <div className="ambient-orb ambient-orb--primary drift pointer-events-none" style={{ width: 400, height: 400, top: "-100px", left: "10%" }} />
     <div className="absolute inset-0 bg-grid opacity-20 pointer-events-none" />
     <div className="max-w-7xl mx-auto px-4 lg:px-8 py-10 relative" data-testid="examiner-page">
       <div className="text-xs uppercase tracking-[0.2em] font-bold text-primary mb-2">Examiner Console</div>

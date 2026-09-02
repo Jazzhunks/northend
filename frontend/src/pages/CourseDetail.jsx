@@ -169,30 +169,7 @@ export default function CourseDetail() {
       className="relative overflow-hidden"
       data-testid="course-detail"
     >
-      {/* ------------------------------------------------------------------ */}
-      {/* BACKGROUND */}
-      {/* ------------------------------------------------------------------ */}
 
-      <div
-        className="ambient-orb ambient-orb--primary drift"
-        style={{
-          width: 600,
-          height: 600,
-          top: -180,
-          left: -180,
-        }}
-      />
-
-      <div
-        className="ambient-orb ambient-orb--accent"
-        style={{
-          width: 420,
-          height: 420,
-          top: "35%",
-          right: -120,
-          opacity: 0.25,
-        }}
-      />
 
       <div className="absolute inset-0 bg-grid opacity-[0.16]" />
 

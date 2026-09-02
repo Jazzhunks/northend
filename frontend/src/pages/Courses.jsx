@@ -60,7 +60,7 @@ export default function Courses() {
         </script>
       </Helmet>
 
-      <div data-testid="courses-page">
+      <div data-testid="courses-page" className="overflow-x-hidden w-full">
         <PageHero
           eyebrow="Programmes"
           title="Find the programme"
@@ -69,7 +69,7 @@ export default function Courses() {
         />
 
         <section className="relative pb-24 -mt-8">
-          <div className="max-w-7xl mx-auto px-4 lg:px-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-wrap gap-2 mb-10" data-testid="course-filters">
               {CATS.map(cat => (
                 <button
@@ -98,7 +98,7 @@ export default function Courses() {
               >
                 {filtered.map((c, i) => (
                   <Reveal key={c.id} delay={i * 0.04}>
-                    <Link to={`/courses/${c.id}`}><CourseCard3D course={c} /></Link>
+                    <Link to={`/courses/${c.id}`} className="h-full block"><CourseCard3D course={c} /></Link>
                   </Reveal>
                 ))}
               </motion.div>

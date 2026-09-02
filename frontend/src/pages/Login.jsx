@@ -153,7 +153,6 @@ export default function Login() {
 
         {/* Form side */}
         <div className="relative flex items-center justify-center p-6 lg:p-12">
-          <div className="ambient-orb ambient-orb--accent" style={{ width: 400, height: 400, bottom: "-100px", left: "-100px", opacity: 0.3 }} />
           <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }} className="w-full max-w-md relative">
             <div className="lg:hidden mb-8">
               <Eyebrow>Sign in</Eyebrow>
