@@ -212,7 +212,7 @@ function CourseCard3D({
           "relative overflow-hidden rounded-[1.6rem]",
           "glass-ultra",
           "border border-border",
-          "bg-white/[0.03]",
+          "bg-muted/30",
           "p-6 lg:p-7",
           "transition-all duration-500",
           "hover:border-border",
@@ -361,7 +361,7 @@ function CourseCard3D({
             <div
               className={cn(
                 "mt-1.5 font-display text-lg font-bold",
-                "text-[#0F172A]"
+                 "text-foreground"
               )}
             >
               ₹{course.fee.toLocaleString("en-IN")}
@@ -401,7 +401,7 @@ function CourseCard3D({
             className={cn(
               "grid h-11 w-11 place-items-center rounded-full",
               "border border-border",
-              "bg-white/[0.04]",
+              "bg-muted/40",
               "backdrop-blur-md",
               "transition-all duration-300",
               "group-hover:border-accent",

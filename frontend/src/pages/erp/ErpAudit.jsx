@@ -161,7 +161,7 @@ function PayloadInspectorModal({ target, onClose }) {
           <button type="button" onClick={onClose} className="p-1 hover:bg-muted/50 rounded-lg border border-transparent hover:border-border transition"><X size={18}/></button>
         </div>
 
-        <div className="space-y-2 text-xs border border-border bg-white/[0.01] p-4 rounded-xl font-mono shrink-0">
+        <div className="space-y-2 text-xs border border-border bg-background/10 p-4 rounded-xl font-mono shrink-0">
           <p><span className="text-muted-foreground">Actor:</span> <span className="text-foreground font-semibold">{target.actor}</span></p>
           <p><span className="text-muted-foreground">Execution:</span> <span className="text-foreground font-semibold">{target.action} ({target.entity})</span></p>
         </div>

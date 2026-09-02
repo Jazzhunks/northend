@@ -161,83 +161,94 @@ export default function Home() {
           </motion.div>
         </section>
 
-        {/* ============================== MARQUEE — programs ============================== */}
-        <section className="relative overflow-hidden border-y border-border bg-muted py-10">
-          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-32 bg-gradient-to-r from-background to-transparent" />
-          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-32 bg-gradient-to-l from-background to-transparent" />
+{/* ============================== MARQUEE — programs ============================== */}
+<section className="relative overflow-hidden border-y border-border bg-muted py-10">
+  <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-32 bg-gradient-to-r from-background to-transparent" />
+  <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-32 bg-gradient-to-l from-background to-transparent" />
 
-          <div className="marquee-wrapper">
-            <div className="marquee-track">
-              {[
-                "NEET", "IIT-JEE", "Foundation 8th–10th", "CBSE | JKBOSE 11th 12th", "Daily Doubt Clearing", "AITS Mock Tests",
-                "NEET", "IIT-JEE", "Foundation 8th–10th", "CBSE | JKBOSE 11th 12th", "Daily Doubt Clearing", "AITS Mock Tests",
-              ].map((t, i) => (
-                <div key={i} className="flex items-center gap-5 px-8 shrink-0">
-                  <span className="font-display text-3xl lg:text-4xl font-light tracking-tight text-foreground/80">{t}</span>
-                  <span className="text-accent text-2xl">✦</span>
-                </div>
-              ))}
+  <div className="marquee-wrapper overflow-hidden flex w-full">
+    <div className="animate-marquee flex items-center shrink-0">
+      {[
+        "NEET", "IIT-JEE", "Foundation 8th–10th", "CBSE | JKBOSE 11th 12th", "Daily Doubt Clearing", "AITS Mock Tests",
+        "NEET", "IIT-JEE", "Foundation 8th–10th", "CBSE | JKBOSE 11th 12th", "Daily Doubt Clearing", "AITS Mock Tests",
+      ].map((t, i) => (
+        <div key={i} className="flex items-center gap-5 px-8 shrink-0">
+          <span className="font-display text-3xl lg:text-4xl font-light tracking-tight text-foreground/80">{t}</span>
+          <span className="text-accent text-2xl">✦</span>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+{/* ============================== WATH FEATURED BANNER ============================== */}
+<section className="relative section-padding" data-testid="home-wath-banner">
+  <div className="max-w-7xl mx-auto px-4 lg:px-8">
+    <Reveal>
+      <Link to="/wath" className="block group">
+        <GlassPanel elevated className="relative overflow-hidden p-8 lg:p-14">
+          {/* Ambient background glows */}
+          <div 
+            className="ambient-orb ambient-orb--accent pointer-events-none absolute" 
+            style={{ width: 'min(90vw, 520px)', height: 'min(90vw, 520px)', top: "-120px", right: "-120px" }} 
+          />
+          <div 
+            className="ambient-orb ambient-orb--primary pointer-events-none absolute" 
+            style={{ width: 'min(90vw, 420px)', height: 'min(90vw, 420px)', bottom: "-160px", left: "-80px", opacity: 0.5 }} 
+          />
+          <div className="absolute inset-0 bg-grid opacity-20 pointer-events-none" />
+
+          {/* Decorative Rotating Trophy Ring (Desktop View) */}
+          <div className="absolute right-[6%] top-1/2 -translate-y-1/2 hidden lg:block pointer-events-none opacity-90">
+            <div className="relative w-[280px] h-[280px]">
+              <div className="absolute inset-0 rounded-full border border-accent/25 animate-[spin_60s_linear_infinite]" />
+              <div className="absolute inset-6 rounded-full border border-primary/30 animate-[spin_45s_linear_infinite_reverse]" />
+              <div className="absolute inset-14 rounded-full border border-accent/15 animate-[spin_30s_linear_infinite]" />
+              <div className="absolute inset-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-accent/20 blur-2xl" />
+              <div className="absolute inset-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-accent glow-accent grid place-items-center">
+                <Trophy weight="fill" size={20} className="text-accent-foreground" />
+              </div>
             </div>
           </div>
-        </section>
 
-        {/* ============================== WATH FEATURED BANNER ============================== */}
-        <section className="relative section-padding" data-testid="home-wath-banner">
-          <div className="max-w-7xl mx-auto px-4 lg:px-8">
-            <Reveal>
-              <Link to="/wath" className="block group">
-                <GlassPanel elevated className="relative overflow-hidden p-8 lg:p-14">
-                  <div className="ambient-orb ambient-orb--accent pointer-events-none" style={{ width: 'min(90vw, 520px)', height: 'min(90vw, 520px)', top: "-120px", right: "-120px" }} />
-                  <div className="ambient-orb ambient-orb--primary pointer-events-none" style={{ width: 'min(90vw, 420px)', height: 'min(90vw, 420px)', bottom: "-160px", left: "-80px", opacity: 0.5 }} />
-                  <div className="absolute inset-0 bg-grid opacity-20 pointer-events-none" />
+          {/* Content Block */}
+          <div className="relative max-w-3xl">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 glass rounded-full text-[10px] font-bold uppercase tracking-[0.22em] mb-6">
+              <Sparkle weight="fill" size={12} className="text-accent" />
+              Kashmir's flagship talent hunt · 2026
+            </div>
 
-                  <div className="absolute right-[6%] top-1/2 -translate-y-1/2 hidden lg:block pointer-events-none opacity-90">
-                    <div className="relative w-[280px] h-[280px]">
-                      <div className="absolute inset-0 rounded-full border border-accent/25 animate-[spin_60s_linear_infinite]" />
-                      <div className="absolute inset-6 rounded-full border border-primary/30 animate-[spin_45s_linear_infinite_reverse]" />
-                      <div className="absolute inset-14 rounded-full border border-accent/15 animate-[spin_30s_linear_infinite]" />
-                      <div className="absolute inset-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-accent/20 blur-2xl" />
-                      <div className="absolute inset-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-accent glow-accent grid place-items-center">
-                        <Trophy weight="fill" size={20} className="text-accent-foreground" />
-                      </div>
-                    </div>
-                  </div>
+            <h2 className="font-display text-5xl lg:text-7xl font-light tracking-[-0.03em] leading-[0.95]">
+              <span className="bg-gradient-to-br from-primary via-accent to-primary bg-clip-text text-transparent font-medium">
+                WATH
+              </span>
+              <span className="block text-xl lg:text-2xl text-foreground/80 mt-3 font-light">
+                <span className="text-accent italic font-medium">Wisdom</span> · <span className="text-accent italic font-medium">Aptitude</span> · <span className="text-accent italic font-medium">Talent</span> · <span className="text-accent italic font-medium">Hunt</span>
+              </span>
+            </h2>
 
-                  <div className="relative max-w-3xl">
-                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 glass rounded-full text-[10px] font-bold uppercase tracking-[0.22em] mb-6">
-                      <Sparkle weight="fill" size={12} className="text-accent" />
-                      Kashmir's flagship talent hunt · 2026
-                    </div>
+            <p className="mt-6 text-base lg:text-lg text-muted-foreground max-w-xl leading-relaxed">
+              A 2-hour valley-wide scholarship exam. Unlock up to <b className="text-accent">100% fee waiver</b> and <b className="text-foreground">cash prizes</b> across NEET, JEE and Foundation programmes. Free to register.
+            </p>
 
-                    <h2 className="font-display text-5xl lg:text-7xl font-light tracking-[-0.03em] leading-[0.95]">
-                      <span className="bg-gradient-to-br from-primary via-accent to-primary bg-clip-text text-transparent font-medium">WATH</span>
-                      <span className="block text-xl lg:text-2xl text-foreground/80 mt-3 font-light">
-                        <span className="text-accent italic font-medium">Wisdom</span> · <span className="text-accent italic font-medium">Aptitude</span> · <span className="text-accent italic font-medium">Talent</span> · <span className="text-accent italic font-medium">Hunt</span>
-                      </span>
-                    </h2>
-
-                    <p className="mt-6 text-base lg:text-lg text-muted-foreground max-w-xl leading-relaxed">
-                      A 2-hour valley-wide scholarship exam. Unlock up to <b className="text-accent">100% fee waiver</b> and <b className="text-foreground">cash prizes</b> across NEET, JEE and Foundation programmes. Free to register.
-                    </p>
-
-                    <div className="mt-8 flex items-center gap-4 flex-wrap">
-                      <span className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-accent text-accent-foreground text-xs font-bold uppercase tracking-[0.18em] glow-accent group-hover:translate-y-[-2px] transition-transform">
-                        Explore WATH <ArrowUpRight weight="bold" size={14}/>
-                      </span>
-                      <div className="flex items-center gap-6 text-[11px] uppercase tracking-[0.22em] text-muted-foreground font-bold">
-                        <span>Free entry</span>
-                        <span className="hidden sm:inline">·</span>
-                        <span className="hidden sm:inline">5 centres</span>
-                        <span className="hidden sm:inline">·</span>
-                        <span className="hidden sm:inline">Class 7–12 · Droppers</span>
-                      </div>
-                    </div>
-                  </div>
-                </GlassPanel>
-              </Link>
-            </Reveal>
+            <div className="mt-8 flex items-center gap-4 flex-wrap">
+              <span className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-accent text-accent-foreground text-xs font-bold uppercase tracking-[0.18em] glow-accent group-hover:translate-y-[-2px] transition-transform">
+                Explore WATH <ArrowUpRight weight="bold" size={14} />
+              </span>
+              <div className="flex items-center gap-6 text-[11px] uppercase tracking-[0.22em] text-muted-foreground font-bold">
+                <span>Free entry</span>
+                <span className="hidden sm:inline">·</span>
+                <span className="hidden sm:inline">5 centres</span>
+                <span className="hidden sm:inline">·</span>
+                <span className="hidden sm:inline">Class 7–12 · Droppers</span>
+              </div>
+            </div>
           </div>
-        </section>
+        </GlassPanel>
+      </Link>
+    </Reveal>
+  </div>
+</section>
 
         {/* ============================== FEATURED COURSES ============================== */}
         <section className="relative section-padding overflow-hidden">

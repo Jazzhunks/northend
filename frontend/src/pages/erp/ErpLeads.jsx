@@ -246,7 +246,7 @@ function UpdateLeadModal({ lead, erpUser, onClose, onUpdated }) {
             <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground mb-1 block flex items-center gap-1">
               <Calendar size={12} className="text-accent"/> Historical Interaction History Timeline
             </label>
-            <div className="w-full h-40 overflow-y-auto px-3 py-2.5 border border-border bg-white/[0.01] rounded-xl text-xs font-sans text-muted-foreground/80 leading-relaxed whitespace-pre-wrap font-medium custom-scrollbar border border-border">
+            <div className="w-full h-40 overflow-y-auto px-3 py-2.5 border border-border bg-background/10 rounded-xl text-xs font-sans text-muted-foreground/80 leading-relaxed whitespace-pre-wrap font-medium custom-scrollbar border border-border">
               {lead.notes ? lead.notes.trim() : "— No engagement historical entry segments recorded yet for this lead blueprint line —"}
             </div>
           </div>

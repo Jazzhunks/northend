@@ -424,7 +424,7 @@ function MessageBubble({ m }) {
             rel="noopener noreferrer"
             className="flex items-center gap-3 p-3 mb-2 rounded-xl bg-black/20 hover:bg-black/30 transition border border-border"
           >
-            <div className="p-2 bg-white/10 rounded-lg shrink-0">
+            <div className="p-2 bg-muted/20 rounded-lg shrink-0">
               <FileText size={20} className="text-white/80" />
             </div>
             <div className="min-w-0 flex-1">

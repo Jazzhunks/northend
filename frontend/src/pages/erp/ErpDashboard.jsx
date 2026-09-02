@@ -111,7 +111,7 @@ export default function ErpDashboard() {
             </button>
           )}
           {canSeeFinance && (
-            <button onClick={() => setActiveModal("expense")} className="inline-flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2 rounded-full bg-muted/50 hover:bg-white/20 text-foreground text-xs font-bold uppercase tracking-wider transition whitespace-nowrap">
+            <button onClick={() => setActiveModal("expense")} className="inline-flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2 rounded-full bg-muted/50 hover:bg-muted/80 text-foreground text-xs font-bold uppercase tracking-wider transition whitespace-nowrap">
               <Wallet size={14} /> <span className="whitespace-nowrap">Add Expense</span>
             </button>
           )}

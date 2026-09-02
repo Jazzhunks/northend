@@ -42,7 +42,7 @@ function Navbar() {
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
       className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
-        scrolled ? "py-2 px-4 bg-white/90 backdrop-blur-md shadow-sm border-b border-border" : "py-4 px-4 bg-transparent"
+        scrolled ? "py-2 px-4 bg-background/90 backdrop-blur-md shadow-sm border-b border-border" : "py-4 px-4 bg-transparent"
       }`}
       data-testid="site-header"
     >
@@ -130,7 +130,7 @@ function Navbar() {
         {open && (
           <motion.div
             initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-            className="xl:hidden mx-2 mt-2 rounded-2xl overflow-hidden shadow-2xl bg-white border border-border p-4"
+            className="xl:hidden mx-2 mt-2 rounded-2xl overflow-hidden shadow-2xl bg-background border border-border p-4"
           >
             <div className="flex flex-col gap-1">
               {NAV.map((n) => (

@@ -294,3 +294,27 @@
     padding-bottom: 5rem;
   }
 }
+
+/* ========================================================================== */
+/* MARQUEE ANIMATION UTILITIES */
+/* ========================================================================== */
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 25s linear infinite;
+}
+
+/* Pause marquee animation on hover */
+.marquee-wrapper:hover .animate-marquee {
+  animation-play-state: paused;
+}

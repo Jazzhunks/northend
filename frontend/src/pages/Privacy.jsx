@@ -167,7 +167,7 @@ California Residents (CCPA):
                   </p>
                   <div className="bg-background/50 rounded-xl p-5 border border-border font-mono text-sm space-y-3 w-full">
                     <p><span className="text-white/50 block mb-1">Email:</span> privacy@northendedu.com</p>
-                    <div className="h-px w-full bg-white/5" />
+                    <div className="h-px w-full bg-border/50" />
                     <p><span className="text-white/50 block mb-1">Registered Address:</span> 
                       Northend Educational World<br/>
                       Head Office, Srinagar,<br/>

@@ -66,7 +66,7 @@ export default function AdminLayout() {
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                     isActive 
                       ? "bg-accent/15 text-accent border border-accent/20" 
-                      : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                   }`}
                 >
                   <Icon size={18} />
@@ -93,7 +93,7 @@ export default function AdminLayout() {
         <header className="flex h-16 items-center justify-between border-b border-border px-4 md:hidden bg-card/50 backdrop-blur-md">
           <button 
             onClick={() => setSidebarOpen(true)}
-            className="p-2 rounded-lg border border-border text-foreground hover:bg-white/5"
+            className="p-2 rounded-lg border border-border text-foreground hover:bg-muted/50"
             aria-label="Open sidebar"
           >
             <List size={20} />

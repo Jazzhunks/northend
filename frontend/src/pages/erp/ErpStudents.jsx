@@ -249,7 +249,7 @@ function CreateStudentModal({ erpUser, branches, onClose, onCreated }) {
         </div>
 
         {/* Dynamic State Preview Mathematical Feedback Row */}
-        <div className="p-4 border border-dashed border-border rounded-xl bg-white/[0.01] flex items-center justify-between shrink-0">
+        <div className="p-4 border border-dashed border-border rounded-xl bg-background/10 flex items-center justify-between shrink-0">
           <div>
             <div className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Ledger Preview Metrics</div>
             <div className="text-xs text-muted-foreground/60 mt-0.5">Exemptions: {fmtINR(calculatedScholarshipAmt + calculatedFlatDiscount)}</div>
