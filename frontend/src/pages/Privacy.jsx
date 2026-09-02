@@ -165,7 +165,7 @@ California Residents (CCPA):
                   <p className="text-muted-foreground leading-relaxed text-sm lg:text-base mb-6">
                     Our business changes constantly and our Policy may change from time to time. We encourage you to check our Platform frequently. If you have any questions, concerns, or requests regarding this Privacy Policy, please contact our Grievance Officer:
                   </p>
-                  <div className="bg-background/50 rounded-xl p-5 border border-white/5 font-mono text-sm space-y-3 w-full">
+                  <div className="bg-background/50 rounded-xl p-5 border border-border font-mono text-sm space-y-3 w-full">
                     <p><span className="text-white/50 block mb-1">Email:</span> privacy@northendedu.com</p>
                     <div className="h-px w-full bg-white/5" />
                     <p><span className="text-white/50 block mb-1">Registered Address:</span> 

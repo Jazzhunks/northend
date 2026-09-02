@@ -172,7 +172,7 @@ export default function ErpAttendance() {
           <a href={buildExcelExportUrl()} target="_blank" rel="noreferrer" className="block">
             <button 
               disabled={!branchId}
-              className="px-4 py-2.5 bg-zinc-900 border border-border text-foreground font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 transition"
+              className="px-4 py-2.5 bg-primary border border-border text-primary-foreground font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 transition"
             >
               <FileDown size={14} className="text-emerald-600" /> Export Today's Excel
             </button>
@@ -241,7 +241,7 @@ export default function ErpAttendance() {
       {/* CORE TRANSACTIONAL SECTION MATRIX LAYOUTS */}
       <div className="grid lg:grid-cols-3 gap-6 flex-1 min-h-0">
         <div className="glass-elevated rounded-2xl border border-border overflow-hidden flex flex-col lg:col-span-2 min-h-0 bg-background/10">
-          <div className="p-4 border-b border-white/[0.04] bg-background/40 flex justify-between items-center shrink-0">
+          <div className="p-4 border-b border-border bg-background/40 flex justify-between items-center shrink-0">
             <div className="font-display font-medium text-lg text-foreground flex items-center gap-2">
               <Clock size={16} className="text-accent"/> Live Gate Check-In Stream
             </div>
@@ -294,7 +294,7 @@ export default function ErpAttendance() {
         </div>
 
         <div className="glass-elevated rounded-2xl border border-border overflow-hidden flex flex-col min-h-0 bg-background/10">
-          <div className="p-4 border-b border-white/[0.04] bg-background/40 shrink-0">
+          <div className="p-4 border-b border-border bg-background/40 shrink-0">
             <div className="font-display font-medium text-base text-foreground flex items-center gap-1.5">
               <ShieldAlert size={15} className="text-accent" /> Desk Override Registry
             </div>

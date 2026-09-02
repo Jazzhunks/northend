@@ -227,7 +227,7 @@ function TodayDueListModal({ erpUser, onClose }) {
   );
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex justify-end backdrop-blur-sm animate-fadeIn" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/30 z-50 flex justify-end backdrop-blur-sm animate-fadeIn" onClick={onClose}>
       <div onClick={e => e.stopPropagation()} className="bg-background border-l border-border w-full max-w-2xl h-full p-6 flex flex-col justify-between overflow-y-auto shadow-2xl">
         <div className="space-y-6 flex-1 flex flex-col min-h-0">
           <div className="flex justify-between items-start shrink-0">
@@ -348,7 +348,7 @@ function SuperView({ d }) {
       </div>
 
       <div className="glass-elevated rounded-2xl overflow-hidden border border-border" data-testid="branches-table">
-        <div className="px-6 py-5 border-b border-white/[0.06] flex items-center justify-between">
+        <div className="px-6 py-5 border-b border-border flex items-center justify-between">
           <h3 className="font-display font-medium text-lg">Branch Metrics Summary</h3>
           <FileText size={18} className="text-muted-foreground" />
         </div>
@@ -452,7 +452,7 @@ function BranchView({ d, canSeeFinance }) {
 
       {d.recent_payments?.length > 0 && (
         <div className="glass-elevated rounded-2xl overflow-hidden border border-border animate-fadeIn" data-testid="recent-payments">
-          <div className="px-6 py-5 border-b border-white/[0.06] flex items-center justify-between">
+          <div className="px-6 py-5 border-b border-border flex items-center justify-between">
             <h3 className="font-display font-medium text-lg">Latest Center Transactions</h3>
           </div>
           <div className="overflow-x-auto">
@@ -510,7 +510,7 @@ function CashbookViewModal({ erpUser, onClose }) {
   const total = items.reduce((s, p) => s + Number(p.amount || 0), 0);
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex justify-end backdrop-blur-sm animate-fadeIn" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/30 z-50 flex justify-end backdrop-blur-sm animate-fadeIn" onClick={onClose}>
       <div onClick={e => e.stopPropagation()} className="bg-background border-l border-border w-full max-w-4xl h-full p-6 flex flex-col justify-between overflow-y-auto shadow-2xl">
         <div className="space-y-6">
           <div className="flex justify-between items-start">
@@ -591,7 +591,7 @@ function StudentsViewModal({ erpUser, onClose }) {
   }, [q, branchId]);
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex justify-end backdrop-blur-sm animate-fadeIn" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/30 z-50 flex justify-end backdrop-blur-sm animate-fadeIn" onClick={onClose}>
       <div onClick={e => e.stopPropagation()} className="bg-background border-l border-border w-full max-w-5xl h-full p-6 flex flex-col gap-6 overflow-y-auto shadow-2xl">
         <div className="flex justify-between items-start">
           <div>
@@ -682,7 +682,7 @@ function ExpensesViewModal({ erpUser, onClose, refreshRoot }) {
   const total = items.filter(e => e.status === "approved").reduce((s, e) => s + Number(e.amount || 0), 0);
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex justify-end backdrop-blur-sm animate-fadeIn" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/30 z-50 flex justify-end backdrop-blur-sm animate-fadeIn" onClick={onClose}>
       <div 
         onClick={e => e.stopPropagation()} 
         className="bg-background border-l border-border w-full max-w-5xl h-full p-6 flex flex-col justify-between shadow-2xl overflow-hidden"
@@ -812,7 +812,7 @@ function CreateStudentModal({ erpUser, onClose, onCreated }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 grid place-items-center p-4 backdrop-blur-sm overflow-y-auto animate-fadeIn" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/20 z-50 grid place-items-center p-4 backdrop-blur-sm overflow-y-auto animate-fadeIn" onClick={onClose}>
       <form onClick={e => e.stopPropagation()} onSubmit={executeSubmit} className="bg-background border border-border rounded-2xl max-w-2xl w-full p-6 space-y-5 my-8 shadow-2xl">
         <div className="flex justify-between items-start">
           <div>
@@ -866,7 +866,7 @@ function CreateExpenseModal({ erpUser, onClose, onCreated }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 grid place-items-center p-4 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/20 z-50 grid place-items-center p-4 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
       <form onClick={e => e.stopPropagation()} onSubmit={executeSubmit} className="bg-background border border-border rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
         <div className="flex justify-between items-start">
           <div>

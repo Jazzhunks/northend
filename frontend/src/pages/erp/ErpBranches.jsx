@@ -75,7 +75,7 @@ export default function ErpBranches() {
             </div>
 
             {/* Financial Metadata Grid Segment */}
-            <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-white/[0.06] pt-4 relative z-10">
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-border pt-4 relative z-10">
               <div className="space-y-0.5">
                 <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Taxation GSTIN</div>
                 <div className="font-mono text-xs text-foreground font-semibold mt-0.5 tracking-wide">{b.gstin || "—"}</div>
@@ -97,7 +97,7 @@ export default function ErpBranches() {
 
       {/* Settings Modal Sheet Portal */}
       {editing && (
-        <div className="fixed inset-0 bg-black/70 z-50 grid place-items-center p-4 backdrop-blur-sm animate-fadeIn" onClick={() => setEditing(null)} data-testid="edit-branch-modal">
+        <div className="fixed inset-0 bg-black/20 z-50 grid place-items-center p-4 backdrop-blur-sm animate-fadeIn" onClick={() => setEditing(null)} data-testid="edit-branch-modal">
           <form 
             onClick={e => e.stopPropagation()} 
             onSubmit={executeSave} 

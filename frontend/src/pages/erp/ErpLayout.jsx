@@ -36,23 +36,23 @@ export default function ErpLayout() {
 
   if (err === "not-erp") {
     return (
-      <div className="min-h-screen grid place-items-center p-6 bg-white" data-testid="erp-no-access">
+      <div className="min-h-screen grid place-items-center p-6 bg-background" data-testid="erp-no-access">
         <div className="text-center max-w-md clay-card p-8">
-          <div className="text-xs uppercase tracking-widest font-bold text-[#1380D0] mb-2">Access Denied</div>
-          <h2 className="font-display text-2xl font-bold mb-3 text-[#3C4952]">ERP Staff Portal Only</h2>
-          <p className="text-sm text-[#3C4952]/80 mb-6">Your logged in account does not have active ERP staff clearance.</p>
+          <div className="text-xs uppercase tracking-widest font-bold text-primary mb-2">Access Denied</div>
+          <h2 className="font-display text-2xl font-bold mb-3 text-foreground">ERP Staff Portal Only</h2>
+          <p className="text-sm text-muted-foreground mb-6">Your logged in account does not have active ERP staff clearance.</p>
           <button onClick={() => { logout(); nav("/login?next=/erp"); }} className="clay-btn-primary" data-testid="erp-relogin-btn">Switch Account</button>
         </div>
       </div>
     );
   }
 
-  if (!erpUser) return <div className="min-h-screen grid place-items-center text-sm font-semibold text-[#3C4952]/70 bg-white">Loading ERP Portal…</div>;
+  if (!erpUser) return <div className="min-h-screen grid place-items-center text-sm font-semibold text-muted-foreground bg-background">Loading ERP Portal…</div>;
 
   const navItems = NAV.filter(n => n.show(erpUser));
 
   return (
-    <div className="h-screen w-screen flex bg-[#ffffff] text-[#3C4952] overflow-hidden select-none print-layout-override">
+    <div className="h-screen w-screen flex bg-background text-foreground overflow-hidden select-none print-layout-override">
       <style>{`
         @media print {
           .print-layout-override {
@@ -68,26 +68,26 @@ export default function ErpLayout() {
       {open && (
         <div
           onClick={() => setOpen(false)}
-          className="lg:hidden fixed inset-0 bg-black/30 z-30 backdrop-blur-xs transition-opacity"
+          className="lg:hidden fixed inset-0 bg-black/20 z-30 backdrop-blur-xs transition-opacity"
         />
       )}
 
       {/* Fixed Sidebar */}
       <aside 
-        className={`${open ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-64 h-full bg-[#ffffff] border-r border-gray-100 flex flex-col justify-between transition-transform duration-200 shrink-0 shadow-sm print:hidden`}
+        className={`${open ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-64 h-full bg-background border-r border-border flex flex-col justify-between transition-transform duration-200 shrink-0 shadow-sm print:hidden`}
         data-testid="erp-sidebar"
       >
         <div className="w-full shrink-0 flex flex-col">
-          <div className="p-5 border-b border-gray-100">
-            <div className="text-[10px] uppercase tracking-widest text-[#08BD80] font-bold">Northend</div>
-            <div className="font-display text-xl font-bold tracking-tight mt-0.5 text-[#3C4952]">ERP Console</div>
+          <div className="p-5 border-b border-border">
+            <div className="text-[10px] uppercase tracking-widest text-accent font-bold">Northend</div>
+            <div className="font-display text-xl font-bold tracking-tight mt-0.5 text-foreground">ERP Console</div>
           </div>
           
-          <div className="px-5 py-3 border-b border-gray-100 bg-[#f8fafc]">
-            <div className="text-[10px] uppercase tracking-widest text-[#3C4952]/60 font-bold">Signed in as</div>
-            <div className="font-semibold mt-0.5 text-xs text-[#3C4952] truncate" data-testid="erp-user-name">{erpUser.name}</div>
-            <div className="text-[10px] text-[#1380D0] font-bold mt-0.5 uppercase tracking-wider" data-testid="erp-user-role">{erpUser.role?.replace("_", " ")}</div>
-            {erpUser.branch && <div className="text-[11px] text-[#3C4952]/70 mt-1 truncate">📍 {erpUser.branch.name}</div>}
+          <div className="px-5 py-3 border-b border-border bg-muted/40">
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Signed in as</div>
+            <div className="font-semibold mt-0.5 text-xs text-foreground truncate" data-testid="erp-user-name">{erpUser.name}</div>
+            <div className="text-[10px] text-primary font-bold mt-0.5 uppercase tracking-wider" data-testid="erp-user-role">{erpUser.role?.replace("_", " ")}</div>
+            {erpUser.branch && <div className="text-[11px] text-muted-foreground mt-1 truncate">📍 {erpUser.branch.name}</div>}
           </div>
         </div>
 
@@ -102,8 +102,8 @@ export default function ErpLayout() {
               data-testid={`erp-nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
               className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-150 ${
                 isActive
-                  ? "bg-[#1380D0]/10 text-[#1380D0] border border-[#1380D0]/20 font-bold"
-                  : "text-[#3C4952]/80 hover:text-[#3C4952] hover:bg-gray-100/70"
+                  ? "bg-primary/10 text-primary border border-primary/20 font-bold"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
               }`}
             >
               <item.icon size={16} className="shrink-0" /> <span className="truncate">{item.label}</span>
@@ -112,11 +112,11 @@ export default function ErpLayout() {
         </nav>
 
         {/* Bottom Signout */}
-        <div className="p-3 border-t border-gray-100 shrink-0 bg-[#f8fafc]">
+        <div className="p-3 border-t border-border shrink-0 bg-muted/40">
           <button 
             onClick={async () => { await logout(); nav("/login"); }}
             data-testid="erp-logout-btn"
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-[#3C4952]/70 hover:text-rose-600 hover:bg-rose-50 transition duration-150"
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-muted-foreground hover:text-rose-600 hover:bg-rose-50 transition duration-150"
           >
             <LogOut size={16} className="shrink-0"/> <span>Sign out</span>
           </button>
@@ -125,11 +125,11 @@ export default function ErpLayout() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full min-w-0 relative overflow-hidden print:overflow-visible print:h-auto">
-        <header className="lg:hidden flex items-center justify-between p-4 bg-white border-b border-gray-100 sticky top-0 z-20 shrink-0 print:hidden">
-          <button onClick={() => setOpen(o => !o)} aria-label="menu" className="text-[#3C4952] p-1.5 hover:bg-gray-100 rounded-lg transition" data-testid="erp-menu-toggle">
+        <header className="lg:hidden flex items-center justify-between p-4 bg-background border-b border-border sticky top-0 z-20 shrink-0 print:hidden">
+          <button onClick={() => setOpen(o => !o)} aria-label="menu" className="text-foreground p-1.5 hover:bg-muted/50 rounded-lg transition" data-testid="erp-menu-toggle">
             {open ? <X size={20}/> : <Menu size={20}/>}
           </button>
-          <div className="font-display font-bold text-sm tracking-tight text-[#3C4952]">Northend ERP</div>
+          <div className="font-display font-bold text-sm tracking-tight text-foreground">Northend ERP</div>
           <div className="w-6" />
         </header>
 

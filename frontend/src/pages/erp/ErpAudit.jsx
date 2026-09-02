@@ -146,7 +146,7 @@ function ActionBadge({ action }) {
 // --- INTERACTIVE METADATA INSPECTION LAYER ---
 function PayloadInspectorModal({ target, onClose }) {
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 grid place-items-center p-4 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/20 z-50 grid place-items-center p-4 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
       <div 
         onClick={e => e.stopPropagation()} 
         className="bg-background border border-border rounded-2xl max-w-xl w-full p-6 space-y-5 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"

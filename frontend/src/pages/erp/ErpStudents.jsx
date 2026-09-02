@@ -202,7 +202,7 @@ function CreateStudentModal({ erpUser, branches, onClose, onCreated }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 grid place-items-center p-4 backdrop-blur-sm overflow-y-auto animate-fadeIn" onClick={onClose} data-testid="create-student-modal">
+    <div className="fixed inset-0 bg-black/20 z-50 grid place-items-center p-4 backdrop-blur-sm overflow-y-auto animate-fadeIn" onClick={onClose} data-testid="create-student-modal">
       <form onClick={e => e.stopPropagation()} onSubmit={submitAdmissionRecord} className="bg-background border border-border rounded-2xl max-w-2xl w-full p-6 space-y-5 my-8 shadow-2xl relative">
         <div className="flex justify-between items-start">
           <div>

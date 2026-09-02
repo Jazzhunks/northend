@@ -51,11 +51,11 @@ export default function WhatsAppInbox() {
 
   return (
     // FIX: Adjusted grid constraints so it won't overflow smaller screens
-    <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-0 h-[calc(100vh-10rem)] min-h-[400px] border border-white/10 rounded-2xl overflow-hidden bg-background/40" data-testid="wa-inbox">
+    <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-0 h-[calc(100vh-10rem)] min-h-[400px] border border-border rounded-2xl overflow-hidden bg-background/40" data-testid="wa-inbox">
       
       {/* Threads list */}
-      <div className={`${!showList && selectedId ? "hidden lg:flex" : "flex"} flex-col h-full min-h-0 border-r border-white/10 bg-background/60`}>
-        <div className="flex-none p-3 border-b border-white/10">
+      <div className={`${!showList && selectedId ? "hidden lg:flex" : "flex"} flex-col h-full min-h-0 border-r border-border bg-background/60`}>
+        <div className="flex-none p-3 border-b border-border">
           <div className="flex items-center gap-2 mb-3">
             <MessageCircle size={16} className="text-[#25D366]"/>
             <div className="text-sm font-medium">Conversations</div>
@@ -76,7 +76,7 @@ export default function WhatsAppInbox() {
             <input
               value={query} onChange={e => setQuery(e.target.value)}
               placeholder="Search name, phone, app no…"
-              className="w-full pl-8 pr-3 py-2 rounded-xl bg-white/[0.03] border border-white/10 text-xs placeholder:text-muted-foreground/60 focus:outline-none focus:border-accent/40"
+              className="w-full pl-8 pr-3 py-2 rounded-xl bg-muted/30 border border-border text-xs placeholder:text-muted-foreground/60 focus:outline-none focus:border-accent/40"
               data-testid="wa-search"
             />
           </div>
@@ -96,7 +96,7 @@ export default function WhatsAppInbox() {
             <button
               key={t.id}
               onClick={() => { setSelectedId(t.id); setShowList(false); }}
-              className={`w-full text-left px-4 py-3 border-b border-white/[0.05] hover:bg-white/[0.03] transition ${selectedId === t.id ? "bg-white/[0.05]" : ""}`}
+              className={`w-full text-left px-4 py-3 border-b border-border hover:bg-muted/30 transition ${selectedId === t.id ? "bg-muted/40" : ""}`}
               data-testid={`wa-thread-${t.id}`}
             >
               <div className="flex items-start gap-3">
@@ -227,7 +227,7 @@ function ChatPane({ thread, onBack, onSent }) {
   return (
     <>
       {/* FIX: Header locked with flex-none */}
-      <div className="flex-none px-4 py-3 border-b border-white/10 bg-background/70 flex items-center gap-3">
+      <div className="flex-none px-4 py-3 border-b border-border bg-background/70 flex items-center gap-3">
         <button onClick={onBack} className="lg:hidden p-1.5 rounded-lg hover:bg-white/5" data-testid="wa-back-btn">
           <ChevronLeft size={16}/>
         </button>
@@ -256,7 +256,7 @@ function ChatPane({ thread, onBack, onSent }) {
       </div>
 
       {/* FIX: Composer locked with flex-none so bubbles cannot push it offscreen */}
-      <div className="flex-none p-3 border-t border-white/10 bg-background/70">
+      <div className="flex-none p-3 border-t border-border bg-background/70">
         <div className="flex items-end gap-2">
           <button onClick={() => setShowTpl(true)} className="p-2 rounded-lg hover:bg-white/5 text-muted-foreground" title="Send template" data-testid="wa-tpl-btn">
             <FileText size={16}/>
@@ -269,7 +269,7 @@ function ChatPane({ thread, onBack, onSent }) {
             onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendText(); } }}
             rows={1}
             placeholder="Type a message… (Enter to send, Shift+Enter for newline)"
-            className="flex-1 resize-none px-3 py-2 rounded-xl bg-white/[0.03] border border-white/10 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:border-accent/40 max-h-32"
+            className="flex-1 resize-none px-3 py-2 rounded-xl bg-muted/30 border border-border text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:border-accent/40 max-h-32"
             data-testid="wa-text-input"
           />
           <button
@@ -315,9 +315,9 @@ function BroadcastModal({ onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 grid place-items-center p-4" onClick={onClose}>
-      <form onClick={e => e.stopPropagation()} onSubmit={trigger} className="w-full max-w-md bg-background border border-white/10 rounded-2xl p-6 space-y-4 shadow-2xl relative" data-testid="wa-broadcast-modal">
-        <div className="flex justify-between items-center border-b border-white/10 pb-3">
+    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 grid place-items-center p-4" onClick={onClose}>
+      <form onClick={e => e.stopPropagation()} onSubmit={trigger} className="w-full max-w-md bg-background border border-border rounded-2xl p-6 space-y-4 shadow-2xl relative" data-testid="wa-broadcast-modal">
+        <div className="flex justify-between items-center border-b border-border pb-3">
           <div className="flex items-center gap-2 font-medium text-accent">
             <Megaphone size={16}/> Broadcast Campaign Launcher
           </div>
@@ -326,11 +326,11 @@ function BroadcastModal({ onClose }) {
         <div className="space-y-3 text-xs">
           <div>
             <label className="text-muted-foreground uppercase tracking-wider font-bold mb-1 block">Approved Meta Template Name *</label>
-            <input required value={templateName} onChange={e => setTemplateName(e.target.value)} placeholder="e.g. exam_details_notification" className="w-full px-3 py-2 rounded-xl bg-white/[0.03] border border-white/10 text-sm focus:outline-none focus:border-accent"/>
+            <input required value={templateName} onChange={e => setTemplateName(e.target.value)} placeholder="e.g. exam_details_notification" className="w-full px-3 py-2 rounded-xl bg-muted/30 border border-border text-sm focus:outline-none focus:border-accent"/>
           </div>
           <div>
             <label className="text-muted-foreground uppercase tracking-wider font-bold mb-1 block">Target Audience Segment</label>
-            <select value={targetGroup} onChange={e => setTargetGroup(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-background border border-white/10 text-sm text-foreground focus:outline-none">
+            <select value={targetGroup} onChange={e => setTargetGroup(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none">
               <option value="all">All Network Contacts (Leads + Enrolled Students)</option>
               <option value="leads">Prospect Leads Only</option>
               <option value="students">Active Enrolled Students Only</option>
@@ -363,9 +363,9 @@ function CreateTemplateModal({ onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 grid place-items-center p-4" onClick={onClose}>
-      <form onClick={e => e.stopPropagation()} onSubmit={submit} className="w-full max-w-md bg-background border border-white/10 rounded-2xl p-6 space-y-4 shadow-2xl relative" data-testid="wa-new-tpl-modal">
-        <div className="flex justify-between items-center border-b border-white/10 pb-3">
+    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 grid place-items-center p-4" onClick={onClose}>
+      <form onClick={e => e.stopPropagation()} onSubmit={submit} className="w-full max-w-md bg-background border border-border rounded-2xl p-6 space-y-4 shadow-2xl relative" data-testid="wa-new-tpl-modal">
+        <div className="flex justify-between items-center border-b border-border pb-3">
           <div className="flex items-center gap-2 font-medium text-accent">
             <PlusCircle size={16}/> Submit Meta Template
           </div>
@@ -374,11 +374,11 @@ function CreateTemplateModal({ onClose }) {
         <div className="space-y-3 text-xs">
           <div>
             <label className="text-muted-foreground uppercase tracking-wider font-bold mb-1 block">Template Identifier Name *</label>
-            <input required value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="e.g. fee_due_reminder" className="w-full px-3 py-2 rounded-xl bg-white/[0.03] border border-white/10 text-sm focus:outline-none focus:border-accent"/>
+            <input required value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="e.g. fee_due_reminder" className="w-full px-3 py-2 rounded-xl bg-muted/30 border border-border text-sm focus:outline-none focus:border-accent"/>
           </div>
           <div>
             <label className="text-muted-foreground uppercase tracking-wider font-bold mb-1 block">Category</label>
-            <select value={form.category} onChange={e => setForm({...form, category: e.target.value})} className="w-full px-3 py-2 rounded-xl bg-background border border-white/10 text-sm text-foreground focus:outline-none">
+            <select value={form.category} onChange={e => setForm({...form, category: e.target.value})} className="w-full px-3 py-2 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none">
               <option value="UTILITY">UTILITY</option>
               <option value="MARKETING">MARKETING</option>
               <option value="AUTHENTICATION">AUTHENTICATION</option>
@@ -386,7 +386,7 @@ function CreateTemplateModal({ onClose }) {
           </div>
           <div>
             <label className="text-muted-foreground uppercase tracking-wider font-bold mb-1 block">Body Message Text *</label>
-            <textarea required rows={3} value={form.body_text} onChange={e => setForm({...form, body_text: e.target.value})} placeholder="Hi {{1}}, your fee due date is {{2}}." className="w-full px-3 py-2 rounded-xl bg-white/[0.03] border border-white/10 text-sm focus:outline-none focus:border-accent resize-none"/>
+            <textarea required rows={3} value={form.body_text} onChange={e => setForm({...form, body_text: e.target.value})} placeholder="Hi {{1}}, your fee due date is {{2}}." className="w-full px-3 py-2 rounded-xl bg-muted/30 border border-border text-sm focus:outline-none focus:border-accent resize-none"/>
           </div>
         </div>
         <button disabled={busy} type="submit" className="w-full py-2.5 bg-primary text-primary-foreground rounded-xl font-bold text-xs uppercase tracking-wider disabled:opacity-50 transition shadow-lg">
@@ -422,7 +422,7 @@ function MessageBubble({ m }) {
             href={doc.link} 
             target="_blank" 
             rel="noopener noreferrer"
-            className="flex items-center gap-3 p-3 mb-2 rounded-xl bg-black/20 hover:bg-black/30 transition border border-white/5"
+            className="flex items-center gap-3 p-3 mb-2 rounded-xl bg-black/20 hover:bg-black/30 transition border border-border"
           >
             <div className="p-2 bg-white/10 rounded-lg shrink-0">
               <FileText size={20} className="text-white/80" />
@@ -487,9 +487,9 @@ function TemplatePicker({ onClose, onSend }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 grid place-items-center p-4" onClick={onClose}>
-      <div className="w-full max-w-lg bg-background border border-white/10 rounded-2xl overflow-hidden" onClick={e => e.stopPropagation()} data-testid="wa-tpl-modal">
-        <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
+    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 grid place-items-center p-4" onClick={onClose}>
+      <div className="w-full max-w-lg bg-background border border-border rounded-2xl overflow-hidden" onClick={e => e.stopPropagation()} data-testid="wa-tpl-modal">
+        <div className="px-5 py-4 border-b border-border flex items-center justify-between">
           <div className="font-medium">Send Approved Template</div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/5"><X size={16}/></button>
         </div>
@@ -497,20 +497,20 @@ function TemplatePicker({ onClose, onSend }) {
           {loading && <div className="text-center text-xs text-muted-foreground py-6">Loading templates…</div>}
           {!loading && tpls.length === 0 && <div className="text-center text-xs text-muted-foreground py-6">No approved templates found in your WABA.</div>}
           {!chosen && tpls.map(t => (
-            <button key={t.name} onClick={() => setChosen(t)} className="w-full text-left p-3 rounded-xl border border-white/10 hover:bg-white/[0.03] transition" data-testid={`wa-tpl-${t.name}`}>
+            <button key={t.name} onClick={() => setChosen(t)} className="w-full text-left p-3 rounded-xl border border-border hover:bg-muted/30 transition" data-testid={`wa-tpl-${t.name}`}>
               <div className="text-sm font-medium">{t.name}</div>
               <div className="text-[10px] text-muted-foreground mt-0.5">{t.language} · {t.category}</div>
             </button>
           ))}
           {chosen && (
             <div className="space-y-3">
-              <div className="p-3 rounded-xl border border-white/10 bg-white/[0.02]">
+              <div className="p-3 rounded-xl border border-border bg-muted/30">
                 <div className="text-[10px] uppercase tracking-[0.2em] text-accent font-bold mb-1">{chosen.name} · {chosen.language}</div>
                 <div className="text-sm whitespace-pre-wrap opacity-90">{bodyComp?.text || "[Body]"}</div>
               </div>
               {Array.from({ length: varCount }, (_, i) => (
                 <input key={i}
-                  className="w-full px-3 py-2 rounded-xl bg-white/[0.03] border border-white/10 text-sm focus:outline-none focus:border-accent/40"
+                  className="w-full px-3 py-2 rounded-xl bg-muted/30 border border-border text-sm focus:outline-none focus:border-accent/40"
                   placeholder={`Variable {{${i + 1}}}`}
                   value={params[i + 1] || ""}
                   onChange={e => setParams(prev => ({ ...prev, [i + 1]: e.target.value }))}
@@ -518,7 +518,7 @@ function TemplatePicker({ onClose, onSend }) {
                 />
               ))}
               <div className="flex gap-2 pt-2">
-                <button onClick={() => setChosen(null)} className="flex-1 px-4 py-2 rounded-xl border border-white/10 text-xs font-bold uppercase tracking-wider">Back</button>
+                <button onClick={() => setChosen(null)} className="flex-1 px-4 py-2 rounded-xl border border-border text-xs font-bold uppercase tracking-wider">Back</button>
                 <button onClick={submit} className="flex-1 px-4 py-2 rounded-xl bg-accent text-accent-foreground text-xs font-bold uppercase tracking-wider" data-testid="wa-tpl-send">Send</button>
               </div>
             </div>
@@ -541,24 +541,24 @@ function MediaPicker({ onClose, onSend }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 grid place-items-center p-4" onClick={onClose}>
-      <div className="w-full max-w-md bg-background border border-white/10 rounded-2xl overflow-hidden" onClick={e => e.stopPropagation()} data-testid="wa-media-modal">
-        <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
+    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 grid place-items-center p-4" onClick={onClose}>
+      <div className="w-full max-w-md bg-background border border-border rounded-2xl overflow-hidden" onClick={e => e.stopPropagation()} data-testid="wa-media-modal">
+        <div className="px-5 py-4 border-b border-border flex items-center justify-between">
           <div className="font-medium">Send Media</div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/5"><X size={16}/></button>
         </div>
         <div className="p-5 space-y-3">
           <div className="grid grid-cols-4 gap-2">
             {["image", "document", "video", "audio"].map(k => (
-              <button key={k} onClick={() => setKind(k)} className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition ${kind === k ? "bg-accent text-accent-foreground" : "border border-white/10 text-muted-foreground"}`} data-testid={`wa-media-kind-${k}`}>{k}</button>
+              <button key={k} onClick={() => setKind(k)} className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition ${kind === k ? "bg-accent text-accent-foreground" : "border border-border text-muted-foreground"}`} data-testid={`wa-media-kind-${k}`}>{k}</button>
             ))}
           </div>
-          <input value={url} onChange={e => setUrl(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-white/[0.03] border border-white/10 text-sm focus:outline-none focus:border-accent/40" placeholder="Public HTTPS URL of the file" data-testid="wa-media-url"/>
+          <input value={url} onChange={e => setUrl(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-muted/30 border border-border text-sm focus:outline-none focus:border-accent/40" placeholder="Public HTTPS URL of the file" data-testid="wa-media-url"/>
           {kind !== "audio" && (
-            <input value={caption} onChange={e => setCaption(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-white/[0.03] border border-white/10 text-sm focus:outline-none focus:border-accent/40" placeholder="Caption (optional)" data-testid="wa-media-caption"/>
+            <input value={caption} onChange={e => setCaption(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-muted/30 border border-border text-sm focus:outline-none focus:border-accent/40" placeholder="Caption (optional)" data-testid="wa-media-caption"/>
           )}
           {kind === "document" && (
-            <input value={filename} onChange={e => setFilename(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-white/[0.03] border border-white/10 text-sm focus:outline-none focus:border-accent/40" placeholder="Filename shown to recipient (optional)" data-testid="wa-media-filename"/>
+            <input value={filename} onChange={e => setFilename(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-muted/30 border border-border text-sm focus:outline-none focus:border-accent/40" placeholder="Filename shown to recipient (optional)" data-testid="wa-media-filename"/>
           )}
           <button onClick={submit} className="w-full px-4 py-2.5 rounded-xl bg-accent text-accent-foreground text-xs font-bold uppercase tracking-wider" data-testid="wa-media-send">Send</button>
         </div>

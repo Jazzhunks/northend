@@ -104,7 +104,7 @@ export default function ErpStudentDetail() {
           </span>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6 pt-4 border-t border-white/[0.04] relative z-10">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6 pt-4 border-t border-border relative z-10">
           <FieldCard icon={Smartphone} label="Student Phone" v={s.contact_phone}/>
           <FieldCard icon={Mail} label="Email Address" v={s.contact_email}/>
           <FieldCard icon={Users} label="Parent / Guardian" v={s.parent_name}/>
@@ -138,7 +138,7 @@ export default function ErpStudentDetail() {
 
       {/* Payments history ledger view (UPGRADED INDEPENDENT SCROLL ZONE) */}
       <div className="glass-elevated rounded-2xl overflow-hidden border border-border animate-fadeIn flex flex-col max-h-[420px]">
-        <div className="px-6 py-5 border-b border-white/[0.06] flex justify-between items-center bg-white/[0.01] shrink-0">
+        <div className="px-6 py-5 border-b border-border flex justify-between items-center bg-background/40 shrink-0">
           <h3 className="font-display font-medium text-lg flex items-center gap-2">
             <ClipboardList size={18} className="text-accent" /> Transaction Ledger History
           </h3>
@@ -205,7 +205,7 @@ export default function ErpStudentDetail() {
 
         {/* Fixed Foot Aggregate Ledger Totals */}
         {stmt.payments.length > 0 && (
-          <div className="bg-muted border-t border-white/[0.06] px-6 py-4 flex items-center justify-between font-bold text-foreground shrink-0 z-10 shadow-[0_-1px_0_rgba(255,255,255,0.05)]">
+          <div className="bg-muted border-t border-border px-6 py-4 flex items-center justify-between font-bold text-foreground shrink-0 z-10 shadow-[0_-1px_0_rgba(255,255,255,0.05)]">
             <div className="text-xs uppercase tracking-wider text-muted-foreground">Aggregate Sunk Income</div>
             <div className="font-mono text-lg text-emerald-600">{fmtINR(stmt.total_paid)}</div>
           </div>
@@ -283,7 +283,7 @@ function EditStudentProfileModal({ student, onClose, onUpdated }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 grid place-items-center p-4 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/20 z-50 grid place-items-center p-4 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
       <form onClick={e => e.stopPropagation()} onSubmit={submitProfileChanges} className="bg-background border border-border rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl">
         <div className="flex justify-between items-start">
           <div>
@@ -384,7 +384,7 @@ function RecordPaymentModal({ studentId, pending, onClose, onCreated }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 grid place-items-center p-4 backdrop-blur-sm animate-fadeIn" onClick={onClose} data-testid="record-payment-modal">
+    <div className="fixed inset-0 bg-black/20 z-50 grid place-items-center p-4 backdrop-blur-sm animate-fadeIn" onClick={onClose} data-testid="record-payment-modal">
       <form onClick={e => e.stopPropagation()} onSubmit={submitPaymentTransaction} className="bg-background border border-border rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
         <div>
           <div className="text-xs uppercase tracking-[0.2em] font-bold text-accent flex items-center gap-1">

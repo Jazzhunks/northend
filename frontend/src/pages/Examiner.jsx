@@ -173,7 +173,7 @@ export default function Examiner() {
                 <Button size="sm" onClick={startScanner} className="bg-primary text-primary-foreground" data-testid="ex-start-btn"><Camera size={14}/>Start Camera</Button>
               )}
             </div>
-            <div id="qr-reader" className="rounded-md overflow-hidden bg-black/90 min-h-[240px]"/>
+            <div id="qr-reader" className="rounded-md overflow-hidden bg-black/30 min-h-[240px]"/>
           </div>
 
           <form onSubmit={onManualSubmit} className="glass-elevated p-5 rounded-2xl bg-background">
@@ -220,7 +220,7 @@ export default function Examiner() {
               <tbody>
                 {data.items.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No applicants for this venue yet.</td></tr>}
                 {data.items.map(a => (
-                  <tr key={a.application_no} className={`border-t border-white/[0.06] ${a.attendance_status === "present" ? "bg-green-50/40" : ""}`} data-testid={`row-${a.application_no}`}>
+                  <tr key={a.application_no} className={`border-t border-border ${a.attendance_status === "present" ? "bg-green-50/40" : ""}`} data-testid={`row-${a.application_no}`}>
                     <td className="p-3 font-mono text-xs">{a.application_no}</td>
                     <td className="p-3 font-bold">{a.name}</td>
                     <td className="p-3 hidden md:table-cell text-muted-foreground">{a.school}</td>

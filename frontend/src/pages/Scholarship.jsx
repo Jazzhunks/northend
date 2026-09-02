@@ -242,7 +242,7 @@ export default function Scholarship() {
 
       {/* WhatsApp community join modal */}
       {showWaModal && submitted?.whatsapp_community_url && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4" data-testid="wa-modal" onClick={() => setShowWaModal(false)}>
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/20 p-4" data-testid="wa-modal" onClick={() => setShowWaModal(false)}>
           <div className="bg-background rounded-md max-w-md w-full p-8 relative" onClick={e => e.stopPropagation()}>
             <button className="absolute top-3 right-3 text-muted-foreground" onClick={() => setShowWaModal(false)} data-testid="wa-modal-close"><X size={18}/></button>
             <div className="h-14 w-14 rounded-full bg-accent/15 grid place-items-center mb-4">

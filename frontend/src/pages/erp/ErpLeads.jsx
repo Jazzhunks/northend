@@ -219,7 +219,7 @@ function UpdateLeadModal({ lead, erpUser, onClose, onUpdated }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 grid place-items-center p-4 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/20 z-50 grid place-items-center p-4 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
       <form 
         onClick={e => e.stopPropagation()} 
         onSubmit={handleUpdateLogSubmit} 
@@ -282,7 +282,7 @@ function UpdateLeadModal({ lead, erpUser, onClose, onUpdated }) {
         </div>
 
         {/* Action Button Row */}
-        <div className="flex gap-3 pt-2 shrink-0 border-t border-white/[0.04]">
+        <div className="flex gap-3 pt-2 shrink-0 border-t border-border">
           <button 
             disabled={busy} 
             type="submit" 
@@ -329,7 +329,7 @@ function CreateLeadModal({ erpUser, branches, onClose, onCreated }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 grid place-items-center p-4 backdrop-blur-sm animate-fadeIn" onClick={onClose} data-testid="create-lead-modal">
+    <div className="fixed inset-0 bg-black/20 z-50 grid place-items-center p-4 backdrop-blur-sm animate-fadeIn" onClick={onClose} data-testid="create-lead-modal">
       <form 
         onClick={e => e.stopPropagation()} 
         onSubmit={submit} 

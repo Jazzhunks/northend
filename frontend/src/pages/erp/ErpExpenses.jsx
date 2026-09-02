@@ -214,7 +214,7 @@ function CreateExpenseModal({ erpUser, branches, onClose, onCreated }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 grid place-items-center p-4 backdrop-blur-sm animate-fadeIn" onClick={onClose} data-testid="create-expense-modal">
+    <div className="fixed inset-0 bg-black/20 z-50 grid place-items-center p-4 backdrop-blur-sm animate-fadeIn" onClick={onClose} data-testid="create-expense-modal">
       <form 
         onClick={e => e.stopPropagation()} 
         onSubmit={submit} 

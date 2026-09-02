@@ -130,7 +130,7 @@ function BulkProgressModal({ isOpen, onClose, state }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[2147483648] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+    <div className="fixed inset-0 z-[2147483648] flex items-center justify-center p-4 bg-black/30 backdrop-blur-md animate-fadeIn">
       <div className="w-full max-w-md glass-elevated border border-border bg-background p-6 rounded-3xl shadow-2xl space-y-5">
         <div className="flex items-center justify-between border-b border-border pb-4">
           <div className="flex items-center gap-2.5">
@@ -248,7 +248,7 @@ function WhatsAppBroadcastModal({ scholarshipId, onClose, allApps }) {
   if (!scholarshipId) return null;
 
   return (
-    <div className="fixed inset-0 z-[2147483648] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+    <div className="fixed inset-0 z-[2147483648] flex items-center justify-center p-4 bg-black/30 backdrop-blur-md animate-fadeIn">
       <div className="w-full max-w-4xl glass-elevated border border-border bg-background p-6 rounded-3xl shadow-2xl flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between border-b border-border pb-4 mb-4 shrink-0">
           <h3 className="font-display font-medium text-xl text-foreground flex items-center gap-2">
@@ -349,8 +349,8 @@ function WhatsAppBroadcastModal({ scholarshipId, onClose, allApps }) {
                 </div>
               </div>
 
-              <div className="bg-black/60 border border-border rounded-xl overflow-hidden shadow-inner">
-                <div className="px-4 py-2 border-b border-border text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex justify-between bg-black/80">
+              <div className="bg-muted/60 border border-border rounded-xl overflow-hidden shadow-inner">
+                <div className="px-4 py-2 border-b border-border text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex justify-between bg-black/30">
                   <span>System Activity Log</span>
                   <span>Real-time Stream</span>
                 </div>
@@ -447,7 +447,7 @@ function AsyncBulkRegModal({ scholarshipId, onClose }) {
   if (!scholarshipId) return null;
 
   return (
-    <div className="fixed inset-0 z-[2147483648] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+    <div className="fixed inset-0 z-[2147483648] flex items-center justify-center p-4 bg-black/30 backdrop-blur-md animate-fadeIn">
       <div className="w-full max-w-2xl glass-elevated border border-border bg-background p-6 rounded-3xl shadow-2xl flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between border-b border-border pb-4 mb-6 shrink-0">
           <h3 className="font-display font-medium text-xl text-foreground flex items-center gap-2">
@@ -523,8 +523,8 @@ function AsyncBulkRegModal({ scholarshipId, onClose }) {
                 </div>
               </div>
 
-              <div className="bg-black/60 border border-border rounded-xl overflow-hidden shadow-inner">
-                <div className="px-4 py-2 border-b border-border text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex justify-between bg-black/80">
+              <div className="bg-muted/60 border border-border rounded-xl overflow-hidden shadow-inner">
+                <div className="px-4 py-2 border-b border-border text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex justify-between bg-black/30">
                   <span>System Activity Log</span>
                   <span>Real-time Stream</span>
                 </div>
@@ -671,7 +671,7 @@ function CampaignOperationsModal({
   if (!scholarshipId) return null;
 
   return (
-    <div className="fixed inset-0 z-[2147483648] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+    <div className="fixed inset-0 z-[2147483648] flex items-center justify-center p-4 bg-black/30 backdrop-blur-md animate-fadeIn">
       <div className="w-full max-w-5xl glass-elevated border border-border bg-background p-6 rounded-3xl shadow-2xl flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border pb-4 mb-5 shrink-0">
@@ -811,7 +811,7 @@ function CampaignOperationsModal({
           <div className="flex-1 overflow-y-auto custom-scrollbar">
             {viewTab === "applicants" && (
               <table className="w-full text-sm text-left relative">
-                <thead className="bg-muted text-muted-foreground text-xs uppercase tracking-wider sticky top-0 z-10 shadow-[0_4px_20px_rgba(0,0,0,0.5)] border-b border-border">
+                <thead className="bg-muted text-muted-foreground text-xs uppercase tracking-wider sticky top-0 z-10 shadow-[0_4px_20px_rgba(60,73,82,0.08)] border-b border-border">
                   <tr>
                     <th className="p-3 sm:p-4 whitespace-nowrap">App No</th>
                     <th className="p-3 sm:p-4 whitespace-nowrap">Applicant Name</th>
@@ -1250,8 +1250,8 @@ export default function AdminDashboard() {
         margin: 0,
         padding: 0,
         zIndex: 2147483647,
-        background: "#050914",
-        color: "#f8fafc",
+        background: "#ffffff",
+        color: "#3C4952",
         visibility: "visible",
         opacity: 1,
         display: "flex",
@@ -1295,7 +1295,7 @@ export default function AdminDashboard() {
       {sidebarOpen && (
         <div 
           onClick={() => setSidebarOpen(false)} 
-          className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm transition-opacity" 
+          className="fixed inset-0 bg-muted/60 z-40 lg:hidden backdrop-blur-sm transition-opacity" 
         />
       )}
 
@@ -1303,7 +1303,7 @@ export default function AdminDashboard() {
         sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       }`}>
         <div className="w-full shrink-0 flex flex-col">
-          <div className="p-4 sm:p-6 border-b border-white/[0.06] flex items-center justify-between">
+          <div className="p-4 sm:p-6 border-b border-border flex items-center justify-between">
             <div>
               <div className="text-[10px] uppercase tracking-[0.22em] text-accent font-bold">Northend Group</div>
               <div className="font-display text-lg sm:text-xl font-medium tracking-tight mt-0.5 text-foreground">Operations Engine</div>
@@ -1312,7 +1312,7 @@ export default function AdminDashboard() {
               <X size={20} />
             </button>
           </div>
-          <div className="p-3 sm:p-4 border-b border-white/[0.06] bg-white/[0.01]">
+          <div className="p-3 sm:p-4 border-b border-border bg-background/40">
             <div className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-bold">System Identity</div>
             <div className="font-medium mt-0.5 text-xs sm:text-sm text-foreground">Operations Admin Desk</div>
             <div className="text-[10px] text-accent font-mono mt-0.5 uppercase tracking-wider">LEVEL 0 ROOT ACCESS</div>
@@ -1339,7 +1339,7 @@ export default function AdminDashboard() {
           })}
         </nav>
 
-        <div className="p-3 border-t border-white/[0.06] shrink-0 bg-background/40">
+        <div className="p-3 border-t border-border shrink-0 bg-background/40">
           <button 
             onClick={() => navigate("/erp")}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs uppercase font-bold tracking-wider text-accent border border-accent/20 bg-accent/5 hover:bg-accent/15 transition duration-200 cursor-pointer"
@@ -1354,8 +1354,8 @@ export default function AdminDashboard() {
         style={{ minWidth: 0, minHeight: 0, height: "100%", position: "relative" }}
       >
         <header
-          className="relative z-30 shrink-0 px-4 sm:px-8 py-4 sm:py-6 border-b border-white/[0.06] backdrop-blur-md flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3"
-          style={{ background: "rgba(5, 9, 20, 0.92)" }}
+          className="relative z-30 shrink-0 px-4 sm:px-8 py-4 sm:py-6 border-b border-border backdrop-blur-md flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3"
+          style={{ background: "rgba(255, 255, 255, 0.92)" }}
         >
           <div className="flex items-center gap-3 min-w-0">
             <button 
@@ -1507,7 +1507,7 @@ export default function AdminDashboard() {
                           </div>
 
                           {editingApp && (
-                            <div className="mt-4 pt-4 border-t border-white/[0.06] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 animate-fadeIn">
+                            <div className="mt-4 pt-4 border-t border-border grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 animate-fadeIn">
                               <div className="col-span-full text-[11px] uppercase tracking-wider font-bold text-accent mb-1 flex items-center">
                                 <User size={14} className="mr-1.5"/> Edit Applicant Identity & Venue
                               </div>
@@ -1564,7 +1564,7 @@ export default function AdminDashboard() {
                           )}
 
                           {editing && (
-                            <div className="mt-4 pt-4 border-t border-white/[0.06] grid grid-cols-1 sm:grid-cols-3 gap-3 animate-fadeIn" data-testid={`result-form-${a.id}`}>
+                            <div className="mt-4 pt-4 border-t border-border grid grid-cols-1 sm:grid-cols-3 gap-3 animate-fadeIn" data-testid={`result-form-${a.id}`}>
                               <div className="col-span-full text-[11px] uppercase tracking-wider font-bold text-accent mb-1 flex items-center">
                                 <Trophy size={14} className="mr-1.5"/> Edit Examination Scores
                               </div>
@@ -1659,7 +1659,7 @@ export default function AdminDashboard() {
                           </div>
                           <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{c.description}</p>
                         </div>
-                        <div className="mt-4 flex flex-wrap gap-1 border-t border-white/[0.04] pt-3">
+                        <div className="mt-4 flex flex-wrap gap-1 border-t border-border pt-3">
                           {(c.features || []).slice(0, 3).map((f) => <span key={f} className="text-[10px] uppercase font-bold font-mono tracking-wider bg-muted/50 border border-border px-2.5 py-0.5 rounded-md text-muted-foreground">{f}</span>)}
                         </div>
                       </div>
@@ -1790,7 +1790,7 @@ export default function AdminDashboard() {
                           <div className="font-bold text-foreground text-base mt-2">{t.name}</div>
                           <div className="text-sm text-muted-foreground/80 mt-2 italic">"{t.quote}"</div>
                         </div>
-                        <div className="flex justify-end pt-3 border-t border-white/[0.04] mt-3">
+                        <div className="flex justify-end pt-3 border-t border-border mt-3">
                           <Button size="sm" variant="outline" onClick={() => del(`/testimonials/${t.id}`, "testimonial")} className="rounded-xl border-transparent text-rose-600 hover:bg-rose-500/5 cursor-pointer"><Trash2 size={14}/></Button>
                         </div>
                       </div>
@@ -1915,7 +1915,7 @@ export default function AdminDashboard() {
                         </div>
 
                         {c.examiner_token && (
-                          <div className="mt-4 pt-4 border-t border-white/[0.04] bg-white/[0.01] -mx-5 -mb-5 px-5 py-4 rounded-b-2xl">
+                          <div className="mt-4 pt-4 border-t border-border bg-background/40 -mx-5 -mb-5 px-5 py-4 rounded-b-2xl">
                             <div className="text-[10px] uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5">Independent Evaluation Gateway Link</div>
                             <div className="flex flex-wrap items-center gap-2 text-xs">
                               <code className="glass-elevated px-3 py-1.5 rounded-lg border border-border break-all flex-1 font-mono text-emerald-600 font-medium">{examinerLink(c.examiner_token)}</code>

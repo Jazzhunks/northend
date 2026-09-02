@@ -211,11 +211,11 @@ function CourseCard3D({
         className={cn(
           "relative overflow-hidden rounded-[1.6rem]",
           "glass-ultra",
-          "border border-white/10",
+          "border border-border",
           "bg-white/[0.03]",
           "p-6 lg:p-7",
           "transition-all duration-500",
-          "hover:border-white/20",
+          "hover:border-border",
           "hover:shadow-[0_20px_80px_rgba(0,47,167,0.22)]",
           "focus-visible:ring-2",
           "focus-visible:ring-primary",
@@ -325,7 +325,7 @@ function CourseCard3D({
         <div
           className={cn(
             "relative z-10 mt-7 grid grid-cols-2 gap-4",
-            "border-t border-white/10 pt-5"
+            "border-t border-border pt-5"
           )}
           style={{
             transform: disableMotion
@@ -400,7 +400,7 @@ function CourseCard3D({
             transition={HOVER_SPRING}
             className={cn(
               "grid h-11 w-11 place-items-center rounded-full",
-              "border border-white/10",
+              "border border-border",
               "bg-white/[0.04]",
               "backdrop-blur-md",
               "transition-all duration-300",
