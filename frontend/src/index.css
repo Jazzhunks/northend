@@ -9,45 +9,90 @@
 /* ========================================================================== */
 
 :root {
-  --background: 222 47% 5%;
-  --foreground: 210 40% 98%;
+  --background: 254 36% 11%;
+  --foreground: 254 30% 98%;
 
-  --card: 222 47% 6%;
-  --card-foreground: 210 40% 98%;
+  --card: 254 32% 14%;
+  --card-foreground: 254 30% 98%;
 
-  --popover: 222 47% 7%;
-  --popover-foreground: 210 40% 98%;
+  --popover: 254 32% 15%;
+  --popover-foreground: 254 30% 98%;
 
-  --primary: 224 100% 33%;
-  --primary-foreground: 0 0% 100%;
+  --primary: 254 100% 78%;
+  --primary-foreground: 254 50% 10%;
 
-  --secondary: 217 33% 12%;
-  --secondary-foreground: 210 40% 98%;
+  --secondary: 254 40% 22%;
+  --secondary-foreground: 254 30% 98%;
 
-  --muted: 217 33% 12%;
-  --muted-foreground: 215 20% 65%;
+  --muted: 254 30% 20%;
+  --muted-foreground: 254 20% 72%;
 
-  --accent: 45 100% 51%;
-  --accent-foreground: 222 47% 11%;
+  --accent: 335 100% 86%;
+  --accent-foreground: 254 50% 10%;
 
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
 
-  --border: rgba(255,255,255,0.08);
-  --input: 217 33% 14%;
-  --ring: 224 100% 65%;
+  --border: rgba(169, 142, 255, 0.15);
+  --input: 254 30% 18%;
+  --ring: 254 100% 78%;
 
-  --radius: 1.5rem;
+  --radius: 1.8rem;
 
-  --glass-bg: rgba(255,255,255,0.04);
-  --glass-border: rgba(255,255,255,0.08);
+  --glass-bg: rgba(169, 142, 255, 0.06);
+  --glass-border: rgba(169, 142, 255, 0.18);
 
-  --glass-elevated-bg: rgba(255,255,255,0.08);
-  --glass-elevated-border: rgba(255,255,255,0.12);
+  --glass-elevated-bg: rgba(169, 142, 255, 0.12);
+  --glass-elevated-border: rgba(169, 142, 255, 0.25);
 
   --container-width: 1440px;
 
   color-scheme: dark;
+}
+
+/* Claymorphism 3D utilities */
+.clay-card {
+  background: linear-gradient(145deg, rgba(35, 28, 62, 0.85), rgba(22, 17, 43, 0.90));
+  border-radius: 2rem;
+  box-shadow:
+    8px 8px 20px rgba(10, 7, 24, 0.65),
+    -6px -6px 16px rgba(169, 142, 255, 0.12),
+    inset 2px 2px 4px rgba(255, 255, 255, 0.25),
+    inset -2px -2px 6px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(169, 142, 255, 0.2);
+  backdrop-filter: blur(20px);
+}
+
+.clay-btn {
+  background: linear-gradient(135deg, #a98eff 0%, #8765ff 100%);
+  color: #120b29;
+  border-radius: 9999px;
+  font-weight: 800;
+  box-shadow:
+    6px 6px 14px rgba(15, 10, 32, 0.5),
+    -4px -4px 10px rgba(220, 205, 255, 0.35),
+    inset 2px 2px 3px rgba(255, 255, 255, 0.6),
+    inset -2px -2px 4px rgba(70, 40, 160, 0.5);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.clay-btn:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow:
+    8px 10px 20px rgba(169, 142, 255, 0.35),
+    -4px -4px 12px rgba(255, 255, 255, 0.45),
+    inset 2px 2px 4px rgba(255, 255, 255, 0.8),
+    inset -2px -2px 4px rgba(70, 40, 160, 0.5);
+}
+
+.clay-pill {
+  background: linear-gradient(145deg, rgba(169, 142, 255, 0.15), rgba(169, 142, 255, 0.05));
+  border-radius: 9999px;
+  box-shadow:
+    3px 3px 8px rgba(10, 7, 24, 0.4),
+    -2px -2px 6px rgba(169, 142, 255, 0.12),
+    inset 1px 1px 2px rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(169, 142, 255, 0.25);
 }
 
 /* ========================================================================== */

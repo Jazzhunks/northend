@@ -84,20 +84,11 @@ export const CTAPrimary = forwardRef(
         }
         transition={SPRING}
         className={cn(
-          "group tracing-beam relative inline-flex items-center justify-center gap-3",
+          "group clay-btn relative inline-flex items-center justify-center gap-3",
           "overflow-hidden rounded-full",
           "transform-gpu will-change-transform",
           "font-bold uppercase tracking-[0.18em]",
-          "bg-primary text-primary-foreground",
-          "shadow-[0_10px_40px_rgba(0,47,167,0.35)]",
-          "transition-all duration-300",
-          "hover:shadow-[0_0_60px_rgba(0,47,167,0.55)]",
-          "active:shadow-[0_0_30px_rgba(0,47,167,0.4)]",
           "focus:outline-none",
-          "focus-visible:ring-2",
-          "focus-visible:ring-primary",
-          "focus-visible:ring-offset-2",
-          "focus-visible:ring-offset-background",
           "disabled:pointer-events-none disabled:opacity-50",
           sizes[size],
           className
@@ -195,23 +186,14 @@ export const CTAGhost = forwardRef(
         }
         transition={SPRING}
         className={cn(
-          "group relative inline-flex items-center justify-center gap-3",
+          "group clay-pill relative inline-flex items-center justify-center gap-3",
           "overflow-hidden rounded-full",
           "transform-gpu will-change-transform",
-          "border border-white/10",
-          "bg-white/[0.04]",
-          "backdrop-blur-xl",
           "text-foreground",
           "font-bold uppercase tracking-[0.18em]",
           "transition-all duration-300",
-          "hover:border-white/20",
-          "hover:bg-white/[0.07]",
-          "hover:shadow-[0_10px_40px_rgba(255,255,255,0.04)]",
+          "hover:border-[#a98eff]/40",
           "focus:outline-none",
-          "focus-visible:ring-2",
-          "focus-visible:ring-white/30",
-          "focus-visible:ring-offset-2",
-          "focus-visible:ring-offset-background",
           "disabled:pointer-events-none disabled:opacity-50",
           sizes[size],
           className
