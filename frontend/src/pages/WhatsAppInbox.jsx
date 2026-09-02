@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import {
   Send, MessageCircle, Search, User, Phone, GraduationCap,
   RefreshCw, FileText, Paperclip, X, Check, CheckCheck, ChevronLeft,
+  Megaphone, PlusCircle, Layers, Radio, Sparkles
 } from "lucide-react";
 
 const ONE_MIN = 60 * 1000;
@@ -45,6 +46,9 @@ export default function WhatsAppInbox() {
 
   const selected = threads.find(t => t.id === selectedId);
 
+  const [showBroadcast, setShowBroadcast] = useState(false);
+  const [showNewTemplate, setShowNewTemplate] = useState(false);
+
   return (
     // FIX: Adjusted grid constraints so it won't overflow smaller screens
     <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-0 h-[calc(100vh-10rem)] min-h-[400px] border border-white/10 rounded-2xl overflow-hidden bg-background/40" data-testid="wa-inbox">
@@ -55,9 +59,17 @@ export default function WhatsAppInbox() {
           <div className="flex items-center gap-2 mb-3">
             <MessageCircle size={16} className="text-[#25D366]"/>
             <div className="text-sm font-medium">Conversations</div>
-            <button onClick={loadThreads} className="ml-auto p-1.5 rounded-lg hover:bg-white/5" data-testid="wa-refresh">
-              <RefreshCw size={13} className={loadingThreads ? "animate-spin" : ""}/>
-            </button>
+            <div className="ml-auto flex items-center gap-1">
+              <button onClick={() => setShowBroadcast(true)} title="SaaS Broadcast Campaign" className="p-1.5 rounded-lg hover:bg-white/5 text-accent" data-testid="wa-broadcast-btn">
+                <Megaphone size={14}/>
+              </button>
+              <button onClick={() => setShowNewTemplate(true)} title="Create Template" className="p-1.5 rounded-lg hover:bg-white/5 text-muted-foreground" data-testid="wa-new-tpl-btn">
+                <PlusCircle size={14}/>
+              </button>
+              <button onClick={loadThreads} className="p-1.5 rounded-lg hover:bg-white/5" data-testid="wa-refresh">
+                <RefreshCw size={13} className={loadingThreads ? "animate-spin" : ""}/>
+              </button>
+            </div>
           </div>
           <div className="relative">
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"/>
@@ -133,6 +145,9 @@ export default function WhatsAppInbox() {
           />
         )}
       </div>
+
+      {showBroadcast && <BroadcastModal onClose={() => setShowBroadcast(false)}/>}
+      {showNewTemplate && <CreateTemplateModal onClose={() => setShowNewTemplate(false)}/>}
     </div>
   );
 }
@@ -275,6 +290,110 @@ function ChatPane({ thread, onBack, onSent }) {
       {showTpl && <TemplatePicker onClose={() => setShowTpl(false)} onSend={sendTemplate}/>}
       {showMedia && <MediaPicker onClose={() => setShowMedia(false)} onSend={sendMedia}/>}
     </>
+  );
+}
+
+function BroadcastModal({ onClose }) {
+  const [templateName, setTemplateName] = useState("");
+  const [targetGroup, setTargetGroup] = useState("all");
+  const [busy, setBusy] = useState(false);
+
+  const trigger = async (e) => {
+    e.preventDefault();
+    if (!templateName.trim()) { toast.error("Please enter an approved Meta template name"); return; }
+    setBusy(true);
+    try {
+      const { data } = await api.post("/whatsapp/broadcast", {
+        template_name: templateName.trim(),
+        target_group: targetGroup,
+      });
+      toast.success(data.message || "Broadcast dispatched successfully!");
+      onClose();
+    } catch (e) {
+      toast.error(formatError(e.response?.data?.detail) || "Failed to trigger broadcast");
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 grid place-items-center p-4" onClick={onClose}>
+      <form onClick={e => e.stopPropagation()} onSubmit={trigger} className="w-full max-w-md bg-background border border-white/10 rounded-2xl p-6 space-y-4 shadow-2xl relative" data-testid="wa-broadcast-modal">
+        <div className="flex justify-between items-center border-b border-white/10 pb-3">
+          <div className="flex items-center gap-2 font-medium text-accent">
+            <Megaphone size={16}/> Broadcast Campaign Launcher
+          </div>
+          <button type="button" onClick={onClose} className="p-1 hover:bg-white/5 rounded-lg"><X size={16}/></button>
+        </div>
+        <div className="space-y-3 text-xs">
+          <div>
+            <label className="text-muted-foreground uppercase tracking-wider font-bold mb-1 block">Approved Meta Template Name *</label>
+            <input required value={templateName} onChange={e => setTemplateName(e.target.value)} placeholder="e.g. exam_details_notification" className="w-full px-3 py-2 rounded-xl bg-white/[0.03] border border-white/10 text-sm focus:outline-none focus:border-accent"/>
+          </div>
+          <div>
+            <label className="text-muted-foreground uppercase tracking-wider font-bold mb-1 block">Target Audience Segment</label>
+            <select value={targetGroup} onChange={e => setTargetGroup(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-background border border-white/10 text-sm text-foreground focus:outline-none">
+              <option value="all">All Network Contacts (Leads + Enrolled Students)</option>
+              <option value="leads">Prospect Leads Only</option>
+              <option value="students">Active Enrolled Students Only</option>
+            </select>
+          </div>
+        </div>
+        <button disabled={busy} type="submit" className="w-full py-2.5 bg-accent text-accent-foreground rounded-xl font-bold text-xs uppercase tracking-wider disabled:opacity-50 transition shadow-lg">
+          {busy ? "Dispatching Broadcast…" : "Dispatch WhatsApp Broadcast"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function CreateTemplateModal({ onClose }) {
+  const [form, setForm] = useState({ name: "", category: "UTILITY", body_text: "", header_text: "", footer_text: "" });
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!form.name || !form.body_text) { toast.error("Template name and body text are required"); return; }
+    setBusy(true);
+    try {
+      await api.post("/whatsapp/templates", form);
+      toast.success("Template submitted to Meta Graph API for approval!");
+      onClose();
+    } catch (e) {
+      toast.error(formatError(e.response?.data?.detail) || "Failed to submit template to Meta");
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 grid place-items-center p-4" onClick={onClose}>
+      <form onClick={e => e.stopPropagation()} onSubmit={submit} className="w-full max-w-md bg-background border border-white/10 rounded-2xl p-6 space-y-4 shadow-2xl relative" data-testid="wa-new-tpl-modal">
+        <div className="flex justify-between items-center border-b border-white/10 pb-3">
+          <div className="flex items-center gap-2 font-medium text-accent">
+            <PlusCircle size={16}/> Submit Meta Template
+          </div>
+          <button type="button" onClick={onClose} className="p-1 hover:bg-white/5 rounded-lg"><X size={16}/></button>
+        </div>
+        <div className="space-y-3 text-xs">
+          <div>
+            <label className="text-muted-foreground uppercase tracking-wider font-bold mb-1 block">Template Identifier Name *</label>
+            <input required value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="e.g. fee_due_reminder" className="w-full px-3 py-2 rounded-xl bg-white/[0.03] border border-white/10 text-sm focus:outline-none focus:border-accent"/>
+          </div>
+          <div>
+            <label className="text-muted-foreground uppercase tracking-wider font-bold mb-1 block">Category</label>
+            <select value={form.category} onChange={e => setForm({...form, category: e.target.value})} className="w-full px-3 py-2 rounded-xl bg-background border border-white/10 text-sm text-foreground focus:outline-none">
+              <option value="UTILITY">UTILITY</option>
+              <option value="MARKETING">MARKETING</option>
+              <option value="AUTHENTICATION">AUTHENTICATION</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-muted-foreground uppercase tracking-wider font-bold mb-1 block">Body Message Text *</label>
+            <textarea required rows={3} value={form.body_text} onChange={e => setForm({...form, body_text: e.target.value})} placeholder="Hi {{1}}, your fee due date is {{2}}." className="w-full px-3 py-2 rounded-xl bg-white/[0.03] border border-white/10 text-sm focus:outline-none focus:border-accent resize-none"/>
+          </div>
+        </div>
+        <button disabled={busy} type="submit" className="w-full py-2.5 bg-primary text-primary-foreground rounded-xl font-bold text-xs uppercase tracking-wider disabled:opacity-50 transition shadow-lg">
+          {busy ? "Submitting to Meta…" : "Register Template with Meta"}
+        </button>
+      </form>
+    </div>
   );
 }
 
