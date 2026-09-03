@@ -170,7 +170,7 @@ export default function CourseDetail() {
         variants={container}
         initial="hidden"
         animate="visible"
-        className="relative container-luxury pt-24 lg:pt-32 pb-24"
+        className="relative container-luxury mx-auto px-6 sm:px-8 lg:px-12 pt-24 lg:pt-32 pb-24"
       >
         <div className="grid gap-12 lg:grid-cols-12 items-start">
           {/* ================================================================ */}
