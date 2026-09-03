@@ -286,6 +286,10 @@ class ScholarshipApplicationIn(BaseModel):
     city: str
     scholarship_id: Optional[str] = None
     venue: Optional[str] = None
+    # Extra candidate details (for official admit card)
+    father_name: Optional[str] = None
+    gender: Optional[str] = None
+    dob: Optional[str] = None
     # WATH Carnival fields
     carnival_id: Optional[str] = None
     chosen_date: Optional[str] = None   # YYYY-MM-DD
@@ -719,6 +723,8 @@ async def apply_scholarship(payload: ScholarshipApplicationIn, background: Backg
             exam_date=exam_date_str, venue=selected_venue,
             exam_time=exam_time_str,
             scholarship_title=title_for_email,
+            father_name=payload.father_name, gender=payload.gender,
+            dob=payload.dob, email=payload.email,
         )
     except Exception as e:
         logging.error(f"Failed to generate Admit Card PDF: {e}")
@@ -1891,6 +1897,10 @@ async def admit_card(application_no: str, phone: Optional[str] = Query(None), re
         venue=venue_name,
         exam_time=exam_time,
         scholarship_title=title,
+        father_name=app_doc.get("father_name"),
+        gender=app_doc.get("gender"),
+        dob=app_doc.get("dob"),
+        email=app_doc.get("email"),
     )
     return Response(content=pdf_bytes, media_type="application/pdf",
                     headers={"Content-Disposition": f'attachment; filename="admit-card-{application_no}.pdf"'})

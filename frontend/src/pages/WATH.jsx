@@ -232,6 +232,7 @@ function HeroSection({ campaign, carnival, mode, loading, onRegistered }) {
     : campaign?.exam_date;
   const [form, setForm] = useState({
     name: "", email: "", phone: "", class_or_course: "", school_name: "", venue: "",
+    father_name: "", gender: "", dob: "",
     chosen_date: "", chosen_slot_time: "",
   });
   const [submitted, setSubmitted] = useState(null);
@@ -269,6 +270,9 @@ function HeroSection({ campaign, carnival, mode, loading, onRegistered }) {
         school: form.school_name,
         standard: form.class_or_course,
         target_exam: targetExam,
+        father_name: form.father_name || undefined,
+        gender: form.gender || undefined,
+        dob: form.dob || undefined,
         city: (form.venue || "Srinagar").replace(/^Northend\s+/i, "") || "Srinagar",
         venue: form.venue || undefined,
       };
@@ -420,7 +424,23 @@ function HeroSection({ campaign, carnival, mode, loading, onRegistered }) {
                           <CaretDown weight="bold" size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                         </div>
                       </div>
-                      <input className={inputCls} placeholder="School / current institute" required value={form.school_name} onChange={e => setForm({...form, school_name: e.target.value})} data-testid="wath-school"/>
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <input className={inputCls} placeholder="Father's / Guardian's name" required value={form.father_name} onChange={e => setForm({...form, father_name: e.target.value})} data-testid="wath-father"/>
+                        <div className="relative">
+                          <select className={`${inputCls} appearance-none pr-8`} required value={form.gender} onChange={e => setForm({...form, gender: e.target.value})} data-testid="wath-gender">
+                            <option value="" disabled className="bg-background text-muted-foreground">Gender</option>
+                            {["Male", "Female", "Other"].map(g => <option key={g} value={g} className="bg-background">{g}</option>)}
+                          </select>
+                          <CaretDown weight="bold" size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div className="relative">
+                          <input className={`${inputCls} pr-3`} type="date" required value={form.dob} onChange={e => setForm({...form, dob: e.target.value})} data-testid="wath-dob" aria-label="Date of birth"/>
+                          {!form.dob && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 text-xs pointer-events-none">Date of birth</span>}
+                        </div>
+                        <input className={inputCls} placeholder="School / current institute" required value={form.school_name} onChange={e => setForm({...form, school_name: e.target.value})} data-testid="wath-school"/>
+                      </div>
 
                       {isCarnival && (
                         <CarnivalSlotPicker
