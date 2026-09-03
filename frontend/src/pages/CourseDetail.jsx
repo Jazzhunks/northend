@@ -170,7 +170,7 @@ export default function CourseDetail() {
         variants={container}
         initial="hidden"
         animate="visible"
-        className="relative container-luxury mx-auto px-6 sm:px-8 lg:px-12 pt-24 lg:pt-32 pb-24"
+        className="relative max-w-7xl mx-auto px-6 sm:px-10 lg:px-12 pt-24 lg:pt-32 pb-24"
       >
         <div className="grid gap-12 lg:grid-cols-12 items-start">
           {/* ================================================================ */}
@@ -302,7 +302,7 @@ export default function CourseDetail() {
                     <CheckCircle
                       weight="duotone"
                       size={20}
-                      className="text-accent flex-shrink-0 mt-0.5"
+                      className="text-primary flex-shrink-0 mt-0.5"
                     />
                     <span className="text-sm leading-relaxed">
                       {item}
@@ -426,7 +426,7 @@ export default function CourseDetail() {
                         uppercase
                         tracking-[0.28em]
                         font-bold
-                        text-accent
+                        text-primary
                       "
                     >
                       Programme Fee
@@ -440,8 +440,7 @@ export default function CourseDetail() {
                         lg:text-6xl
                         font-medium
                         tracking-[-0.04em]
-                        text-accent
-                        text-glow-accent
+                        text-foreground
                       "
                     >
                       {formattedFee}
@@ -532,7 +531,7 @@ export default function CourseDetail() {
                       text-muted-foreground
                     "
                   >
-                    <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+                    <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
                     Limited seats available for this batch
                   </div>
                 </GlassPanel>
@@ -567,7 +566,7 @@ function InfoRow({ Icon, label, value }) {
           <Icon
             weight="duotone"
             size={18}
-            className="text-accent"
+            className="text-primary"
           />
         </div>
         <span className="text-sm text-muted-foreground">

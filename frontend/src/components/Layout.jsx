@@ -48,10 +48,7 @@ function Navbar() {
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between h-12">
         <Link to="/" className="flex items-center gap-3 group shrink-0" data-testid="logo-link">
-          <div className="leading-tight">
-            <div className="font-display font-bold text-lg tracking-tight text-foreground">Northend</div>
-            <div className="text-[9px] tracking-[0.25em] uppercase text-primary font-bold">Educational World</div>
-          </div>
+          <img src="/logo.svg" alt="Unacademy Kashmir" className="h-6 w-auto object-contain" />
         </Link>
 
         {/* Desktop Navigation Link Track */}
