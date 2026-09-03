@@ -15,6 +15,7 @@ import {
   User, UserPlus, Printer, Wand2
 } from "lucide-react";
 import ChipInput from "@/components/ChipInput";
+import { usePaged, Paginator } from "@/components/Paginator";
 import WhatsAppInbox from "@/pages/WhatsAppInbox";
 import WATHManagement from "@/pages/WATHManagement";
 
@@ -977,6 +978,7 @@ export default function AdminDashboard() {
   const [editingCourse, setEditingCourse] = useState(null);
   const [busy, setBusy] = useState(false);
   const [innerSearch, setInnerSearch] = useState("");
+  const [schKind, setSchKind] = useState("all");
 
   const [newNotice, setNewNotice] = useState({ title:"", content:"", category:"General", pinned:false });
   const [newJob, setNewJob] = useState({ title:"", department:"", location:"", type:"Full-time", description:"", requirements: [], active:true });
@@ -1058,7 +1060,7 @@ export default function AdminDashboard() {
   };
 
   const filteredEnrollments = useMemo(() => enrollments.filter(x => searchMatch(x, ["name", "receipt_no", "phone", "center"])), [enrollments, innerSearch]);
-  const filteredScholarships = useMemo(() => scholarshipApps.filter(x => searchMatch(x, ["name", "application_no", "email", "phone", "target_exam"])), [scholarshipApps, innerSearch]);
+  const filteredScholarships = useMemo(() => scholarshipApps.filter(x => searchMatch(x, ["name", "application_no", "email", "phone", "target_exam"]) && (schKind === "all" || (x.campaign_kind || "scholarship") === schKind)), [scholarshipApps, innerSearch, schKind]);
   const filteredJobApps = useMemo(() => jobApps.filter(x => searchMatch(x, ["name", "email", "qualification"])), [jobApps, innerSearch]);
   const filteredCourses = useMemo(() => courses.filter(x => searchMatch(x, ["title", "category", "description"])), [courses, innerSearch]);
   const filteredNotices = useMemo(() => notices.filter(x => searchMatch(x, ["title", "category", "content"])), [notices, innerSearch]);
@@ -1068,6 +1070,10 @@ export default function AdminDashboard() {
   const filteredResults = useMemo(() => results.filter(x => searchMatch(x, ["student_name", "exam", "rank", "course"])), [results, innerSearch]);
   const filteredCampaigns = useMemo(() => adminCampaigns.filter(x => searchMatch(x, ["title", "eligibility", "exam_date"])), [adminCampaigns, innerSearch]);
   const filteredInquiries = useMemo(() => inquiries.filter(x => searchMatch(x, ["name", "email", "subject", "message"])), [inquiries, innerSearch]);
+
+  const enrPage = usePaged(filteredEnrollments, 25);
+  const schPage = usePaged(filteredScholarships, 25);
+  const jobPage = usePaged(filteredJobApps, 25);
 
   const updateStatus = async (kind, id, status) => {
     const map = { enr: "enrollments", sch: "scholarship-applications", job: "job-applications" };
@@ -1427,7 +1433,7 @@ export default function AdminDashboard() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border text-foreground bg-background/20">
-                          {filteredEnrollments.map((e) => (
+                          {enrPage.pageItems.map((e) => (
                             <tr key={e.id} className="hover:bg-muted/50 transition-colors">
                               <td className="p-3 sm:p-4 font-mono text-xs font-semibold">{e.receipt_no}</td>
                               <td className="p-3 sm:p-4 font-bold">{e.name}</td>
@@ -1443,6 +1449,7 @@ export default function AdminDashboard() {
                         </tbody>
                       </table>
                     </div>
+                    <div className="px-4 pb-4"><Paginator {...enrPage} testid="enrollments-paginator"/></div>
                   </div>
                 )}
               </div>
@@ -1468,15 +1475,28 @@ export default function AdminDashboard() {
 
             {activeTab === "scholarships" && (
               <div className="space-y-4 animate-fadeIn">
-                <div className="flex justify-between items-center gap-2">
+                <div className="flex justify-between items-center gap-2 flex-wrap">
                   <h3 className="font-display font-medium text-lg sm:text-xl text-foreground truncate">Scholarship Processing Queue</h3>
-                  <ExportBtn kind="scholarship-applications"/>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={schKind}
+                      onChange={e => setSchKind(e.target.value)}
+                      className="text-xs font-bold uppercase tracking-wider border border-border rounded-xl px-3 py-2 bg-background text-foreground cursor-pointer focus:outline-none focus:border-accent"
+                      data-testid="scholarship-kind-filter"
+                    >
+                      <option value="all">All programmes</option>
+                      <option value="wath">WATH</option>
+                      <option value="carnival">WATH Carnival</option>
+                      <option value="scholarship">Scholarship</option>
+                    </select>
+                    <ExportBtn kind="scholarship-applications"/>
+                  </div>
                 </div>
                 {filteredScholarships.length === 0 ? (
                   <EmptyState />
                 ) : (
                   <div className="space-y-3">
-                    {filteredScholarships.map((a) => {
+                    {schPage.pageItems.map((a) => {
                       const editing = resultEditor[a.id];
                       const r = editing || { marks_obtained: a.result_marks_obtained ?? "", total_marks: a.result_total_marks ?? 100, rank: a.result_rank ?? "", percentile: a.result_percentile ?? "", scholarship_percentage: a.result_scholarship_percentage ?? 0, remarks: a.result_remarks ?? "", publish: a.result_published ?? false };
                       
@@ -1590,6 +1610,7 @@ export default function AdminDashboard() {
                         </div>
                       );
                     })}
+                    <Paginator {...schPage} testid="scholarships-paginator"/>
                   </div>
                 )}
               </div>
@@ -1617,7 +1638,7 @@ export default function AdminDashboard() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border text-foreground bg-background/20">
-                          {filteredJobApps.map((a) => (
+                          {jobPage.pageItems.map((a) => (
                             <tr key={a.id} className="hover:bg-muted/50 transition-colors">
                               <td className="p-3 sm:p-4 font-bold text-foreground">{a.name}</td>
                               <td className="p-3 sm:p-4 text-muted-foreground font-mono text-xs">{a.email}</td>
@@ -1633,6 +1654,7 @@ export default function AdminDashboard() {
                         </tbody>
                       </table>
                     </div>
+                    <div className="px-4 pb-4"><Paginator {...jobPage} testid="jobapps-paginator"/></div>
                   </div>
                 )}
               </div>

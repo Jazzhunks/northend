@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { erp, isSuper, fmtINR, fmtDate } from "@/lib/erpApi";
 // Added "api" explicitly inside your central api routing import below
 import { api, formatError, API_BASE } from "@/lib/api";
+import { usePaged, Paginator } from "@/components/Paginator";
 import { Search, Plus, Download, X, GraduationCap, Users, User, Mail, Smartphone, Receipt, BadgeAlert, ClipboardList } from "lucide-react";
 
 export default function ErpStudents() {
@@ -13,6 +14,7 @@ export default function ErpStudents() {
   const [branchId, setBranchId] = useState("");
   const [branches, setBranches] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
+  const studentsPage = usePaged(items, 25);
 
   const reload = useCallback(() => {
     const params = {};
@@ -93,7 +95,7 @@ export default function ErpStudents() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border bg-background/20">
-              {items.map(s => {
+              {studentsPage.pageItems.map(s => {
                 const baseTuition = Number(s.total_fee || 0);
                 const scholarshipExemption = (Number(s.scholarship_percent || 0) / 100) * baseTuition;
                 const dynamicFlatDiscount = Number(s.discount || 0);
@@ -133,6 +135,7 @@ export default function ErpStudents() {
             </tbody>
           </table>
         </div>
+        <div className="px-5 py-3 border-t border-border shrink-0"><Paginator {...studentsPage} testid="students-paginator"/></div>
       </div>
 
       {/* Admission Execution Sheet Portal */}

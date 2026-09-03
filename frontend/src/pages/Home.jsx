@@ -194,12 +194,12 @@ export default function Home() {
                   <div className="relative max-w-3xl">
                     <div className="inline-flex items-center gap-2 px-3.5 py-1.5 glass rounded-full text-[10px] font-bold uppercase tracking-[0.22em] mb-6">
                       <Sparkle weight="fill" size={12} className="text-accent shrink-0" />
-                      <span className="truncate">Kashmir's flagship talent hunt · 2026</span>
+                      <span className="truncate">WATH Carnival · Kashmir's flagship talent weekend · 2026</span>
                     </div>
 
                     <h2 className="font-display text-3xl sm:text-5xl lg:text-7xl font-light tracking-[-0.03em] leading-[1.05] sm:leading-[0.95]">
                       <span className="bg-gradient-to-br from-primary via-accent to-primary bg-clip-text text-transparent font-medium">
-                        WATH
+                        WATH Carnival
                       </span>
                       <span className="block text-lg sm:text-xl lg:text-2xl text-foreground/85 mt-3 font-light">
                         <span className="text-accent italic font-medium">Wisdom</span> · <span className="text-accent italic font-medium">Aptitude</span> · <span className="text-accent italic font-medium">Talent</span> · <span className="text-accent italic font-medium">Hunt</span>
@@ -207,12 +207,12 @@ export default function Home() {
                     </h2>
 
                     <p className="mt-6 text-sm sm:text-base lg:text-lg text-muted-foreground max-w-xl leading-relaxed">
-                      A 2-hour valley-wide scholarship exam. Unlock up to <b className="text-accent">100% fee waiver</b> and <b className="text-foreground">cash prizes</b> across NEET, JEE and Foundation programmes. Free to register.
+                      A valley-wide scholarship exam carnival — pick your date &amp; slot. Unlock up to <b className="text-accent">100% fee waiver</b> and <b className="text-foreground">cash prizes</b> across NEET, JEE and Foundation programmes. Free to register.
                     </p>
 
                     <div className="mt-8 flex items-center gap-4 flex-wrap">
                       <span className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-accent text-accent-foreground text-xs font-bold uppercase tracking-[0.18em] glow-accent group-hover:translate-y-[-2px] transition-transform">
-                        Explore WATH <ArrowUpRight weight="bold" size={14} />
+                        Explore WATH Carnival <ArrowUpRight weight="bold" size={14} />
                       </span>
                       <div className="flex items-center gap-3 sm:gap-6 text-[10px] sm:text-[11px] uppercase tracking-[0.22em] text-muted-foreground font-bold flex-wrap">
                         <span>Free entry</span>

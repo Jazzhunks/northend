@@ -3,6 +3,7 @@ import { useOutletContext } from "react-router-dom";
 import { toast } from "sonner";
 import { erp, isSuper, fmtDate } from "@/lib/erpApi";
 import { formatError } from "@/lib/api";
+import { usePaged, Paginator } from "@/components/Paginator";
 import { Plus, X, Search, FileText, Smartphone, Compass, Edit3, MessageSquare, Calendar, Milestone } from "lucide-react";
 
 const STATUSES = ["new", "contacted", "follow_up", "converted", "lost"];
@@ -43,6 +44,8 @@ export default function ErpLeads() {
     l.target_exam?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     l.notes?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const leadsPage = usePaged(filteredItems, 25);
 
   return (
     <div className="space-y-6 h-[calc(100vh-120px)] flex flex-col min-h-0 animate-fadeIn" data-testid="erp-leads-page">
@@ -113,7 +116,7 @@ export default function ErpLeads() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border bg-background/20">
-              {filteredItems.map(l => (
+              {leadsPage.pageItems.map(l => (
                 <tr key={l.id} className="hover:bg-muted/50 transition-colors group" data-testid={`lead-row-${l.id}`}>
                   <td className="px-5 py-4 text-xs whitespace-nowrap text-muted-foreground font-mono">{fmtDate(l.created_at)}</td>
                   <td className="px-5 py-4 text-xs font-semibold text-foreground truncate">{l.name}</td>
@@ -150,6 +153,7 @@ export default function ErpLeads() {
             </tbody>
           </table>
         </div>
+        <div className="px-5 py-3 border-t border-border shrink-0"><Paginator {...leadsPage} testid="leads-paginator"/></div>
       </div>
 
       {/* Creation Sheet Dialog */}

@@ -11,6 +11,7 @@ The WATH page has three modes controlled by system_meta.wath_page_config:
 """
 from __future__ import annotations
 import uuid
+import hashlib
 from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException
@@ -63,16 +64,39 @@ def build_wath_router(db, require_admin_dep) -> APIRouter:
             return {"key": PAGE_CONFIG_KEY, "mode": "exam", "active_carnival_id": None, "disabled_message": None}
         return cfg
 
-    async def _hydrate_carnival(carnival: Dict[str, Any]) -> Dict[str, Any]:
-        """Merge live booked_count from wath_slot_counts into the carnival's exam_dates."""
+    async def _hydrate_carnival(carnival: Dict[str, Any], pad: bool = False) -> Dict[str, Any]:
+        """Merge live booked_count from wath_slot_counts into the carnival's exam_dates.
+
+        When pad=True (public views only), the DISPLAYED booked_count / remaining are
+        inflated so slots appear ~50-70% full to create urgency ("booking fast"),
+        while `available` and real capacity stay truthful so genuine registrations
+        are NEVER blocked until the real capacity is reached. Admin views pass pad=False
+        and always see the real numbers.
+        """
+        def _fill_fraction(cid: str, date: str, time: str) -> float:
+            h = int(hashlib.md5(f"{cid}|{date}|{time}".encode()).hexdigest(), 16)
+            return 0.50 + (h % 21) / 100.0  # deterministic 0.50 .. 0.70
+
         counts = await db.wath_slot_counts.find({"carnival_id": carnival["id"]}, {"_id": 0}).to_list(500)
         by_key = {f"{c['date']}|{c['time']}": c["booked_count"] for c in counts}
         for d in carnival.get("exam_dates", []):
             for s in d.get("slots", []):
                 k = f"{d['date']}|{s['time']}"
-                s["booked_count"] = int(by_key.get(k, 0))
-                s["remaining"] = max(0, int(s.get("capacity", 0)) - s["booked_count"])
-                s["available"] = bool(s.get("is_open", True)) and s["remaining"] > 0
+                capacity = int(s.get("capacity", 0))
+                real_booked = int(by_key.get(k, 0))
+                real_remaining = max(0, capacity - real_booked)
+                # `available` is ALWAYS based on the real remaining capacity.
+                s["available"] = bool(s.get("is_open", True)) and real_remaining > 0
+                if pad and capacity > 0:
+                    padded_booked = max(real_booked, round(capacity * _fill_fraction(carnival["id"], d["date"], s["time"])))
+                    padded_booked = min(padded_booked, capacity)
+                    if real_remaining > 0:
+                        padded_booked = min(padded_booked, capacity - 1)  # always show ≥1 left while real seats exist
+                    s["booked_count"] = padded_booked
+                    s["remaining"] = max(0, capacity - padded_booked)
+                else:
+                    s["booked_count"] = real_booked
+                    s["remaining"] = real_remaining
         return carnival
 
     async def _get_wath_exam_campaign() -> Optional[Dict[str, Any]]:
@@ -96,7 +120,7 @@ def build_wath_router(db, require_admin_dep) -> APIRouter:
                 # fallback: newest active carnival
                 car = await db.wath_carnivals.find_one({"active": True}, {"_id": 0}, sort=[("created_at", -1)])
             if car:
-                payload["carnival"] = await _hydrate_carnival(car)
+                payload["carnival"] = await _hydrate_carnival(car, pad=True)
             else:
                 # No carnival configured — degrade gracefully to exam mode
                 payload["mode"] = "exam"
@@ -109,7 +133,7 @@ def build_wath_router(db, require_admin_dep) -> APIRouter:
         car = await db.wath_carnivals.find_one({"id": cid}, {"_id": 0})
         if not car:
             raise HTTPException(404, "Carnival not found")
-        return await _hydrate_carnival(car)
+        return await _hydrate_carnival(car, pad=True)
 
     # ---------- Admin: page config ----------
     @router.get("/admin/wath/page-config")
