@@ -167,7 +167,7 @@ function CarnivalSlotPicker({ carnival, chosenDate, chosenSlot, onPick }) {
       <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-accent font-bold">
         <CalendarBlank size={12}/> Pick your exam slot
       </div>
-      <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+      <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {dates.map(d => {
           const isActive = d.date === activeDate;
           const remaining = (d.slots || []).reduce((sum, s) => sum + (s.remaining || 0), 0);
@@ -179,7 +179,7 @@ function CarnivalSlotPicker({ carnival, chosenDate, chosenSlot, onPick }) {
               key={d.date}
               onClick={() => setActiveDate(d.date)}
               disabled={fullyBooked}
-              className={`shrink-0 px-4 py-2 rounded-xl text-[11px] font-medium text-center transition ${isActive ? "bg-accent text-accent-foreground" : fullyBooked ? "bg-white/[0.02] text-muted-foreground/40 line-through" : "glass text-foreground/80 hover:text-foreground"}`}
+              className={`shrink-0 snap-start px-4 py-2 rounded-xl text-[11px] font-medium text-center transition ${isActive ? "bg-accent text-accent-foreground" : fullyBooked ? "bg-white/[0.02] text-muted-foreground/40 line-through" : "glass text-foreground/80 hover:text-foreground"}`}
               data-testid={`slot-date-${d.date}`}
             >
               <div className="text-center">{new Date(d.date).toLocaleDateString("en-IN", { weekday: "short", day: "2-digit", month: "short" })}</div>
@@ -191,7 +191,7 @@ function CarnivalSlotPicker({ carnival, chosenDate, chosenSlot, onPick }) {
         })}
       </div>
       {active && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
           {(active.slots || []).map(s => {
             const disabled = !s.available;
             const selected = chosenDate === active.date && chosenSlot === s.time;
@@ -410,11 +410,13 @@ function HeroSection({ campaign, carnival, mode, loading, onRegistered }) {
                           <span className="font-bold uppercase text-amber-400">Opening soon</span> — drop details to get notified.
                         </div>
                       )}
-                      <div className="grid grid-cols-2 gap-2.5">
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                         <input className={inputCls} placeholder="Full name" required value={form.name} onChange={e => setForm({...form, name: e.target.value})} data-testid="wath-name"/>
                         <input className={inputCls} type="email" placeholder="Email" required value={form.email} onChange={e => setForm({...form, email: e.target.value})} data-testid="wath-email"/>
                       </div>
-                      <div className="grid grid-cols-2 gap-2.5">
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                         <input className={inputCls} placeholder="Phone number" required value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} data-testid="wath-phone"/>
                         <div className="relative">
                           <select className={`${inputCls} appearance-none pr-8`} required value={form.class_or_course} onChange={e => setForm({...form, class_or_course: e.target.value})} data-testid="wath-class">
@@ -424,7 +426,8 @@ function HeroSection({ campaign, carnival, mode, loading, onRegistered }) {
                           <CaretDown weight="bold" size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-2.5">
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                         <input className={inputCls} placeholder="Father's / Guardian's name" required value={form.father_name} onChange={e => setForm({...form, father_name: e.target.value})} data-testid="wath-father"/>
                         <div className="relative">
                           <select className={`${inputCls} appearance-none pr-8`} required value={form.gender} onChange={e => setForm({...form, gender: e.target.value})} data-testid="wath-gender">
@@ -434,7 +437,8 @@ function HeroSection({ campaign, carnival, mode, loading, onRegistered }) {
                           <CaretDown weight="bold" size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-2.5">
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                         <div className="relative">
                           <input className={`${inputCls} pr-3`} type="date" required value={form.dob} onChange={e => setForm({...form, dob: e.target.value})} data-testid="wath-dob" aria-label="Date of birth"/>
                           {!form.dob && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 text-xs pointer-events-none"></span>}
