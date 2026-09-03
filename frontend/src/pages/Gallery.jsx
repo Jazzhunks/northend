@@ -4,7 +4,9 @@ import { Eyebrow, Reveal } from "@/components/Cinematic";
 import { galleryAPI } from "@/lib/api";
 import PageHero from "@/components/PageHero";
 import GlassPanel from "@/components/GlassPanel";
-import { Play, FileText, Image as ImageIcon, ArrowUpRight, Flame } from "@phosphor-icons/react";
+import { Play, FileText, Image as ImageIcon, ArrowUpRight } from "@phosphor-icons/react";
+import { Maximize2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 const CARD_SIZES = [
   "tall",
@@ -19,6 +21,7 @@ export default function Gallery() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("All");
+  const [selectedItem, setSelectedItem] = useState(null);
 
   useEffect(() => {
     galleryAPI.list()
@@ -93,7 +96,7 @@ export default function Gallery() {
                   {/* Hero card */}
                   {hero && (
                     <div className="md:col-span-2 md:row-span-2" data-testid={`gallery-${hero.id}`}>
-                      <GalleryCard item={hero} size="hero" />
+                      <GalleryCard item={hero} size="hero" onClick={() => setSelectedItem(hero)} />
                     </div>
                   )}
 
@@ -102,7 +105,7 @@ export default function Gallery() {
                     const size = CARD_SIZES[idx % CARD_SIZES.length];
                     return (
                       <div key={item.id} data-testid={`gallery-${item.id}`}>
-                        <GalleryCard item={item} size={size} />
+                        <GalleryCard item={item} size={size} onClick={() => setSelectedItem(item)} />
                       </div>
                     );
                   })}
@@ -120,19 +123,70 @@ export default function Gallery() {
           </div>
         </section>
       </div>
+
+      {/* Full-size viewer */}
+      <Dialog open={!!selectedItem} onOpenChange={(open) => !open && setSelectedItem(null)}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-background border-border rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-display font-semibold text-foreground">
+              {selectedItem?.title}
+            </DialogTitle>
+            {selectedItem?.description && (
+              <DialogDescription className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                {selectedItem.description}
+              </DialogDescription>
+            )}
+          </DialogHeader>
+
+          <div className="mt-4">
+            {selectedItem?.media_type === "video" && selectedItem?.media_url && (
+              <div className="rounded-2xl overflow-hidden bg-black/5">
+                <video controls className="w-full" style={{ maxHeight: "70vh" }}>
+                  <source src={selectedItem.media_url} />
+                </video>
+              </div>
+            )}
+
+            {selectedItem?.media_type === "text" && (
+              <div className="rounded-2xl border border-border bg-background/40 p-6">
+                <p className="text-base sm:text-lg text-foreground leading-relaxed whitespace-pre-wrap">
+                  {selectedItem.description || selectedItem.title}
+                </p>
+              </div>
+            )}
+
+            {selectedItem?.media_type === "image" && selectedItem?.media_url && (
+              <div className="rounded-2xl overflow-hidden bg-muted/30">
+                <img
+                  src={selectedItem.media_url}
+                  alt={selectedItem.title}
+                  className="w-full h-auto object-contain"
+                  style={{ maxHeight: "70vh" }}
+                />
+              </div>
+            )}
+
+            {selectedItem?.category && (
+              <div className="mt-4 flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground font-bold">
+                <span className="capitalize">{selectedItem.media_type}</span>
+                <span className="text-border">·</span>
+                <span>{selectedItem.category}</span>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
 
-function GalleryCard({ item, size }) {
+function GalleryCard({ item, size, onClick }) {
   const isHero = size === "hero";
-  const isTall = size === "tall";
-  const isWide = size === "wide";
 
   const media = (
     <div
       className={`relative w-full h-full rounded-3xl overflow-hidden bg-muted/30 ${
-        isHero ? "md:h-full" : isTall ? "h-full" : isWide ? "h-full" : "h-full"
+        isHero ? "md:h-full" : "h-full"
       }`}
     >
       {item.media_type === "video" && item.media_url ? (
@@ -145,7 +199,7 @@ function GalleryCard({ item, size }) {
         </video>
       ) : item.media_type === "text" ? (
         <div className="h-full overflow-y-auto p-6 bg-background/40">
-          <p className="text-sm sm:text-base text-foreground leading-relaxed whitespace-pre-wrap">
+          <p className="text-sm sm:text-base text-foreground leading-relaxed whitespace-pre-wrap line-clamp-6">
             {item.description || item.title}
           </p>
         </div>
@@ -164,6 +218,13 @@ function GalleryCard({ item, size }) {
       {item.media_type !== "text" && (
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
       )}
+
+      {/* Expand icon */}
+      <div className="absolute top-4 right-4">
+        <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/90">
+          <Maximize2 size={16} className="text-black" />
+        </span>
+      </div>
 
       {/* Content overlay */}
       <div className="absolute inset-0 p-5 flex flex-col justify-between">
@@ -199,14 +260,17 @@ function GalleryCard({ item, size }) {
   // Text-only card style
   if (item.media_type === "text") {
     return (
-      <div className="h-full rounded-3xl border border-border bg-background/40 p-5 flex flex-col justify-between">
+      <button
+        onClick={onClick}
+        className="h-full rounded-3xl border border-border bg-background/40 p-5 flex flex-col justify-between text-left cursor-pointer hover:border-primary/30 transition"
+      >
         <div>
           {item.category && (
             <span className="inline-block px-2.5 py-1 rounded-full bg-muted/50 text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-3">
               {item.category}
             </span>
           )}
-          <p className="text-sm sm:text-base text-foreground leading-relaxed whitespace-pre-wrap">
+          <p className="text-sm sm:text-base text-foreground leading-relaxed whitespace-pre-wrap line-clamp-6">
             {item.description || item.title}
           </p>
         </div>
@@ -215,14 +279,17 @@ function GalleryCard({ item, size }) {
             {item.title}
           </div>
         )}
-      </div>
+      </button>
     );
   }
 
   // Standard card with image/video
   return (
-    <div className={`group relative h-full ${isHero ? "md:row-span-2" : ""}`}>
+    <button
+      onClick={onClick}
+      className={`group relative h-full w-full text-left cursor-pointer ${isHero ? "md:row-span-2" : ""}`}
+    >
       {media}
-    </div>
+    </button>
   );
 }
