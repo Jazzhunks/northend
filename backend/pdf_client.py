@@ -340,7 +340,7 @@ def admit_card_pdf(application_no, name, phone, school, standard, target_exam,
     kv(col1, ex_top - 10 * mm, "Programme / Target Track", target_exam_str, BRAND_BLUE, 11)
     kv(col2, ex_top - 10 * mm, "Roll No.", app_no_str, INK, 11)
     kv(col1, ex_top - 23 * mm, "Examination Date", exam_date_str, BRAND_GREEN, 11)
-    kv(col2, ex_top - 23 * mm, "Reporting Time", exam_time_str, BRAND_GREEN, 11)
+    kv(col2, ex_top - 23 * mm, "Exam Time", exam_time_str, BRAND_GREEN, 11)
 
     c.setStrokeColor(CARD_LINE)
     c.line(LM + 3 * mm, ex_top - 32 * mm, RM - 3 * mm, ex_top - 32 * mm)
@@ -353,7 +353,7 @@ def admit_card_pdf(application_no, name, phone, school, standard, target_exam,
     notes = [
         "Carry a printed copy of this admit card along with a valid school photo ID card.",
         "Affix a recent passport-size photograph in the box above before the exam day.",
-        "Report to your designated centre at least 30 minutes prior to the reporting time.",
+        "Report to your designated centre at least 30 minutes prior to the Exam time.",
         "Mobile phones, smart watches, calculators and electronic gadgets are strictly prohibited.",
         "Results will be declared within 7 days and can be verified at northendedu.com via the QR.",
     ]
