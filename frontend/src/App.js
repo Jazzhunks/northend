@@ -23,6 +23,8 @@ import ScholarshipDashboard from "@/pages/ScholarshipDashboard";
 import Examiner from "@/pages/Examiner";
 import Privacy from "@/pages/Privacy";
 import Gallery from "./pages/Gallery";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
 
 // --- ERP Console Infrastructure Imports ---
 import ErpLayout from "@/pages/erp/ErpLayout";
