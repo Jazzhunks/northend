@@ -2,7 +2,6 @@
 import os
 from dotenv import load_dotenv
 from pathlib import Path
-from openai import OpenAI
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -33,7 +32,6 @@ from fastapi.responses import StreamingResponse
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, EmailStr
-from openai import OpenAI
 
 # 4. INTERNAL CLIENTS (Loaded after environment is populated)
 from storage_client import init_storage, put_object, get_object, aclose as storage_aclose, APP_NAME
@@ -165,12 +163,6 @@ else:
         client = AsyncMongoMockClient()
         db = client[os.environ.get('DB_NAME', 'northend_db')]
 
-# Initialize OpenAI Client dynamically using Environment Variables
-nvidia_openai_client = OpenAI(
-    base_url=NVIDIA_BASE_URL,
-    api_key=NVIDIA_API_KEY
-)
-
 app = FastAPI(title="Unacademy Offline Centre API")
 api = APIRouter(prefix="/api")
 
@@ -242,44 +234,6 @@ async def require_super_admin(user: dict = Depends(get_current_user)) -> dict:
         raise HTTPException(403, "Super admin access required")
     return user
 
-# ---------- Completion ----------
-def run_completion():
-    # Initialize OpenAI client targeting your custom base URL
-    client = OpenAI(
-        base_url=base_url,
-        api_key=api_key
-    )
-
-    # Make the streaming chat completion request
-    completion = client.chat.completions.create(
-        model=model,
-        messages=[{"role": "user", "content": "Write a limerick about the wonders of GPU computing."}],
-        temperature=1,
-        top_p=0.95,
-        max_tokens=16384,
-        extra_body={
-            "chat_template_kwargs": {"enable_thinking": True},
-            "reasoning_budget": 16384
-        },
-        stream=True
-    )
-
-    # Process stream output
-    for chunk in completion:
-        if not chunk.choices:
-            continue
-        
-        # Output reasoning content if supported by host
-        reasoning = getattr(chunk.choices[0].delta, "reasoning_content", None)
-        if reasoning:
-            print(reasoning, end="", flush=True)
-            
-        # Output response text
-        if chunk.choices[0].delta.content is not None:
-            print(chunk.choices[0].delta.content, end="", flush=True)
-
-if __name__ == "__main__":
-    run_completion()
 # ---------- Models ----------
 class RegisterIn(BaseModel):
     name: str
@@ -319,6 +273,7 @@ class ScholarshipIn(BaseModel):
     whatsapp_community_url: Optional[str] = None
     active: bool = True
     is_featured: bool = False
+    kind: Literal["scholarship", "wath"] = "scholarship"
 
 class ScholarshipApplicationIn(BaseModel):
     name: str
@@ -328,8 +283,12 @@ class ScholarshipApplicationIn(BaseModel):
     standard: str
     target_exam: str
     city: str
-    scholarship_id: str
+    scholarship_id: Optional[str] = None
     venue: Optional[str] = None
+    # WATH Carnival fields
+    carnival_id: Optional[str] = None
+    chosen_date: Optional[str] = None   # YYYY-MM-DD
+    chosen_slot_time: Optional[str] = None  # "10:00 AM"
 
 class ScholarshipApplicationUpdateIn(BaseModel):
     name: Optional[str] = None
@@ -586,8 +545,15 @@ async def delete_course(cid: str, _admin = Depends(require_admin)):
 
 # ---------- Scholarships ----------
 @api.get("/scholarships")
-async def list_scholarships():
-    items = await db.scholarships.find({}, {"_id": 0, "examiner_token": 0}).sort("created_at", -1).to_list(100)
+async def list_scholarships(include_wath: bool = False):
+    """Public scholarships list. WATH campaigns are excluded by default so they only appear on /wath."""
+    q: Dict[str, Any] = {}
+    if not include_wath:
+        q["$and"] = [
+            {"$or": [{"kind": {"$exists": False}}, {"kind": {"$ne": "wath"}}]},
+            {"$or": [{"title": {"$not": {"$regex": "^WATH", "$options": "i"}}}, {"kind": "scholarship"}]},
+        ]
+    items = await db.scholarships.find(q, {"_id": 0, "examiner_token": 0}).sort("created_at", -1).to_list(100)
     return items
 
 @api.get("/admin/scholarships")
@@ -635,30 +601,57 @@ async def delete_scholarship(sid: str, _admin = Depends(require_admin)):
 async def apply_scholarship(payload: ScholarshipApplicationIn, background: BackgroundTasks, request: Request):
     client_ip = request.client.host if request.client else "unknown"
     check_rate_limit(f"scholarship_app:{client_ip}", max_requests=15, window_seconds=60)
-    campaign = await db.scholarships.find_one({"id": payload.scholarship_id}, {"_id": 0})
-    if not campaign:
-        raise HTTPException(404, "Scholarship campaign not found")
-    if not campaign.get("active"):
-        raise HTTPException(400, "Scholarship campaign is closed")
+
+    # -------- Resolve target: scholarship campaign OR WATH Carnival --------
+    campaign: Optional[Dict[str, Any]] = None
+    carnival: Optional[Dict[str, Any]] = None
+    campaign_kind = "scholarship"
+
+    if payload.carnival_id:
+        carnival = await db.wath_carnivals.find_one({"id": payload.carnival_id}, {"_id": 0})
+        if not carnival or not carnival.get("active", True):
+            raise HTTPException(404, "Carnival not found or inactive")
+        if not payload.chosen_date or not payload.chosen_slot_time:
+            raise HTTPException(400, "Please pick an exam date and time slot")
+        campaign_kind = "carnival"
+    elif payload.scholarship_id:
+        campaign = await db.scholarships.find_one({"id": payload.scholarship_id}, {"_id": 0})
+        if not campaign:
+            raise HTTPException(404, "Scholarship campaign not found")
+        if not campaign.get("active"):
+            raise HTTPException(400, "Scholarship campaign is closed")
+        campaign_kind = campaign.get("kind", "scholarship")
+    else:
+        raise HTTPException(400, "scholarship_id or carnival_id required")
 
     clean_email = payload.email.lower().strip()
     clean_phone = payload.phone.strip()
 
-    existing_app = await db.scholarship_applications.find_one({
-        "scholarship_id": payload.scholarship_id,
-        "$or": [{"email": clean_email}, {"phone": clean_phone}]
-    })
+    # Duplicate check within the same campaign or carnival
+    dup_query: Dict[str, Any] = {"$or": [{"email": clean_email}, {"phone": clean_phone}]}
+    if payload.carnival_id:
+        dup_query["carnival_id"] = payload.carnival_id
+    else:
+        dup_query["scholarship_id"] = payload.scholarship_id
 
+    existing_app = await db.scholarship_applications.find_one(dup_query)
     if existing_app:
         msg = f"An application already exists with this data (App No: {existing_app.get('application_no')})."
         raise HTTPException(status_code=400, detail=msg)
 
     selected_venue = _sanitize_venue(payload.venue)
 
+    # If carnival: try to reserve the slot atomically BEFORE inserting the app
+    if carnival:
+        ok = await try_reserve_slot(db, carnival["id"], payload.chosen_date, payload.chosen_slot_time)
+        if not ok:
+            raise HTTPException(409, "This slot is now full or closed — please pick another")
+
     doc = payload.model_dump()
     doc["id"] = new_id()
     doc["email"] = clean_email
     doc["phone"] = clean_phone
+    doc["campaign_kind"] = campaign_kind
 
     for _ in range(10):
         candidate = str(random.randint(10000000, 99999999))
@@ -669,13 +662,28 @@ async def apply_scholarship(payload: ScholarshipApplicationIn, background: Backg
         doc["application_no"] = str(int(datetime.now(timezone.utc).timestamp() * 1000))[-8:]
 
     doc["status"] = "pending"
-    doc["scholarship_title"] = campaign.get("title", "")
+    if campaign:
+        doc["scholarship_title"] = campaign.get("title", "")
+        exam_date_str = campaign.get("exam_date", "TBA")
+        exam_time_str = campaign.get("exam_time", "10:00 AM")
+        title_for_email = campaign.get("title") or payload.target_exam
+    else:
+        doc["scholarship_title"] = carnival.get("title", "WATH Carnival")
+        exam_date_str = payload.chosen_date
+        exam_time_str = payload.chosen_slot_time
+        title_for_email = carnival.get("title") or "WATH Carnival"
     doc["venue"] = selected_venue
     doc["created_at"] = now_iso()
 
-    await db.scholarship_applications.insert_one(doc)
+    try:
+        await db.scholarship_applications.insert_one(doc)
+    except Exception:
+        # Roll back the slot reservation if the insert fails
+        if carnival:
+            await release_slot(db, carnival["id"], payload.chosen_date, payload.chosen_slot_time)
+        raise
     doc.pop("_id", None)
-    doc["whatsapp_community_url"] = campaign.get("whatsapp_community_url")
+    doc["whatsapp_community_url"] = (campaign or carnival or {}).get("whatsapp_community_url")
 
     admit_pdf_bytes = None
     try:
@@ -683,9 +691,9 @@ async def apply_scholarship(payload: ScholarshipApplicationIn, background: Backg
             application_no=doc["application_no"],
             name=payload.name, phone=payload.phone, school=payload.school,
             standard=payload.standard, target_exam=payload.target_exam,
-            exam_date=campaign.get("exam_date", "TBA"), venue=selected_venue,
-            exam_time=campaign.get("exam_time", "10:00 AM"),
-            scholarship_title=campaign.get("title", "Scholarship Test")
+            exam_date=exam_date_str, venue=selected_venue,
+            exam_time=exam_time_str,
+            scholarship_title=title_for_email,
         )
     except Exception as e:
         logging.error(f"Failed to generate Admit Card PDF: {e}")
@@ -694,8 +702,8 @@ async def apply_scholarship(payload: ScholarshipApplicationIn, background: Backg
         email_scholarship_received, payload.email, payload.name, doc["application_no"], payload.target_exam, admit_pdf_bytes
     )
     background.add_task(
-        email_admin_notification, f"New scholarship application: {payload.name}",
-        f"<p><b>{payload.name}</b> from {payload.school} ({payload.standard}) applied for <b>{campaign.get('title','')}</b> at <b>{doc['venue']}</b>.<br/>App No: {doc['application_no']}<br/>Phone: {payload.phone}</p>"
+        email_admin_notification, f"New {campaign_kind} application: {payload.name}",
+        f"<p><b>{payload.name}</b> from {payload.school} ({payload.standard}) applied for <b>{title_for_email}</b> at <b>{doc['venue']}</b>.<br/>App No: {doc['application_no']}<br/>Phone: {payload.phone}<br/>Slot: {exam_date_str} · {exam_time_str}</p>"
     )
 
     if admit_pdf_bytes:
@@ -704,12 +712,12 @@ async def apply_scholarship(payload: ScholarshipApplicationIn, background: Backg
             phone=payload.phone,
             name=payload.name,
             application_no=doc["application_no"],
-            scholarship_title=campaign.get("title") or payload.target_exam,
-            standard=payload.standard,                       
-            exam_date=campaign.get("exam_date", "TBA"),
-            exam_time=campaign.get("exam_time", "10:00 AM"), 
+            scholarship_title=title_for_email,
+            standard=payload.standard,
+            exam_date=exam_date_str,
+            exam_time=exam_time_str,
             venue=selected_venue,
-            pdf_bytes=admit_pdf_bytes
+            pdf_bytes=admit_pdf_bytes,
         )
 
     return doc
@@ -1938,6 +1946,38 @@ async def seed():
     async for sc in db.scholarships.find({"examiner_token": {"$exists": False}}, {"_id": 0, "id": 1}):
         await db.scholarships.update_one({"id": sc["id"]}, {"$set": {"examiner_token": uuid.uuid4().hex}})
 
+    # ---------- Migration: backfill scholarships.kind ----------
+    if not (await db.system_meta.find_one({"key": "kind_backfill_v1"})):
+        # Anything titled WATH becomes kind=wath. All other rows become kind=scholarship.
+        await db.scholarships.update_many(
+            {"title": {"$regex": "WATH", "$options": "i"}, "kind": {"$exists": False}},
+            {"$set": {"kind": "wath"}},
+        )
+        await db.scholarships.update_many(
+            {"kind": {"$exists": False}},
+            {"$set": {"kind": "scholarship"}},
+        )
+        # Backfill campaign_kind on existing applications
+        wath_ids = [d["id"] async for d in db.scholarships.find({"kind": "wath"}, {"_id": 0, "id": 1})]
+        if wath_ids:
+            await db.scholarship_applications.update_many(
+                {"scholarship_id": {"$in": wath_ids}, "campaign_kind": {"$exists": False}},
+                {"$set": {"campaign_kind": "wath"}},
+            )
+        await db.scholarship_applications.update_many(
+            {"campaign_kind": {"$exists": False}},
+            {"$set": {"campaign_kind": "scholarship"}},
+        )
+        # Ensure default WATH page config exists (mode=exam)
+        if not await db.system_meta.find_one({"key": "wath_page_config"}):
+            await db.system_meta.insert_one({
+                "key": "wath_page_config", "mode": "exam",
+                "active_carnival_id": None, "disabled_message": None,
+                "updated_at": now_iso(),
+            })
+        await db.system_meta.insert_one({"key": "kind_backfill_v1", "completed_at": now_iso()})
+        logging.info("kind_backfill_v1 migration complete")
+
     await db.scholarship_applications.create_index(
         [("scholarship_id", 1), ("email", 1)]
     )
@@ -2065,6 +2105,9 @@ api.include_router(erp_router)
 
 from whatsapp_inbox import build_whatsapp_router
 api.include_router(build_whatsapp_router(db, require_super_admin))
+# WATH Carnival + page config
+from wath_carnival import build_wath_router, try_reserve_slot, release_slot  # noqa: E402
+api.include_router(build_wath_router(db, require_admin))
 app.include_router(api)
 
 _default_allowed = [

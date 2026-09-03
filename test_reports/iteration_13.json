@@ -1,0 +1,33 @@
+{
+  "summary": "Iteration 13 — Retested the WATH Carnival over-booking regression fix from iteration_12. All 5 regression tests pass. Two-phase try_reserve_slot + unique index on wath_slot_counts(carnival_id,date,time) correctly prevents over-booking under real concurrency (asyncio.gather via httpx.AsyncClient).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration13_overbook_regression.py",
+    "/app/test_reports/pytest/iter13.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "try_reserve_slot creates the unique index on every call via best-effort try/except — functionally correct and idempotent, but noisy. Consider moving create_index into a startup hook so the first request isn't paying the cost and errors aren't silently swallowed.",
+    "release_slot decrements booked_count on insert failure but does not decrement below 0 (guarded by $gt:0) — correct. However, if the scholarship_applications.insert_one raises AFTER the 8-digit application_no was already reserved via a prior find_one, no ledger cleanup is done for the app_no probe (harmless).",
+    "iteration_12 code review comments still apply for the WATH.jsx modal fallback (not re-tested this iteration per instructions)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration13_overbook_regression.py"
+  ],
+  "success_rate": {"backend": "100% (5/5)", "frontend": "n/a (skipped per instructions)"},
+  "test_credentials": "admin@northend.edu / Admin@2025",
+  "seed_data_creation": "Tests create TEST_OVERBOOK_* carnivals and TEST_-prefixed applicants; every carnival is DELETEd in finally blocks. Applicants are removed transitively via DELETE carnival (wath_slot_counts cascade); however scholarship_applications rows with the TEST_ email prefix remain in the DB — harmless and easily purged by prefix filter.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Regression suite for over-booking lives at /app/backend/tests/test_iteration13_overbook_regression.py. Covers: (1) seeded carnival hydration sanity, (2) sequential capacity=1 -> 200 then 409 with 8-digit application_no assertion, (3) 5 concurrent to capacity=1 slot via asyncio.gather/httpx.AsyncClient -> exactly 1×200 + 4×409, (4) 10 concurrent to capacity=3 slot -> exactly 3×200 + 7×409 with booked_count=3, (5) cross-carnival unique-index isolation. Note: ScholarshipApplicationIn requires `city` — earlier iterations may have missed this in test payloads. All tests self-clean their TEST_OVERBOOK_* carnivals. Prior iteration_12 UI review points (WATH.jsx modal in carnival mode) are still open but out of scope for this iteration.",
+  "rca of the issue": "Fix verified. The iteration_12 RCA (upsert=True on a full-slot filter inserted a duplicate counter doc, silently permitting infinite over-books) is resolved by iteration_13's two-phase strategy in /app/backend/wath_carnival.py:189 try_reserve_slot: (1) idempotent unique index on wath_slot_counts(carnival_id,date,time); (2) find_one_and_update on existing row with $lt capacity guard (no upsert); (3) fallback insert_one on first booking; (4) DuplicateKeyError branch re-runs step 2. Under 5-way and 10-way asyncio.gather concurrency the counts are exactly at capacity (1 and 3 respectively), and booked_count/available are correctly reflected in GET /api/admin/wath/carnivals/{id} and GET /api/wath/carnivals/{id}."
+}

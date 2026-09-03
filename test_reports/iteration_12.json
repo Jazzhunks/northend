@@ -1,0 +1,45 @@
+{
+  "summary": "Iteration 12: Tested WATH Carnival separation from Scholarships, atomic slot booking, admin config, and UI. 13/14 backend tests pass. CRITICAL backend bug found: try_reserve_slot allows over-booking because upsert=True with a $lt filter creates a duplicate counter doc when the slot is full instead of failing. Frontend UI (public /wath carnival mode, admin /admin WATH Management) works: mode cards, slot picker with disabled full slots, toast validation, registrations drawer grouped by slot.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST /api/scholarship-applications (carnival flow)",
+        "issue": "Over-booking possible. wath_carnival.try_reserve_slot uses find_one_and_update with filter {booked_count: {$lt: capacity}} + upsert=True. When the counter doc already exists and is full (booked_count==capacity), the filter no longer matches so Mongo performs an UPSERT and INSERTS A SECOND counter document with booked_count=1. There is no unique index on (carnival_id,date,time), so the insert succeeds and the function returns True, allowing unlimited over-booking. The subsequent /api/wath/page hydration also reads only the first counter via find({...}).to_list, but even summing wouldn't fix the correctness gap. Verified via automated over-book test: capacity=1, 2 registrations both returned 200 (expected 2nd = 409).",
+        "priority": "CRITICAL"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration12_wath_carnival.py",
+    "/app/test_reports/pytest/iter12.xml"
+  ],
+  "action_items": [
+    "Fix wath_carnival.try_reserve_slot to prevent over-booking. Recommended: (a) add a unique index on wath_slot_counts (carnival_id, date, time) so upsert of a duplicate raises DuplicateKeyError; combined with the $lt filter this makes over-booking impossible atomically. (b) OR remove upsert and pre-create the counter doc with booked_count:0 when the carnival is created/updated, then only the $inc happens under the $lt guard. Also handle the DuplicateKeyError branch to return False."
+  ],
+  "critical_code_review_comments": [
+    "wath_carnival.try_reserve_slot: race/over-book bug described above (CRITICAL).",
+    "wath_carnival._hydrate_carnival: If two counter docs existed for the same slot (see bug), only the first is used because dict merge in by_key overwrites — masks the bug in reads.",
+    "wath_carnival._get_page_config default returns key present but system_meta.update_one uses $set with 'key' — safe. However, DELETE carnival that is active flips mode to 'exam' but doesn't clear active_carnival_id atomically with mode — fine because both set together.",
+    "WATH.jsx modal form (fallback) does NOT include the CarnivalSlotPicker or handle carnival_id — users opening the hero modal in carnival mode can only submit via scholarship_id path, which will fail with 400 'scholarship_id or carnival_id required'. Consider hiding modal button in carnival mode or wiring the picker into the modal form too.",
+    "WATH.jsx inline form disables submit when `busy || (!campaign && !isCarnival)` but the modal form disables on `busy || !campaign` — inconsistent when in carnival mode.",
+    "server.py apply_scholarship: When carnival is active, dup email/phone check happens BEFORE try_reserve_slot — but if try_reserve_slot succeeds and insert_one fails, release_slot is called. Good. But if slot reservation happens and duplicate email check missed a race, the release is not invoked (the raise in dup path is before the reserve so ok). Overall ordering is safe.",
+    "server.py /api/scholarships filters out kind=wath but does not filter carnivals (they live in wath_carnivals collection anyway) — OK."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration12_wath_carnival.py"
+  ],
+  "success_rate": {"backend": "93% (13/14)", "frontend": "100% (spot-checked flows)"},
+  "test_credentials": "admin@northend.edu / Admin@2025; student@test.com / Student@2025",
+  "seed_data_creation": "Test file creates and cleans up temporary TEST_ carnivals for over-book / duplicate / registrations tests. No permanent DB pollution.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "main_agent_can_self_test": false,
+  "context_for_next_testing_agent": "Backend tests live in /app/backend/tests/test_iteration12_wath_carnival.py (pytest). One test (test_carnival_over_book_returns_409) will keep failing until main agent fixes try_reserve_slot. All other 13 tests pass green including: /api/wath/page hydration, /api/scholarships excludes WATH kind, admin auth on page-config, mode transitions (exam/disabled/carnival), 400 on carnival without id, carnival CRUD, delete-active-carnival-resets-mode, missing-both-ids 400, carnival-without-slot 400, duplicate email 400, registrations list. UI verified: /wath data-mode attr, slot-date pills, slot-time buttons with disabled 'Full' state, toast on missing slot, admin WATH Management side-nav, wath-mode-exam/carnival/disabled cards, new-carnival-btn, carnival-<id> rows, carnival-regs-<id> button, carnival-regs-drawer grouping by slot. Do NOT re-test WhatsApp inbox or bulk-register flows per instructions.",
+  "rca of the issue": "RCA — Over-booking in WATH Carnival slot reservation:\n\nCode: /app/backend/wath_carnival.py:212-220\n```\nres = await db.wath_slot_counts.find_one_and_update(\n  {\"carnival_id\": cid, \"date\": d, \"time\": t, \"booked_count\": {\"$lt\": capacity}},\n  {\"$inc\": {\"booked_count\": 1}, \"$setOnInsert\": {\"capacity\": capacity}},\n  upsert=True, return_document=True)\nif res and int(res.get(\"booked_count\", 0)) <= capacity: return True\n```\n\nWhen the slot's counter doc reaches booked_count == capacity, the filter no longer matches. Because upsert=True, MongoDB then performs an INSERT of a NEW counter document (with booked_count:1). Since there is NO unique index on (carnival_id,date,time), the insert succeeds, res.booked_count is 1, and the function returns True — allowing infinite over-books.\n\nReproduction: create carnival with capacity=1, POST /api/scholarship-applications twice with different emails but same carnival_id/chosen_date/chosen_slot_time. Both return 200 (expected 2nd = 409).\n\nMitigation: (1) Add unique index db.wath_slot_counts.create_index([(carnival_id,1),(date,1),(time,1)], unique=True) on startup — then upsert of a duplicate raises DuplicateKeyError which caller can catch and return False. (2) OR pre-create counter docs when carnival is created/updated with booked_count:0 and drop upsert=True; the $lt filter alone will then correctly fail to match a full slot and return None."
+}

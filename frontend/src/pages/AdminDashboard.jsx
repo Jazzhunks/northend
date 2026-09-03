@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import ChipInput from "@/components/ChipInput";
 import WhatsAppInbox from "@/pages/WhatsAppInbox";
+import WATHManagement from "@/pages/WATHManagement";
 
 const CATEGORIES = ["NEET", "IIT-JEE", "Foundation", "CBSE", "JKBOSE"];
 
@@ -61,6 +62,7 @@ const normalizeVenue = (rawVenue) => {
 
 const SIDE_NAV = [
   { id: "enrollments", label: "Enrollments", icon: ClipboardList },
+  { id: "wath", label: "WATH Management", icon: Trophy },
   { id: "scholarships", label: "Scholarships", icon: GraduationCap },
   { id: "chats", label: "WhatsApp Inbox", icon: MessageSquare },
   { id: "jobapps", label: "Job Applications", icon: Briefcase },
@@ -1455,6 +1457,12 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 <WhatsAppInbox />
+              </div>
+            )}
+
+            {activeTab === "wath" && (
+              <div className="animate-fadeIn" data-testid="admin-wath-tab">
+                <WATHManagement />
               </div>
             )}
 

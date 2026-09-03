@@ -74,67 +74,175 @@ function InfoBlock({ label, value, testid, mono }) {
 }
 
 export default function WATH() {
-  const [campaign, setCampaign] = useState(null);
+  const [pageState, setPageState] = useState(null);   // {mode, exam?, carnival?, disabled_message?}
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    api.get("/scholarships")
-      .then(r => {
-        const list = r.data || [];
-        const found = list.find(c => c.title?.toUpperCase().includes("WATH"))
-          || list.find(c => c.active !== false)
-          || list[0];
-        setCampaign(found || null);
-      })
-      .catch(() => setCampaign(null))
+  const load = () => {
+    setLoading(true);
+    api.get("/wath/page")
+      .then(r => setPageState(r.data || null))
+      .catch(() => setPageState(null))
       .finally(() => setLoading(false));
-  }, []);
+  };
+  useEffect(() => { load(); }, []);
+
+  const mode = pageState?.mode || "exam";
+  const campaign = mode === "exam" ? pageState?.exam : null;
+  const carnival = mode === "carnival" ? pageState?.carnival : null;
 
   return (
-    <div className="relative" data-testid="wath-page">
+    <div className="relative" data-testid="wath-page" data-mode={mode}>
       <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
 
-      <HeroSection campaign={campaign} loading={loading} />
-      <AboutSection />
-      <FormatSection />
-      <RewardsSection />
-      <SlabsSection />
-      <TimelineSection campaign={campaign} />
-      <AdmitCardDownloadSection campaign={campaign} />
-      <ResultCheckSection />
-      <FAQSection />
-      <FinalCTA />
+      {mode === "disabled" ? (
+        <DisabledMode message={pageState?.disabled_message}/>
+      ) : (
+        <>
+          <HeroSection
+            campaign={campaign}
+            carnival={carnival}
+            mode={mode}
+            loading={loading}
+            onRegistered={load}
+          />
+          <AboutSection />
+          <FormatSection />
+          <RewardsSection />
+          <SlabsSection />
+          <TimelineSection campaign={campaign} carnival={carnival} mode={mode}/>
+          <AdmitCardDownloadSection campaign={campaign} carnival={carnival}/>
+          <ResultCheckSection />
+          <FAQSection />
+          <FinalCTA />
+        </>
+      )}
+    </div>
+  );
+}
+
+function DisabledMode({ message }) {
+  return (
+    <section className="min-h-[70vh] grid place-items-center px-6 text-center">
+      <div className="max-w-lg">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass text-[10px] uppercase tracking-[0.22em] font-bold text-accent mb-6">
+          <Clock size={12}/> Registrations paused
+        </div>
+        <h1 className="font-display text-4xl lg:text-6xl font-light tracking-[-0.02em] leading-[0.95]">
+          WATH is <span className="italic text-accent">taking a breath</span>
+        </h1>
+        <p className="mt-4 text-sm text-muted-foreground">
+          {message || "The next scholarship examination window is being scheduled. Follow us on WhatsApp to be the first to know when registrations open."}
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function CarnivalSlotPicker({ carnival, chosenDate, chosenSlot, onPick }) {
+  const dates = carnival?.exam_dates || [];
+  const [activeDate, setActiveDate] = useState(chosenDate || dates[0]?.date);
+  useEffect(() => {
+    if (!chosenDate && dates[0]?.date) setActiveDate(dates[0].date);
+  }, [dates, chosenDate]);
+  const active = dates.find(d => d.date === activeDate);
+
+  return (
+    <div className="p-3 rounded-2xl border border-accent/25 bg-accent/[0.03] space-y-3" data-testid="wath-slot-picker">
+      <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-accent font-bold">
+        <CalendarBlank size={12}/> Pick your exam slot
+      </div>
+      <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+        {dates.map(d => {
+          const isActive = d.date === activeDate;
+          const remaining = (d.slots || []).reduce((sum, s) => sum + (s.remaining || 0), 0);
+          const fullyBooked = remaining === 0;
+          return (
+            <button
+              type="button"
+              key={d.date}
+              onClick={() => setActiveDate(d.date)}
+              disabled={fullyBooked}
+              className={`shrink-0 px-3 py-2 rounded-xl text-[11px] font-medium transition ${isActive ? "bg-accent text-accent-foreground" : fullyBooked ? "bg-white/[0.02] text-muted-foreground/40 line-through" : "glass text-foreground/80 hover:text-foreground"}`}
+              data-testid={`slot-date-${d.date}`}
+            >
+              <div>{new Date(d.date).toLocaleDateString("en-IN", { weekday: "short", day: "2-digit", month: "short" })}</div>
+              <div className="text-[9px] opacity-70 mt-0.5">{fullyBooked ? "Full" : `${remaining} left`}</div>
+            </button>
+          );
+        })}
+      </div>
+      {active && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+          {(active.slots || []).map(s => {
+            const disabled = !s.available;
+            const selected = chosenDate === active.date && chosenSlot === s.time;
+            return (
+              <button
+                type="button"
+                key={s.time}
+                disabled={disabled}
+                onClick={() => onPick(active.date, s.time)}
+                className={`px-2.5 py-2 rounded-lg text-[11px] font-medium transition text-left ${selected ? "bg-accent text-accent-foreground" : disabled ? "bg-white/[0.02] text-muted-foreground/40 line-through cursor-not-allowed" : "glass hover:border-accent/40"}`}
+                data-testid={`slot-time-${active.date}-${s.time.replace(/[^0-9A-Za-z]/g,'')}`}
+              >
+                <div className="flex items-center gap-1"><Clock size={10}/>{s.time}</div>
+                <div className="text-[9px] opacity-70 mt-0.5">{disabled ? "Full" : `${s.remaining}/${s.capacity} left`}</div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {chosenDate && chosenSlot && (
+        <div className="text-[10px] text-accent flex items-center gap-1.5 pt-1 border-t border-white/5">
+          <Check size={12} weight="bold"/> Selected: {new Date(chosenDate).toLocaleDateString("en-IN", { weekday: "short", day: "2-digit", month: "short" })} · {chosenSlot}
+        </div>
+      )}
     </div>
   );
 }
 
 // ---------------- Sections ----------------
 
-function HeroSection({ campaign, loading }) {
-  const examDate = campaign?.exam_date;
+function HeroSection({ campaign, carnival, mode, loading, onRegistered }) {
+  const isCarnival = mode === "carnival" && !!carnival;
+  const examDate = isCarnival
+    ? carnival.exam_dates?.[0]?.date
+    : campaign?.exam_date;
   const [form, setForm] = useState({
     name: "", email: "", phone: "", class_or_course: "", school_name: "", venue: "",
+    chosen_date: "", chosen_slot_time: "",
   });
   const [submitted, setSubmitted] = useState(null);
   const [busy, setBusy] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Available venues come from exam campaign OR fall back to a fixed list during carnival
+  const venueOptions = useMemo(() => {
+    if (isCarnival) return carnival.available_venues || ["Northend 90 FT", "Northend Anantnag", "Northend Zakura", "Northend Parraypora"];
+    return campaign?.available_venues || [];
+  }, [campaign, carnival, isCarnival]);
+
   useEffect(() => {
-    if (campaign?.available_venues?.length && !form.venue) {
-      setForm(f => ({ ...f, venue: campaign.available_venues[0] }));
-    }
-  }, [campaign, form.venue]);
+    if (venueOptions.length && !form.venue) setForm(f => ({ ...f, venue: venueOptions[0] }));
+  }, [venueOptions, form.venue]);
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!campaign) { toast.error("Registration is not open yet — please check back soon."); return; }
+    if (isCarnival) {
+      if (!form.chosen_date || !form.chosen_slot_time) {
+        toast.error("Please pick your exam date and time slot");
+        return;
+      }
+    } else if (!campaign) {
+      toast.error("Registration is not open yet — please check back soon.");
+      return;
+    }
     setBusy(true);
     try {
-      const [d1, d2] = form.class_or_course.includes("(") ? form.class_or_course.split("(") : [form.class_or_course, ""];
+      const [, d2] = form.class_or_course.includes("(") ? form.class_or_course.split("(") : [form.class_or_course, ""];
       const targetExam = d2.includes("NEET") ? "NEET" : d2.includes("JEE") ? "JEE" : form.class_or_course.includes("11") || form.class_or_course.includes("12") ? "NEET/JEE" : "Foundation";
-      
-      const { data } = await api.post("/scholarship-applications", {
-        scholarship_id: campaign.id,
+
+      const basePayload = {
         name: form.name,
         email: form.email,
         phone: form.phone,
@@ -143,9 +251,15 @@ function HeroSection({ campaign, loading }) {
         target_exam: targetExam,
         city: (form.venue || "Srinagar").replace(/^Northend\s+/i, "") || "Srinagar",
         venue: form.venue || undefined,
-      });
+      };
+      const payload = isCarnival
+        ? { ...basePayload, carnival_id: carnival.id, chosen_date: form.chosen_date, chosen_slot_time: form.chosen_slot_time }
+        : { ...basePayload, scholarship_id: campaign.id };
+
+      const { data } = await api.post("/scholarship-applications", payload);
       setSubmitted(data);
       toast.success("Registered — download your admit card below.");
+      onRegistered?.();
     } catch (e) {
       toast.error(formatError(e.response?.data?.detail) || "Registration failed. Please try again.");
     } finally { setBusy(false); }
@@ -266,11 +380,21 @@ function HeroSection({ campaign, loading }) {
                         </div>
                       </div>
                       <input className={inputCls} placeholder="School / current institute" required value={form.school_name} onChange={e => setForm({...form, school_name: e.target.value})} data-testid="wath-school"/>
-                      {campaign?.available_venues?.length > 0 ? (
+
+                      {isCarnival && (
+                        <CarnivalSlotPicker
+                          carnival={carnival}
+                          chosenDate={form.chosen_date}
+                          chosenSlot={form.chosen_slot_time}
+                          onPick={(date, time) => setForm(f => ({ ...f, chosen_date: date, chosen_slot_time: time }))}
+                        />
+                      )}
+
+                      {venueOptions.length > 0 ? (
                         <div className="relative">
                           <select className={`${inputCls} appearance-none pr-8`} required value={form.venue} onChange={e => setForm({...form, venue: e.target.value})} data-testid="wath-venue">
                             <option value="" className="bg-background">— Select exam venue —</option>
-                            {campaign.available_venues.map(v => <option key={v} value={v} className="bg-background">{v}</option>)}
+                            {venueOptions.map(v => <option key={v} value={v} className="bg-background">{v}</option>)}
                           </select>
                           <CaretDown weight="bold" size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                         </div>
@@ -279,13 +403,13 @@ function HeroSection({ campaign, loading }) {
                       )}
 
                       <div className="pt-1">
-                        <CTAPrimary type="submit" className="w-full justify-center text-xs py-2.5" data-testid="wath-submit" disabled={busy || !campaign}>
-                          {busy ? "Registering…" : campaign ? "Register & get admit card" : "Notify me"}
+                        <CTAPrimary type="submit" className="w-full justify-center text-xs py-2.5" data-testid="wath-submit" disabled={busy || (!campaign && !isCarnival)}>
+                          {busy ? "Registering…" : (campaign || isCarnival) ? "Register & get admit card" : "Notify me"}
                         </CTAPrimary>
                       </div>
 
                       <div className="pt-3 border-t border-border flex items-center justify-between text-[11px] text-muted-foreground">
-                        <span>Exam: {loading ? "…" : (examDate ? formatDate(examDate) : "TBA")}</span>
+                        <span>{isCarnival ? `${carnival.exam_dates?.length || 0} exam dates available` : `Exam: ${loading ? "…" : (examDate ? formatDate(examDate) : "TBA")}`}</span>
                         <span>Fee: ₹0 (Free)</span>
                       </div>
                     </form>
