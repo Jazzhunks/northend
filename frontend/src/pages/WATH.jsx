@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Helmet } from "react-helmet-async";
 import { Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -9,7 +10,7 @@ import { CTAPrimary, CTAGhost, Eyebrow, Reveal } from "@/components/Cinematic";
 import { AnimatedCounter } from "@/components/Metrics";
 import {
   Trophy, Sparkle, GraduationCap, MedalMilitary, Clock, MapPin,
-  CalendarBlank, Coins, ChartLineUp, ArrowRight, ArrowDown, FileText,
+  CalendarBlank, Coins, ChartLineUp, ArrowRight, ArrowDown, ArrowUp, FileText,
   Download, Check, WhatsappLogo, Question, Certificate, IdentificationCard, X, CaretDown
 } from "@phosphor-icons/react";
 
@@ -73,8 +74,751 @@ function InfoBlock({ label, value, testid, mono }) {
   );
 }
 
+// Helper to determine if a date/time combination has already passed
+function isSlotInPast(dateStr, timeStr) {
+  if (!dateStr || !timeStr) return false;
+  const dateObj = new Date(dateStr);
+  dateObj.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  if (dateObj.getTime() < today.getTime()) return true; // Past date
+  if (dateObj.getTime() > today.getTime()) return false; // Future date
+  
+  // If it's today, we need to check the actual time
+  const match = timeStr.match(/(\d+):(\d+)\s+(AM|PM)/i);
+  if (!match) return false;
+  
+  let h = parseInt(match[1], 10);
+  const m = parseInt(match[2], 10);
+  if (match[3].toUpperCase() === 'PM' && h < 12) h += 12;
+  if (match[3].toUpperCase() === 'AM' && h === 12) h = 0;
+  
+  const slotTime = new Date();
+  slotTime.setHours(h, m, 0, 0);
+  
+  return slotTime.getTime() <= new Date().getTime();
+}
+
+
+// ---------------- UI Components ----------------
+
+function CustomSelect({ value, onChange, options, placeholder, testid }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [coords, setCoords] = useState({ left: 0, width: 0, top: 0, bottom: 0, placement: "bottom" });
+  
+  const buttonRef = useRef(null);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      document.body.style.overflow = "unset";
+      return;
+    }
+    
+    document.body.style.overflow = "hidden";
+    
+    const updatePosition = () => {
+      if (buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        const dropdownHeight = 240; 
+        
+        const placement = (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) ? "top" : "bottom";
+        
+        setCoords({
+          left: rect.left,
+          width: rect.width,
+          top: placement === "bottom" ? rect.bottom + 8 : undefined,
+          bottom: placement === "top" ? window.innerHeight - rect.top + 8 : undefined,
+          placement,
+        });
+      }
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (e) => {
+      if (
+        dropdownRef.current && !dropdownRef.current.contains(e.target) &&
+        buttonRef.current && !buttonRef.current.contains(e.target)
+      ) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside, { passive: true });
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [isOpen]);
+
+  return (
+    <div className="relative min-w-0" data-testid={testid}>
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`w-full min-w-0 px-5 py-3.5 rounded-full bg-white border text-[13px] text-left transition flex items-center justify-between shadow-sm focus:outline-none ${
+          isOpen ? 'border-[#08BD80] ring-1 ring-[#08BD80]' : 'border-gray-200 hover:border-gray-300'
+        }`}
+      >
+        <span className={value ? "text-gray-800" : "text-gray-400"}>
+          {value || placeholder}
+        </span>
+        <CaretDown weight="bold" size={14} className={`text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+      </button>
+
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              ref={dropdownRef}
+              initial={{ opacity: 0, y: coords.placement === "top" ? 10 : -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: coords.placement === "top" ? 10 : -10 }}
+              transition={{ duration: 0.15 }}
+              style={{
+                position: "fixed",
+                left: `${coords.left}px`,
+                width: `${coords.width}px`,
+                ...(coords.placement === "bottom" ? { top: `${coords.top}px` } : { bottom: `${coords.bottom}px` })
+              }}
+              onWheel={(e) => {
+                e.stopPropagation();
+                if (dropdownRef.current) {
+                  dropdownRef.current.scrollTop += e.deltaY;
+                }
+              }}
+              className="z-[9999] bg-white border border-gray-200 shadow-xl rounded-[20px] py-2 max-h-[220px] overflow-y-auto overscroll-contain [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+            >
+              {options.map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full text-left px-5 py-3 text-[13px] transition ${
+                    value === opt ? 'bg-[#08BD80]/10 text-[#08BD80] font-medium' : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  {opt}
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+    </div>
+  );
+}
+
+function CustomDatePicker({ value, onChange, placeholder, testid }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [coords, setCoords] = useState({ left: 0, width: 0, top: 0, bottom: 0, placement: "bottom" });
+  const [viewMode, setViewMode] = useState("days");
+  
+  const buttonRef = useRef(null);
+  const dropdownRef = useRef(null);
+  
+  const initialDate = value ? new Date(value) : new Date(2010, 0, 1);
+  const [viewDate, setViewDate] = useState(initialDate);
+
+  useEffect(() => {
+    if (!isOpen) {
+      document.body.style.overflow = "unset";
+      return;
+    }
+
+    document.body.style.overflow = "hidden";
+    setViewDate(value ? new Date(value) : new Date(2010, 0, 1));
+    setViewMode("days");
+
+    const updatePosition = () => {
+      if (buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        const dropdownHeight = 380;
+        
+        const placement = (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) ? "top" : "bottom";
+        
+        const isMobile = window.innerWidth < 400;
+        
+        setCoords({
+          left: isMobile ? (window.innerWidth - 300) / 2 : rect.left,
+          width: 300, 
+          top: placement === "bottom" ? rect.bottom + 8 : undefined,
+          bottom: placement === "top" ? window.innerHeight - rect.top + 8 : undefined,
+          placement,
+        });
+      }
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen, value]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (e) => {
+      if (
+        dropdownRef.current && !dropdownRef.current.contains(e.target) &&
+        buttonRef.current && !buttonRef.current.contains(e.target)
+      ) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside, { passive: true });
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const handleSelectDay = (dateObj) => {
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    onChange(`${y}-${m}-${d}`);
+    setIsOpen(false);
+  };
+
+  const handleSelectMonth = (monthIndex) => {
+    setViewDate(new Date(viewDate.getFullYear(), monthIndex, 1));
+    setViewMode("days");
+  };
+
+  const handleSelectYear = (year) => {
+    setViewDate(new Date(year, viewDate.getMonth(), 1));
+    setViewMode("months");
+  };
+
+  const handleClear = () => {
+    onChange("");
+    setIsOpen(false);
+  };
+
+  const handleToday = () => {
+    handleSelectDay(new Date());
+  };
+
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const monthNamesShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+  const days = [];
+  for (let i = firstDay - 1; i >= 0; i--) {
+    days.push({ day: daysInPrevMonth - i, current: false, date: new Date(year, month - 1, daysInPrevMonth - i) });
+  }
+  for (let i = 1; i <= daysInMonth; i++) {
+    days.push({ day: i, current: true, date: new Date(year, month, i) });
+  }
+  const remaining = 42 - days.length;
+  for (let i = 1; i <= remaining; i++) {
+    days.push({ day: i, current: false, date: new Date(year, month + 1, i) });
+  }
+
+  const displayValue = value ? value.split("-").reverse().join("/") : "";
+
+  return (
+    <div className="relative min-w-0 w-full" data-testid={testid}>
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`w-full min-w-0 px-5 py-3.5 rounded-full bg-white border text-[13px] text-left transition flex items-center justify-between shadow-sm focus:outline-none ${
+          isOpen ? 'border-[#08BD80] ring-1 ring-[#08BD80]' : 'border-gray-200 hover:border-gray-300'
+        }`}
+      >
+        <span className={displayValue ? "text-gray-800" : "text-gray-400"}>
+          {displayValue || placeholder}
+        </span>
+        <CalendarBlank size={16} className="text-gray-500" />
+      </button>
+
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              ref={dropdownRef}
+              initial={{ opacity: 0, y: coords.placement === "top" ? 10 : -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: coords.placement === "top" ? 10 : -10 }}
+              transition={{ duration: 0.15 }}
+              style={{
+                position: "fixed",
+                left: `${coords.left}px`,
+                width: `${coords.width}px`,
+                ...(coords.placement === "bottom" ? { top: `${coords.top}px` } : { bottom: `${coords.bottom}px` })
+              }}
+              onWheel={(e) => {
+                e.stopPropagation();
+                if (dropdownRef.current) {
+                  dropdownRef.current.scrollTop += e.deltaY;
+                }
+              }}
+              className="z-[9999] bg-white border border-gray-200 shadow-2xl rounded-[20px] p-5 overscroll-contain touch-pan-y [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+            >
+              
+              {/* DAYS VIEW */}
+              {viewMode === "days" && (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <button type="button" onClick={() => setViewMode("years")} className="font-bold text-gray-900 text-[15px] hover:bg-gray-100 px-2.5 py-1 rounded-lg transition flex items-center gap-1">
+                      {monthNames[month]} {year} <CaretDown size={14}/>
+                    </button>
+                    <div className="flex gap-1">
+                      <button type="button" onClick={() => setViewDate(new Date(year, month - 1, 1))} className="p-2 hover:bg-gray-100 rounded-full transition text-gray-700">
+                        <ArrowUp size={16} />
+                      </button>
+                      <button type="button" onClick={() => setViewDate(new Date(year, month + 1, 1))} className="p-2 hover:bg-gray-100 rounded-full transition text-gray-700">
+                        <ArrowDown size={16} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-7 mb-2">
+                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                      <div key={i} className="text-center text-xs font-medium text-gray-900">{d}</div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-7 gap-y-1">
+                    {days.map((d, i) => {
+                      const isSelected = value && new Date(value).getTime() === d.date.getTime();
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => handleSelectDay(d.date)}
+                          className={`h-9 w-full flex items-center justify-center text-[13px] rounded-lg transition ${
+                            isSelected 
+                              ? 'bg-[#1a73e8] text-white font-medium shadow-sm' 
+                              : d.current 
+                                ? 'text-gray-900 hover:bg-gray-100' 
+                                : 'text-gray-400 hover:bg-gray-50'
+                          }`}
+                        >
+                          {d.day}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+
+              {/* MONTHS VIEW */}
+              {viewMode === "months" && (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <button type="button" onClick={() => setViewMode("years")} className="font-bold text-gray-900 text-[15px] hover:bg-gray-100 px-2.5 py-1 rounded-lg transition flex items-center gap-1">
+                      {year} <CaretDown size={14}/>
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {monthNamesShort.map((m, i) => (
+                      <button key={m} type="button" onClick={() => handleSelectMonth(i)} className="py-3 rounded-lg text-[13px] font-medium text-gray-900 hover:bg-gray-100 transition">
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* YEARS VIEW */}
+              {viewMode === "years" && (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="font-bold text-gray-900 text-[15px] px-2.5 py-1">
+                      {startYear} - {startYear + 19}
+                    </div>
+                    <div className="flex gap-1">
+                      <button type="button" onClick={() => setViewDate(new Date(year - 20, month, 1))} className="p-2 hover:bg-gray-100 rounded-full transition text-gray-700">
+                        <ArrowUp size={16} />
+                      </button>
+                      <button type="button" onClick={() => setViewDate(new Date(year + 20, month, 1))} className="p-2 hover:bg-gray-100 rounded-full transition text-gray-700">
+                        <ArrowDown size={16} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {years.map(y => (
+                      <button key={y} type="button" onClick={() => handleSelectYear(y)} className={`py-3 rounded-lg text-[13px] font-medium transition ${year === y ? 'bg-[#1a73e8]/10 text-[#1a73e8]' : 'text-gray-900 hover:bg-gray-100'}`}>
+                        {y}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* Footer */}
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+                <button type="button" onClick={handleClear} className="text-[#1a73e8] text-[13px] font-medium hover:underline px-2">Clear</button>
+                <button type="button" onClick={handleToday} className="text-[#1a73e8] text-[13px] font-medium hover:underline px-2">Today</button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+    </div>
+  );
+}
+
+function CarnivalSlotPicker({ carnival, chosenDate, chosenSlot, onPick }) {
+  const dates = carnival?.exam_dates || [];
+  const [isOpen, setIsOpen] = useState(false);
+  const [coords, setCoords] = useState({ left: 0, width: 0, top: 0, bottom: 0, placement: "bottom" });
+  
+  const buttonRef = useRef(null);
+  const dropdownRef = useRef(null);
+
+  // Automatically select the first date that actually has future slots available
+  const initialAvailableDate = useMemo(() => {
+    if (chosenDate) return chosenDate;
+    const firstValid = dates.find(d => {
+      const validSlots = (d.slots || []).filter(s => s.available && !isSlotInPast(d.date, s.time));
+      return validSlots.length > 0;
+    });
+    return firstValid ? firstValid.date : (dates[0]?.date || null);
+  }, [dates, chosenDate]);
+
+  const [activeDate, setActiveDate] = useState(initialAvailableDate);
+  const initialView = initialAvailableDate ? new Date(initialAvailableDate) : new Date();
+  const [viewDate, setViewDate] = useState(initialView);
+
+  useEffect(() => {
+    if (!chosenDate && initialAvailableDate) {
+      setActiveDate(initialAvailableDate);
+    }
+  }, [dates, chosenDate, initialAvailableDate]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      document.body.style.overflow = "unset";
+      return;
+    }
+
+    document.body.style.overflow = "hidden";
+
+    const updatePosition = () => {
+      if (buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        const dropdownHeight = 420; 
+        
+        const placement = (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) ? "top" : "bottom";
+        
+        const isMobile = window.innerWidth < 480;
+        const desiredWidth = 360; 
+        const actualWidth = isMobile ? window.innerWidth - 32 : desiredWidth;
+        let leftPos = isMobile ? 16 : rect.left;
+
+        if (!isMobile && leftPos + actualWidth > window.innerWidth - 16) {
+            leftPos = window.innerWidth - actualWidth - 16;
+        }
+
+        setCoords({
+          left: leftPos,
+          width: actualWidth,
+          top: placement === "bottom" ? rect.bottom + 8 : undefined,
+          bottom: placement === "top" ? window.innerHeight - rect.top + 8 : undefined,
+          placement,
+        });
+      }
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (e) => {
+      if (
+        dropdownRef.current && !dropdownRef.current.contains(e.target) &&
+        buttonRef.current && !buttonRef.current.contains(e.target)
+      ) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside, { passive: true });
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const handlePick = (date, time) => {
+    onPick(date, time);
+    setIsOpen(false); 
+  };
+
+  const formatYMD = (dateObj) => {
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+  const days = [];
+  for (let i = firstDay - 1; i >= 0; i--) {
+    days.push({ day: daysInPrevMonth - i, current: false, date: new Date(year, month - 1, daysInPrevMonth - i) });
+  }
+  for (let i = 1; i <= daysInMonth; i++) {
+    days.push({ day: i, current: true, date: new Date(year, month, i) });
+  }
+  const remainingSlots = 42 - days.length;
+  for (let i = 1; i <= remainingSlots; i++) {
+    days.push({ day: i, current: false, date: new Date(year, month + 1, i) });
+  }
+
+  const active = dates.find(d => d.date === activeDate);
+
+  return (
+    <div className="relative min-w-0" data-testid="carnival-slot-picker">
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`w-full min-w-0 px-5 py-3.5 rounded-full bg-white border text-[13px] text-left transition flex items-center justify-between shadow-sm focus:outline-none ${
+          isOpen || (chosenDate && chosenSlot) 
+            ? 'border-[#08BD80] ring-1 ring-[#08BD80]' 
+            : 'border-gray-200 hover:border-gray-300'
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <CalendarBlank size={16} className={chosenDate ? "text-[#08BD80]" : "text-gray-400"}/>
+          <span className={chosenDate ? "text-gray-800" : "text-gray-400"}>
+            {chosenDate && chosenSlot
+              ? `${new Date(chosenDate).toLocaleDateString("en-IN", { weekday: "short", day: "2-digit", month: "short" })} · ${chosenSlot}`
+              : "Pick your exam date & slot"}
+          </span>
+        </div>
+        <CaretDown weight="bold" size={14} className={`text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+      </button>
+
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              ref={dropdownRef}
+              initial={{ opacity: 0, y: coords.placement === "top" ? 10 : -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: coords.placement === "top" ? 10 : -10 }}
+              transition={{ duration: 0.15 }}
+              style={{
+                position: "fixed",
+                left: `${coords.left}px`,
+                width: `${coords.width}px`,
+                ...(coords.placement === "bottom" ? { top: `${coords.top}px` } : { bottom: `${coords.bottom}px` })
+              }}
+              onWheel={(e) => {
+                e.stopPropagation();
+                if (dropdownRef.current) {
+                  dropdownRef.current.scrollTop += e.deltaY;
+                }
+              }}
+              className="z-[9999] bg-white border border-gray-200 shadow-2xl rounded-[20px] p-5 overscroll-contain overflow-y-auto max-h-[460px] touch-pan-y [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+            >
+              <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-3">
+                <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.15em] text-[#08BD80] font-bold">
+                  <CalendarBlank size={16}/> Exam Schedule
+                </div>
+                <button type="button" onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-gray-700 transition">
+                  <X size={16} weight="bold" />
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="font-bold text-gray-900 text-[15px] px-2.5 py-1">
+                    {monthNames[month]} {year}
+                  </div>
+                  <div className="flex gap-1">
+                    <button type="button" onClick={() => setViewDate(new Date(year, month - 1, 1))} className="p-2 hover:bg-gray-100 rounded-full transition text-gray-700">
+                      <ArrowUp size={16} />
+                    </button>
+                    <button type="button" onClick={() => setViewDate(new Date(year, month + 1, 1))} className="p-2 hover:bg-gray-100 rounded-full transition text-gray-700">
+                      <ArrowDown size={16} />
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-7 mb-2">
+                  {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                    <div key={i} className="text-center text-xs font-medium text-gray-900">{d}</div>
+                  ))}
+                </div>
+                
+                <div className="grid grid-cols-7 gap-y-1">
+                  {days.map((d, i) => {
+                    const ymd = formatYMD(d.date);
+                    const carnivalDate = dates.find(x => x.date === ymd);
+                    const isSelected = activeDate === ymd;
+                    
+                    let btnClass = "h-9 w-full flex flex-col items-center justify-center rounded-lg transition relative text-[13px] ";
+                    let isDisabled = true;
+                    let validSlotsRemaining = 0;
+
+                    if (carnivalDate) {
+                      // Only count slots that have not passed yet
+                      const validFutureSlots = (carnivalDate.slots || []).filter(s => s.available && !isSlotInPast(carnivalDate.date, s.time));
+                      validSlotsRemaining = validFutureSlots.reduce((sum, s) => sum + (s.remaining || 0), 0);
+                      isDisabled = validSlotsRemaining === 0;
+                      
+                      if (isSelected) {
+                         btnClass += "bg-[#08BD80] text-white font-medium shadow-sm";
+                      } else if (isDisabled) {
+                         btnClass += "bg-gray-50 text-gray-400 line-through cursor-not-allowed";
+                      } else {
+                         btnClass += "bg-[#08BD80]/10 text-[#08BD80] font-bold hover:bg-[#08BD80]/20 cursor-pointer";
+                      }
+                    } else {
+                      btnClass += d.current ? "text-gray-300 cursor-not-allowed" : "text-gray-200 opacity-50 cursor-not-allowed";
+                    }
+
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        disabled={isDisabled || !carnivalDate}
+                        onClick={() => setActiveDate(ymd)}
+                        className={btnClass}
+                      >
+                        {d.day}
+                        {carnivalDate && validSlotsRemaining > 0 && !isSelected && (
+                          <span className="absolute bottom-1 w-1 h-1 rounded-full bg-[#08BD80]" />
+                        )}
+                        {carnivalDate && validSlotsRemaining > 0 && isSelected && (
+                          <span className="absolute bottom-1 w-1 h-1 rounded-full bg-white" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Time Slots Section */}
+              <AnimatePresence mode="wait">
+                {activeDate && active ? (
+                  <motion.div
+                    key="slots"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="pt-4 border-t border-gray-100 overflow-hidden"
+                  >
+                    <div className="text-[10px] uppercase tracking-widest text-gray-500 mb-3 font-semibold text-center">
+                      Slots for {new Date(activeDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {(active.slots || []).map(s => {
+                        const past = isSlotInPast(active.date, s.time);
+                        const disabled = !s.available || past;
+                        const selected = chosenDate === active.date && chosenSlot === s.time;
+                        
+                        return (
+                          <button
+                            type="button"
+                            key={s.time}
+                            disabled={disabled}
+                            onClick={() => handlePick(active.date, s.time)}
+                            className={`w-full px-3 py-3 rounded-xl text-[12px] font-medium text-center flex flex-col items-center justify-center gap-1 transition ${
+                              selected 
+                                ? "bg-[#08BD80] text-white shadow-md" 
+                                : disabled 
+                                  ? "bg-transparent text-gray-400 cursor-not-allowed" 
+                                  : "bg-[#F3F4F6] text-[#4B5563] hover:bg-[#E5E7EB]"
+                            }`}
+                          >
+                            <div className={`flex items-center justify-center gap-1.5 ${disabled ? "line-through opacity-70" : ""}`}>
+                              <Clock size={14}/>{s.time}
+                            </div>
+                            <div className={`text-[10px] flex items-center justify-center gap-1 ${disabled ? "opacity-60" : "opacity-90"}`}>
+                              {past ? "Time passed" : disabled ? "Full" : `${s.remaining}/${s.capacity} left`}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div 
+                    key="empty"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="pt-4 border-t border-gray-100 text-center text-xs text-gray-400 py-2"
+                  >
+                    Select an available date to view time slots.
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+    </div>
+  );
+}
+
 export default function WATH() {
-  const [pageState, setPageState] = useState(null);   // {mode, exam?, carnival?, disabled_message?}
+  const [pageState, setPageState] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const load = (silent = false) => {
@@ -154,77 +898,6 @@ function DisabledMode({ message }) {
   );
 }
 
-function CarnivalSlotPicker({ carnival, chosenDate, chosenSlot, onPick }) {
-  const dates = carnival?.exam_dates || [];
-  const [activeDate, setActiveDate] = useState(chosenDate || dates[0]?.date);
-  useEffect(() => {
-    if (!chosenDate && dates[0]?.date) setActiveDate(dates[0].date);
-  }, [dates, chosenDate]);
-  const active = dates.find(d => d.date === activeDate);
-
-  return (
-    <div className="p-3 rounded-2xl border border-accent/25 bg-accent/[0.03] space-y-3" data-testid="wath-slot-picker">
-      <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-accent font-bold">
-        <CalendarBlank size={12}/> Pick your exam slot
-      </div>
-      <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        {dates.map(d => {
-          const isActive = d.date === activeDate;
-          const remaining = (d.slots || []).reduce((sum, s) => sum + (s.remaining || 0), 0);
-          const fullyBooked = remaining === 0;
-          const fillingFast = !fullyBooked && remaining <= 10;
-          return (
-            <button
-              type="button"
-              key={d.date}
-              onClick={() => setActiveDate(d.date)}
-              disabled={fullyBooked}
-              className={`shrink-0 snap-start px-4 py-2 rounded-xl text-[11px] font-medium text-center transition ${isActive ? "bg-accent text-accent-foreground" : fullyBooked ? "bg-white/[0.02] text-muted-foreground/40 line-through" : "glass text-foreground/80 hover:text-foreground"}`}
-              data-testid={`slot-date-${d.date}`}
-            >
-              <div className="text-center">{new Date(d.date).toLocaleDateString("en-IN", { weekday: "short", day: "2-digit", month: "short" })}</div>
-              <div className={`text-[9px] mt-0.5 flex items-center justify-center gap-1 ${fillingFast && !isActive ? "text-amber-500 font-semibold" : "opacity-70"}`}>
-                {fullyBooked ? "Full" : fillingFast ? (<><span className="inline-block w-1 h-1 rounded-full bg-amber-500 animate-pulse"/>{remaining} left</>) : `${remaining} left`}
-              </div>
-            </button>
-          );
-        })}
-      </div>
-      {active && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-          {(active.slots || []).map(s => {
-            const disabled = !s.available;
-            const selected = chosenDate === active.date && chosenSlot === s.time;
-            const low = !disabled && s.remaining > 0 && s.remaining <= 5;
-            return (
-              <button
-                type="button"
-                key={s.time}
-                disabled={disabled}
-                onClick={() => onPick(active.date, s.time)}
-                className={`px-3 py-2.5 rounded-xl text-[11px] font-medium text-center flex flex-col items-center justify-center gap-0.5 transition ${selected ? "bg-accent text-accent-foreground" : disabled ? "bg-white/[0.02] text-muted-foreground/40 line-through cursor-not-allowed" : low ? "glass border border-amber-500/40 hover:border-amber-500/60" : "glass hover:border-accent/40"}`}
-                data-testid={`slot-time-${active.date}-${s.time.replace(/[^0-9A-Za-z]/g,'')}`}
-              >
-                <div className="flex items-center justify-center gap-1"><Clock size={11}/>{s.time}</div>
-                <div className={`text-[9px] flex items-center justify-center gap-1 ${low && !selected ? "text-amber-500 font-semibold" : "opacity-70"}`}>
-                  {disabled ? "Full" : low ? (<><span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"/>Only {s.remaining} left!</>) : `${s.remaining}/${s.capacity} left`}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
-      {chosenDate && chosenSlot && (
-        <div className="text-[10px] text-accent flex items-center gap-1.5 pt-1 border-t border-white/5">
-          <Check size={12} weight="bold"/> Selected: {new Date(chosenDate).toLocaleDateString("en-IN", { weekday: "short", day: "2-digit", month: "short" })} · {chosenSlot}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ---------------- Sections ----------------
-
 function HeroSection({ campaign, carnival, mode, loading, onRegistered }) {
   const isCarnival = mode === "carnival" && !!carnival;
   const examDate = isCarnival
@@ -242,10 +915,6 @@ function HeroSection({ campaign, carnival, mode, loading, onRegistered }) {
     if (isCarnival) return carnival.available_venues || ["90 FT", "Anantnag", "Zakura", "Parraypora", "Sopore"];
     return campaign?.available_venues || [];
   }, [campaign, carnival, isCarnival]);
-
-  useEffect(() => {
-    if (venueOptions.length && !form.venue) setForm(f => ({ ...f, venue: venueOptions[0] }));
-  }, [venueOptions, form.venue]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -289,7 +958,7 @@ function HeroSection({ campaign, carnival, mode, loading, onRegistered }) {
     } finally { setBusy(false); }
   };
 
-  const inputCls = "w-full px-3 py-2.5 rounded-xl glass text-xs placeholder:text-muted-foreground/60 focus:outline-none focus:border-accent/50 transition";
+  const inputCls = "w-full min-w-0 px-5 py-3.5 rounded-full bg-white border border-gray-200 text-[13px] text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-[#08BD80] focus:ring-1 focus:ring-[#08BD80] transition shadow-sm";
 
   return (
     <>
@@ -311,7 +980,7 @@ function HeroSection({ campaign, carnival, mode, loading, onRegistered }) {
           </div>
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-4 lg:px-8 w-full grid lg:grid-cols-12 gap-10 items-center py-24">
+        <div className="relative max-w-7xl mx-auto px-6 md:px-8 w-full grid lg:grid-cols-12 gap-10 items-center pt-28 pb-16 md:pt-32 md:pb-24">
           <div className="lg:col-span-7">
             <motion.div
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: EASE }}
@@ -356,9 +1025,12 @@ function HeroSection({ campaign, carnival, mode, loading, onRegistered }) {
 
           <div className="lg:col-span-5" id="register">
             <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, ease: EASE, delay: 0.4 }}>
-              <GlassPanel elevated className="p-6 lg:p-7 relative overflow-hidden" data-testid="hero-exam-details">
-                <div className="absolute -top-20 -right-20 w-60 h-60 rounded-full bg-accent/10 blur-3xl" />
-                <div className="relative">
+              <GlassPanel elevated className="p-5 sm:p-6 lg:p-7 relative z-10" data-testid="hero-exam-details">
+                <div className="absolute inset-0 rounded-[inherit] overflow-hidden pointer-events-none">
+                  <div className="absolute -top-20 -right-20 w-60 h-60 rounded-full bg-accent/10 blur-3xl" />
+                </div>
+                
+                <div className="relative z-20">
                   <div className="text-[10px] uppercase tracking-[0.28em] text-accent font-bold mb-5 flex items-center justify-between">
                     <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-accent pulse-ring"/>{isCarnival ? "Register for Carnival" : "Register for WATH"}</span>
                     <span className="text-muted-foreground font-normal lowercase">free entry</span>
@@ -404,45 +1076,47 @@ function HeroSection({ campaign, carnival, mode, loading, onRegistered }) {
                       </button>
                     </div>
                   ) : (
-                    <form onSubmit={submit} data-testid="wath-register-form" className="space-y-3">
+                    <form onSubmit={submit} data-testid="wath-register-form" className="space-y-4">
                       {!campaign && !isCarnival && (
                         <div className="p-3 rounded-xl glass border border-amber-500/30 text-xs">
                           <span className="font-bold uppercase text-amber-400">Opening soon</span> — drop details to get notified.
                         </div>
                       )}
                       
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <input className={inputCls} placeholder="Full name" required value={form.name} onChange={e => setForm({...form, name: e.target.value})} data-testid="wath-name"/>
                         <input className={inputCls} type="email" placeholder="Email" required value={form.email} onChange={e => setForm({...form, email: e.target.value})} data-testid="wath-email"/>
                       </div>
                       
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <input className={inputCls} placeholder="Phone number" required value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} data-testid="wath-phone"/>
-                        <div className="relative">
-                          <select className={`${inputCls} appearance-none pr-8`} required value={form.class_or_course} onChange={e => setForm({...form, class_or_course: e.target.value})} data-testid="wath-class">
-                            <option value="" disabled className="bg-background text-muted-foreground">Current class</option>
-                            {CLASSES.map(c => <option key={c} value={c} className="bg-background">{c}</option>)}
-                          </select>
-                          <CaretDown weight="bold" size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                        </div>
+                        <CustomSelect 
+                          value={form.class_or_course} 
+                          onChange={val => setForm({...form, class_or_course: val})} 
+                          options={CLASSES} 
+                          placeholder="Current class" 
+                          testid="wath-class" 
+                        />
                       </div>
                       
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <input className={inputCls} placeholder="Father's / Guardian's name" required value={form.father_name} onChange={e => setForm({...form, father_name: e.target.value})} data-testid="wath-father"/>
-                        <div className="relative">
-                          <select className={`${inputCls} appearance-none pr-8`} required value={form.gender} onChange={e => setForm({...form, gender: e.target.value})} data-testid="wath-gender">
-                            <option value="" disabled className="bg-background text-muted-foreground">Gender</option>
-                            {["Male", "Female", "Other"].map(g => <option key={g} value={g} className="bg-background">{g}</option>)}
-                          </select>
-                          <CaretDown weight="bold" size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                        </div>
+                        <CustomSelect 
+                          value={form.gender} 
+                          onChange={val => setForm({...form, gender: val})} 
+                          options={["Male", "Female", "Other"]} 
+                          placeholder="Gender" 
+                          testid="wath-gender" 
+                        />
                       </div>
                       
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        <div className="relative">
-                          <input className={`${inputCls} pr-3`} type="date" required value={form.dob} onChange={e => setForm({...form, dob: e.target.value})} data-testid="wath-dob" aria-label="Date of birth"/>
-                          {!form.dob && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 text-xs pointer-events-none"></span>}
-                        </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <CustomDatePicker 
+                          value={form.dob} 
+                          onChange={val => setForm({...form, dob: val})} 
+                          placeholder="dd / mm / yyyy" 
+                          testid="wath-dob" 
+                        />
                         <input className={inputCls} placeholder="School / current institute" required value={form.school_name} onChange={e => setForm({...form, school_name: e.target.value})} data-testid="wath-school"/>
                       </div>
 
@@ -456,24 +1130,24 @@ function HeroSection({ campaign, carnival, mode, loading, onRegistered }) {
                       )}
 
                       {venueOptions.length > 0 ? (
-                        <div className="relative">
-                          <select className={`${inputCls} appearance-none pr-8`} required value={form.venue} onChange={e => setForm({...form, venue: e.target.value})} data-testid="wath-venue">
-                            <option value="" className="bg-background">— Select exam venue —</option>
-                            {venueOptions.map(v => <option key={v} value={v} className="bg-background">{v}</option>)}
-                          </select>
-                          <CaretDown weight="bold" size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                        </div>
+                        <CustomSelect 
+                          value={form.venue} 
+                          onChange={val => setForm({...form, venue: val})} 
+                          options={venueOptions} 
+                          placeholder="Select exam venue" 
+                          testid="wath-venue" 
+                        />
                       ) : (
-                        <input className={inputCls} placeholder="Preferred venue (e.g. Srinagar)" required value={form.venue} onChange={e => setForm({...form, venue: e.target.value})} data-testid="wath-venue-text"/>
+                         <input className={inputCls} placeholder="Preferred venue" required value={form.venue} onChange={e => setForm({...form, venue: e.target.value})} data-testid="wath-venue-text"/>
                       )}
 
-                      <div className="pt-1">
-                        <CTAPrimary type="submit" className="w-full justify-center text-xs py-2.5" data-testid="wath-submit" disabled={busy || (!campaign && !isCarnival)}>
+                      <div className="pt-2">
+                        <CTAPrimary type="submit" className="w-full justify-center text-xs py-3.5 rounded-full shadow-lg" data-testid="wath-submit" disabled={busy || (!campaign && !isCarnival)}>
                           {busy ? "Registering…" : (campaign || isCarnival) ? "Register & get admit card" : "Notify me"}
                         </CTAPrimary>
                       </div>
 
-                      <div className="pt-3 border-t border-border flex items-center justify-between text-[11px] text-muted-foreground">
+                      <div className="pt-4 border-t border-border flex items-center justify-between text-[11px] text-muted-foreground">
                         <span>{isCarnival ? `${carnival.exam_dates?.length || 0} exam dates available` : `Exam: ${loading ? "…" : (examDate ? formatDate(examDate) : "TBA")}`}</span>
                         <span>Fee: ₹0 (Free)</span>
                       </div>
@@ -727,7 +1401,7 @@ function AdmitCardDownloadSection({ campaign }) {
     }
   };
 
-  const inputCls = "w-full px-4 py-3 rounded-xl glass text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:border-accent/50 transition";
+  const inputCls = "w-full min-w-0 px-5 py-3.5 rounded-full bg-white border border-gray-200 text-[13px] text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-[#08BD80] focus:ring-1 focus:ring-[#08BD80] transition shadow-sm";
 
   return (
     <section id="admit-card" className="relative section-padding scroll-mt-20">
@@ -748,7 +1422,7 @@ function AdmitCardDownloadSection({ campaign }) {
             <input className={inputCls} placeholder="Registered phone" required value={phone} onChange={e => setPhone(e.target.value)} data-testid="admit-phone"/>
           </div>
           <div className="mt-5">
-            <CTAPrimary type="submit" className="w-full justify-center" data-testid="admit-submit" disabled={busy}>
+            <CTAPrimary type="submit" className="w-full justify-center rounded-full py-3.5 text-xs" data-testid="admit-submit" disabled={busy}>
               {busy ? "Retrieving…" : "Find Admit Card"}
             </CTAPrimary>
           </div>
@@ -772,7 +1446,7 @@ function AdmitCardDownloadSection({ campaign }) {
                 </div>
                 <div className="mt-6 flex flex-wrap gap-3">
                   <a href={`${API_BASE}/scholarship-applications/${appData.application_no}/admit-card?phone=${encodeURIComponent(appData.phone || phone)}`} target="_blank" rel="noreferrer" data-testid="download-fetched-admit">
-                    <CTAPrimary><Download weight="bold" size={14}/> Download Admit Card PDF</CTAPrimary>
+                    <CTAPrimary className="rounded-full py-3 px-6"><Download weight="bold" size={14}/> Download Admit Card PDF</CTAPrimary>
                   </a>
                 </div>
               </div>
@@ -808,7 +1482,7 @@ function ResultCheckSection() {
     }
   };
 
-  const inputCls = "w-full px-4 py-3 rounded-xl glass text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:border-accent/50 transition";
+  const inputCls = "w-full min-w-0 px-5 py-3.5 rounded-full bg-white border border-gray-200 text-[13px] text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-[#08BD80] focus:ring-1 focus:ring-[#08BD80] transition shadow-sm";
 
   return (
     <section id="result" className="relative section-padding scroll-mt-20">
@@ -829,7 +1503,7 @@ function ResultCheckSection() {
             <input className={inputCls} placeholder="Registered phone" required value={lookup.phone} onChange={e => setLookup({...lookup, phone: e.target.value})} data-testid="lookup-phone"/>
           </div>
           <div className="mt-5">
-            <CTAPrimary type="submit" className="w-full justify-center" data-testid="lookup-submit" disabled={busy}>
+            <CTAPrimary type="submit" className="w-full justify-center rounded-full py-3.5 text-xs" data-testid="lookup-submit" disabled={busy}>
               {busy ? "Searching…" : "View Result"}
             </CTAPrimary>
           </div>
@@ -872,10 +1546,10 @@ function ResultCheckSection() {
 
                   <div className="flex flex-wrap gap-3 pt-2">
                     <a href={`${API_BASE}/scholarship-applications/${result.application_no}/result-card?phone=${encodeURIComponent(result.phone)}`} target="_blank" rel="noreferrer" data-testid="download-result-pdf">
-                      <CTAPrimary><FileText weight="bold" size={14}/> Download Result Card PDF</CTAPrimary>
+                      <CTAPrimary className="rounded-full py-3 px-6"><FileText weight="bold" size={14}/> Download Result Card PDF</CTAPrimary>
                     </a>
                     <a href={`${API_BASE}/scholarship-applications/${result.application_no}/admit-card?phone=${encodeURIComponent(result.phone)}`} target="_blank" rel="noreferrer" data-testid="download-admit-from-result">
-                      <CTAGhost><Download weight="bold" size={14}/> Download Admit Card</CTAGhost>
+                      <CTAGhost className="rounded-full py-3 px-6"><Download weight="bold" size={14}/> Download Admit Card</CTAGhost>
                     </a>
                   </div>
                 </div>
