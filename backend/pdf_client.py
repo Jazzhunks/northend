@@ -1,4 +1,4 @@
-"""PDF generators (admit card, result card) with QR code."""
+"""PDF generators (admit card, result card) with QR code and barcode."""
 import io
 import re
 import logging
@@ -8,6 +8,7 @@ from reportlab.lib.colors import HexColor
 from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
+from reportlab.graphics.barcode import code128
 
 logger = logging.getLogger(__name__)
 
@@ -228,19 +229,21 @@ def admit_card_pdf(application_no, name, phone, school, standard, target_exam,
     c.setLineWidth(1.3)
     c.roundRect(8 * mm, 8 * mm, W - 16 * mm, H - 16 * mm, 6, stroke=1, fill=0)
 
-    # ================= HEADER =================
+# ================= HEADER =================
+
     _draw_unacademy_logo(c, X0=LM + 1 * mm, Ytop=H - 14 * mm, target_width=44 * mm)
 
-    c.setFillColor(INK_SOFT)
-    c.setFont("Helvetica-Bold", 7)
-    c.drawRightString(RM, H - 13 * mm, "APPLICATION / FORM NO.")
-    c.setFillColor(BRAND_BLUE)
-    c.setFont("Helvetica-Bold", 15)
-    c.drawRightString(RM, H - 20 * mm, app_no_str)
+    # Barcode with thicker bars (text label removed)
+    c.setFillColor(INK)
+    bc = code128.Code128(app_no_str, barHeight=10.5 * mm, humanReadable=False)
+    bc.barWidth = 0.55 * mm  
+    bc.drawOn(c, RM - 55 * mm, H - 22.5 * mm)
 
     c.setStrokeColor(CARD_LINE)
     c.setLineWidth(1)
     c.line(LM, H - 24 * mm, RM, H - 24 * mm)
+
+
 
     # Title strip (gradient)
     strip_y = H - 37 * mm
@@ -267,15 +270,15 @@ def admit_card_pdf(application_no, name, phone, school, standard, target_exam,
     # ================= CANDIDATE / PERSONAL DETAILS =================
     section_head(H - 45 * mm, "Candidate / Personal Details")
     box_top = H - 48 * mm
-    box_h = 60 * mm
+    box_h = 74 * mm
     box_y = box_top - box_h
     c.setFillColor(CARD_BG)
     c.setStrokeColor(CARD_LINE)
     c.setLineWidth(1)
     c.roundRect(LM, box_y, RM - LM, box_h, 4, stroke=1, fill=1)
 
-    # Photo box (top-right inside)
-    ph_w, ph_h = 30 * mm, 33 * mm
+    # Photo box (top-right inside) - Passport proportions (~28x32)
+    ph_w, ph_h = 28 * mm, 32 * mm
     ph_x = RM - 4 * mm - ph_w
     ph_y = box_top - 4 * mm - ph_h
     c.setFillColor(WHITE)
@@ -285,21 +288,31 @@ def admit_card_pdf(application_no, name, phone, school, standard, target_exam,
     c.setDash()
     c.setFillColor(INK_SOFT)
     c.setFont("Helvetica-Bold", 6)
-    c.drawCentredString(ph_x + ph_w / 2, ph_y + ph_h / 2 + 2, "AFFIX RECENT")
-    c.drawCentredString(ph_x + ph_w / 2, ph_y + ph_h / 2 - 5, "PHOTOGRAPH")
+    c.drawCentredString(ph_x + ph_w / 2, ph_y + ph_h / 2 + 3, "AFFIX RECENT")
+    c.drawCentredString(ph_x + ph_w / 2, ph_y + ph_h / 2 - 4, "PASSPORT SIZE")
+    c.drawCentredString(ph_x + ph_w / 2, ph_y + ph_h / 2 - 11, "PHOTOGRAPH")
 
-    # QR (mandatory) below photo
+    # QR code and label positioned cleanly below the passport photo
     qr_url = f"https://northendedu.com/wath?app_no={app_no_str}&phone={phone_str}#result"
-    qr_sz = 22 * mm
+    qr_sz = 20 * mm  
     qr_x = ph_x + (ph_w - qr_sz) / 2
-    qr_y = box_y + 5 * mm
+    
+    # QR box only encloses the QR image itself
+    qr_box_h = qr_sz + 3 * mm
+    qr_y = ph_y - 4 * mm - qr_box_h
+    
+    # Draw white rounded box background exclusively for the QR code
     c.setFillColor(WHITE)
     c.setStrokeColor(CARD_LINE)
-    c.roundRect(qr_x - 1.5 * mm, qr_y - 1 * mm, qr_sz + 3 * mm, qr_sz + 5.5 * mm, 3, stroke=1, fill=1)
-    c.drawImage(_qr_bytes(qr_url), qr_x, qr_y + 3 * mm, qr_sz, qr_sz, mask='auto')
+    c.roundRect(qr_x - 1.5 * mm, qr_y, qr_sz + 3 * mm, qr_box_h, 3, stroke=1, fill=1)
+    
+    # Draw QR image inside its dedicated box
+    c.drawImage(_qr_bytes(qr_url), qr_x, qr_y + 1.5 * mm, qr_sz, qr_sz, mask='auto')
+    
+    # Draw label text completely OUTSIDE the QR box in the outer container margin
     c.setFillColor(INK_SOFT)
     c.setFont("Helvetica-Bold", 5.5)
-    c.drawCentredString(qr_x + qr_sz / 2, qr_y + 0.5 * mm, "SCAN TO VERIFY / RESULT")
+    c.drawCentredString(qr_x + qr_sz / 2, qr_y - 3.5 * mm, "SCAN TO VERIFY / RESULT")
 
     # Left field grid (2 columns)
     col1 = LM + 5 * mm

@@ -18,14 +18,35 @@ const STATIC_FALLBACK_SCHEMA_COURSES = [
 export default function Courses() {
   const [items, setItems] = useState([]);
   const [active, setActive] = useState("All");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => { 
-    api.get("/courses").then(r => setItems(r.data || [])); 
+    setLoading(true);
+    api.get("/courses")
+      .then(r => setItems(r.data || []))
+      .catch(() => setItems([]))
+      .finally(() => setLoading(false));
   }, []);
 
   const filtered = active === "All" ? items : items.filter(c => c.category === active);
 
   const schemaSourceData = filtered.length > 0 ? filtered : STATIC_FALLBACK_SCHEMA_COURSES;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen grid place-items-center bg-background" data-testid="courses-loading">
+        <div className="text-center">
+          <div className="relative w-16 h-16 mx-auto">
+            <div className="absolute inset-0 rounded-full border-2 border-accent/20"/>
+            <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-accent animate-spin"/>
+            <div className="absolute inset-3 rounded-full bg-accent/10 blur-md animate-pulse"/>
+          </div>
+          <div className="mt-6 text-[10px] uppercase tracking-[0.32em] text-accent font-bold">Loading</div>
+          <div className="mt-1 text-xs text-muted-foreground">Preparing your academic programmes…</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

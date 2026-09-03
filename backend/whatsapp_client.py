@@ -312,7 +312,7 @@ async def send_whatsapp_exam_notification(
                     clean_phone=clean_phone,
                     wa_msg_id=wa_msg_id,
                     preview_text=preview,
-                    msg_type="document", # Changed to Document since PDF is attached
+                    msg_type="document", 
                     caption=full_text,
                     document_url=f"/api/scholarship-applications/{application_no}/admit-card",
                     document_filename=f"AdmitCard_{application_no}.pdf",
@@ -329,4 +329,128 @@ async def send_whatsapp_exam_notification(
             return False
         except Exception as e:
             log.error("WhatsApp delivery failed for %s: %s", clean_phone, str(e))
+            return False
+
+# ---------------------------------------------------------
+# TEMPLATE 3: WATH CARNIVAL (5 Variables + PDF)
+# ---------------------------------------------------------
+async def send_whatsapp_wath_carnival(
+    phone: str,
+    name: str,
+    application_no: str,
+    exam_date: str,
+    exam_time: str,
+    venue: str,
+    pdf_bytes: bytes,
+    **kwargs # Safely catch any extra arguments server.py passes
+) -> bool:
+    """
+    Sends the 'wath_carnival' WhatsApp template message with the PDF admit card attached.
+    Template ID: 2255670248530219
+    Parameters mapping:
+      {{1}} -> Name
+      {{2}} -> Roll No / Application No
+      {{3}} -> Date
+      {{4}} -> Time Slot
+      {{5}} -> Venue
+    """
+    phone_id = os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
+    access_token = os.environ.get("WHATSAPP_ACCESS_TOKEN")
+
+    if not phone_id or not access_token:
+        log.warning("WhatsApp credentials missing; skipping WATH Carnival send.")
+        return False
+
+    clean_phone = str(phone).split(".")[0].strip()
+    clean_phone = "".join(filter(str.isdigit, clean_phone))
+    if len(clean_phone) == 10:
+        clean_phone = f"91{clean_phone}"
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        try:
+            # 1. Upload PDF
+            upload_url = f"https://graph.facebook.com/v18.0/{phone_id}/media"
+            filename = f"WATH_Carnival_{application_no}.pdf"
+            files = {
+                "file": (filename, pdf_bytes, "application/pdf")
+            }
+            data = {"messaging_product": "whatsapp", "type": "application/pdf"}
+            headers = {"Authorization": f"Bearer {access_token}"}
+
+            media_res = await client.post(upload_url, data=data, files=files, headers=headers)
+            media_res.raise_for_status()
+            media_id = media_res.json().get("id")
+
+            if not media_id:
+                return False
+
+            # 2. Send Message Payload
+            msg_url = f"https://graph.facebook.com/v18.0/{phone_id}/messages"
+            payload = {
+                "messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": clean_phone,
+                "type": "template",
+                "template": {
+                    "name": "wath_carnival",
+                    "language": {"code": "en"},
+                    "components": [
+                        {
+                            "type": "header",
+                            "parameters": [
+                                {"type": "document", "document": {"id": media_id, "filename": filename}}
+                            ],
+                        },
+                        {
+                            "type": "body",
+                            "parameters": [
+                                {"type": "text", "text": name},            # {{1}}
+                                {"type": "text", "text": application_no},  # {{2}}
+                                {"type": "text", "text": exam_date},       # {{3}}
+                                {"type": "text", "text": exam_time},       # {{4}}
+                                {"type": "text", "text": venue}            # {{5}}
+                            ],
+                        }
+                    ],
+                },
+            }
+
+            msg_res = await client.post(msg_url, json=payload, headers=headers)
+            msg_res.raise_for_status()
+            
+            result = msg_res.json()
+            wa_msg_id = (result.get("messages") or [{}])[0].get("id")
+            
+            if wa_msg_id:
+                preview = f"🎪 [WATH Carnival Admit Card] App No: {application_no}"
+                caption_text = (
+                    f"🎪 *WATH Carnival Pass*\n\n"
+                    f"*Name:* {name}\n"
+                    f"*App No:* {application_no}\n"
+                    f"*Date:* {exam_date}\n"
+                    f"*Time:* {exam_time}\n"
+                    f"*Venue:* {venue}\n"
+                )
+                
+                await _log_automated_message_to_inbox(
+                    clean_phone=clean_phone,
+                    wa_msg_id=wa_msg_id,
+                    preview_text=preview,
+                    msg_type="document",
+                    caption=caption_text,
+                    document_url=f"/api/scholarship-applications/{application_no}/admit-card",
+                    document_filename=filename,
+                    linked_app_no=application_no,
+                    linked_title="WATH Carnival",
+                    linked_name=name
+                )
+
+            log.info("WATH Carnival WhatsApp message sent successfully to %s", clean_phone)
+            return True
+
+        except httpx.HTTPStatusError as e:
+            log.error(f"Meta Graph API HTTP Error for {clean_phone}: {e.response.status_code} - {e.response.text}")
+            return False
+        except Exception as e:
+            log.error("WATH Carnival WhatsApp delivery failed for %s: %s", clean_phone, str(e))
             return False

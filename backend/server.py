@@ -42,7 +42,7 @@ from email_client import (
     email_scholarship_result_published,
 )
 from pdf_client import admit_card_pdf, result_card_pdf
-from whatsapp_client import send_whatsapp_admit_card
+from whatsapp_client import send_whatsapp_admit_card, send_whatsapp_wath_carnival
 from whatsapp_notifier import broadcast_scholarship_details
 
 
@@ -115,11 +115,18 @@ async def _run_maybe_async(func, *args, **kwargs):
 
 
 def _safe_send_whatsapp_admit_card(*args, **kwargs) -> None:
-    """Sync wrapper for FastAPI BackgroundTasks; supports sync or async WhatsApp clients."""
+    """Sync wrapper for FastAPI BackgroundTasks for standard admit cards."""
     try:
         asyncio.run(_run_maybe_async(send_whatsapp_admit_card, *args, **kwargs))
     except Exception as e:
         logging.error(f"Background WhatsApp task failed: {e}")
+
+def _safe_send_whatsapp_wath_carnival(*args, **kwargs) -> None:
+    """Sync wrapper for FastAPI BackgroundTasks for WATH Carnival messages."""
+    try:
+        asyncio.run(_run_maybe_async(send_whatsapp_wath_carnival, *args, **kwargs))
+    except Exception as e:
+        logging.error(f"Background WATH Carnival WhatsApp task failed: {e}")
 
 def export_excel(rows: list, sheet_name: str, filename: str):
     """Helper utility for generating Excel downloads."""

@@ -18,10 +18,10 @@ const EASE = [0.16, 1, 0.3, 1];
 const CLASSES = ["Class 7", "Class 8", "Class 9", "Class 10", "Class 11 (NEET)", "Class 11 (IIT-JEE)", "Class 12 (NEET)", "Class 12 (IIT-JEE)", "Dropper (NEET)", "Dropper (IIT-JEE)"];
 
 const SLABS = [
-  { pct: "100%", marks: "≥ 90%", tag: "Star Scholar" },
-  { pct: "75%",  marks: "≥ 80%", tag: "Merit Scholar" },
-  { pct: "50%",  marks: "≥ 70%", tag: "Excellence" },
-  { pct: "25%",  marks: "≥ 60%", tag: "Encouragement" },
+  { pct: "90%", marks: "≥ 90%", tag: "Star Scholar" },
+  { pct: "80%",  marks: "≥ 80%", tag: "Merit Scholar" },
+  { pct: "70%",  marks: "≥ 70%", tag: "Excellence" },
+  { pct: "60%",  marks: "≥ 60%", tag: "Encouragement" },
 ];
 
 const REWARDS = [
@@ -239,7 +239,7 @@ function HeroSection({ campaign, carnival, mode, loading, onRegistered }) {
   const [busy, setBusy] = useState(false);
 
   const venueOptions = useMemo(() => {
-    if (isCarnival) return carnival.available_venues || ["Northend 90 FT", "Northend Anantnag", "Northend Zakura", "Northend Parraypora"];
+    if (isCarnival) return carnival.available_venues || ["90 FT", "Anantnag", "Zakura", "Parraypora", "Sopore"];
     return campaign?.available_venues || [];
   }, [campaign, carnival, isCarnival]);
 
@@ -273,7 +273,7 @@ function HeroSection({ campaign, carnival, mode, loading, onRegistered }) {
         father_name: form.father_name || undefined,
         gender: form.gender || undefined,
         dob: form.dob || undefined,
-        city: (form.venue || "Srinagar").replace(/^Northend\s+/i, "") || "Srinagar",
+        city: form.venue || undefined,
         venue: form.venue || undefined,
       };
       const payload = isCarnival
@@ -437,7 +437,7 @@ function HeroSection({ campaign, carnival, mode, loading, onRegistered }) {
                       <div className="grid grid-cols-2 gap-2.5">
                         <div className="relative">
                           <input className={`${inputCls} pr-3`} type="date" required value={form.dob} onChange={e => setForm({...form, dob: e.target.value})} data-testid="wath-dob" aria-label="Date of birth"/>
-                          {!form.dob && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 text-xs pointer-events-none">Date of birth</span>}
+                          {!form.dob && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 text-xs pointer-events-none"></span>}
                         </div>
                         <input className={inputCls} placeholder="School / current institute" required value={form.school_name} onChange={e => setForm({...form, school_name: e.target.value})} data-testid="wath-school"/>
                       </div>
@@ -638,6 +638,7 @@ function SlabsSection() {
                 <h2 className="font-display text-4xl lg:text-5xl font-light tracking-tight mt-4">
                   Score more, <span className="font-medium italic text-accent">pay less.</span>
                 </h2>
+              
               </div>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 {SLABS.map((s, i) => (
@@ -651,7 +652,9 @@ function SlabsSection() {
                   </Reveal>
                 ))}
               </div>
-              <p className="text-center text-xs text-muted-foreground mt-8 max-w-2xl mx-auto">*Applicable on tuition component of NEET, JEE and Foundation classroom programmes. Final award subject to admissions verification.</p>
+             
+              <p className="text-center text-xs text-muted-foreground mt-8 max-w-2xl mx-auto">*Your scholarship percentage directly matches your exam score percentage. Applicable on tuition component of NEET, JEE and Foundation classroom programmes. Final award subject to admissions verification.</p>
+            
             </div>
           </GlassPanel>
         </Reveal>

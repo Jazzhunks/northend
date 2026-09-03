@@ -11,7 +11,7 @@ import { isReactSnap } from "@/utils/isBot";
 import { Helmet } from "react-helmet-async";
 import {
   Star, Sparkle, Trophy, GraduationCap, Lightning, Compass,
-  ShieldCheck, ChartLineUp, Quotes, MapPin, ArrowUpRight
+  ShieldCheck, ChartLineUp, Quotes, MapPin, ArrowUpRight, Clock
 } from "@phosphor-icons/react";
 
 const EASE = [0.16, 1, 0.3, 1];
@@ -21,18 +21,34 @@ export default function Home() {
   const isBot = isReactSnap(); 
   
   const [courses, setCourses] = useState([]);
-  const [stats, setStats] = useState({ students_trained: 1323, selections: 100, educators: 100, centers: 4 });
+  const [stats, setStats] = useState({ students_trained: 1323, selections: 100, educators: 100, centers: 5 });
   const [results, setResults] = useState([]);
   const [testimonials, setTestimonials] = useState([]);
   const [centers, setCenters] = useState([]);
+  
+  // WATH State
+  const [wathPage, setWathPage] = useState(null);
+  const [wathLoading, setWathLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       api.get("/courses?featured=true").then(r => setCourses(r.data)).catch(()=>{}),
-      api.get("/stats").then(r => setStats(r.data)).catch(()=>{}),
+      api.get("/stats").then(r => {
+        // Destructure 'centers' out so the backend stats can NEVER overwrite it
+        const { centers: _, ...statsWithoutCenters } = r.data;
+        setStats(prev => ({ ...prev, ...statsWithoutCenters }));
+      }).catch(()=>{}),
       api.get("/results").then(r => setResults(r.data.slice(0, 6))).catch(()=>{}),
       api.get("/testimonials").then(r => setTestimonials(r.data)).catch(()=>{}),
-      api.get("/centers").then(r => setCenters(r.data)).catch(()=>{}),
+      api.get("/centers").then(r => {
+        setCenters(r.data);
+        // Explicitly set the accurate count from the array length
+        setStats(prev => ({ ...prev, centers: r.data.length }));
+      }).catch(()=>{}),
+      api.get("/wath/page")
+         .then(r => setWathPage(r.data))
+         .catch(()=>{})
+         .finally(() => setWathLoading(false)),
     ]);
   }, []);
 
@@ -172,62 +188,96 @@ export default function Home() {
         </section>
 
         {/* ============================== WATH FEATURED BANNER ============================== */}
-        <section className="relative py-12 lg:py-16" data-testid="home-wath-banner">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <Reveal>
-              <Link to="/wath" className="block group">
-                <GlassPanel elevated className="relative overflow-hidden p-6 sm:p-8 lg:p-14">
-                  <div className="absolute inset-0 bg-grid opacity-20 pointer-events-none" />
-
-                  <div className="absolute right-[6%] top-1/2 -translate-y-1/2 hidden lg:block pointer-events-none opacity-90">
-                    <div className="relative w-[280px] h-[280px]">
-                      <div className="absolute inset-0 rounded-full border border-accent/25 animate-[spin_60s_linear_infinite]" />
-                      <div className="absolute inset-6 rounded-full border border-primary/30 animate-[spin_45s_linear_infinite_reverse]" />
-                      <div className="absolute inset-14 rounded-full border border-accent/15 animate-[spin_30s_linear_infinite]" />
-                      <div className="absolute inset-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-accent/20 blur-2xl" />
-                      <div className="absolute inset-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-accent glow-accent grid place-items-center">
-                        <Trophy weight="fill" size={20} className="text-accent-foreground" />
+        {!wathLoading && (
+          <section className="relative py-12 lg:py-16" data-testid="home-wath-banner">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <Reveal>
+                {wathPage?.mode === "disabled" ? (
+                  <GlassPanel elevated className="relative overflow-hidden p-6 sm:p-8 lg:p-14 text-center grid place-items-center">
+                    <div className="absolute inset-0 bg-grid opacity-20 pointer-events-none" />
+                    <div className="relative max-w-xl mx-auto py-8">
+                      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass text-[10px] uppercase tracking-[0.22em] font-bold text-accent mb-6">
+                        <Clock size={12} weight="bold"/> Registrations paused
                       </div>
+                      <h2 className="font-display text-3xl sm:text-5xl lg:text-6xl font-light tracking-[-0.03em] leading-[1.05]">
+                        WATH is <span className="italic text-accent font-medium">taking a breath</span>
+                      </h2>
+                      <p className="mt-4 text-sm sm:text-base text-muted-foreground">
+                        {wathPage?.disabled_message || "The next scholarship examination window is being scheduled. Follow us on WhatsApp to be the first to know when registrations open."}
+                      </p>
                     </div>
-                  </div>
+                  </GlassPanel>
+                ) : (
+                  <Link to="/wath" className="block group">
+                    <GlassPanel elevated className="relative overflow-hidden p-6 sm:p-8 lg:p-14">
+                      <div className="absolute inset-0 bg-grid opacity-20 pointer-events-none" />
 
-                  <div className="relative max-w-3xl">
-                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 glass rounded-full text-[10px] font-bold uppercase tracking-[0.22em] mb-6">
-                      <Sparkle weight="fill" size={12} className="text-accent shrink-0" />
-                      <span className="truncate">WATH Carnival · Kashmir's flagship talent weekend · 2026</span>
-                    </div>
-
-                    <h2 className="font-display text-3xl sm:text-5xl lg:text-7xl font-light tracking-[-0.03em] leading-[1.05] sm:leading-[0.95]">
-                      <span className="bg-gradient-to-br from-primary via-accent to-primary bg-clip-text text-transparent font-medium">
-                        WATH Carnival
-                      </span>
-                      <span className="block text-lg sm:text-xl lg:text-2xl text-foreground/85 mt-3 font-light">
-                        <span className="text-accent italic font-medium">Wisdom</span> · <span className="text-accent italic font-medium">Aptitude</span> · <span className="text-accent italic font-medium">Talent</span> · <span className="text-accent italic font-medium">Hunt</span>
-                      </span>
-                    </h2>
-
-                    <p className="mt-6 text-sm sm:text-base lg:text-lg text-muted-foreground max-w-xl leading-relaxed">
-                      A valley-wide scholarship exam carnival — pick your date &amp; slot. Unlock up to <b className="text-accent">100% fee waiver</b> and <b className="text-foreground">cash prizes</b> across NEET, JEE and Foundation programmes. Free to register.
-                    </p>
-
-                    <div className="mt-8 flex items-center gap-4 flex-wrap">
-                      <span className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-accent text-accent-foreground text-xs font-bold uppercase tracking-[0.18em] glow-accent group-hover:translate-y-[-2px] transition-transform">
-                        Explore WATH Carnival <ArrowUpRight weight="bold" size={14} />
-                      </span>
-                      <div className="flex items-center gap-3 sm:gap-6 text-[10px] sm:text-[11px] uppercase tracking-[0.22em] text-muted-foreground font-bold flex-wrap">
-                        <span>Free entry</span>
-                        <span>·</span>
-                        <span>5 centres</span>
-                        <span>·</span>
-                        <span>Class 7–12 · Droppers</span>
+                      <div className="absolute right-[6%] top-1/2 -translate-y-1/2 hidden lg:block pointer-events-none opacity-90">
+                        <div className="relative w-[280px] h-[280px]">
+                          <div className="absolute inset-0 rounded-full border border-accent/25 animate-[spin_60s_linear_infinite]" />
+                          <div className="absolute inset-6 rounded-full border border-primary/30 animate-[spin_45s_linear_infinite_reverse]" />
+                          <div className="absolute inset-14 rounded-full border border-accent/15 animate-[spin_30s_linear_infinite]" />
+                          <div className="absolute inset-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-accent/20 blur-2xl" />
+                          <div className="absolute inset-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-accent glow-accent grid place-items-center">
+                            <Trophy weight="fill" size={20} className="text-accent-foreground" />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </GlassPanel>
-              </Link>
-            </Reveal>
-          </div>
-        </section>
+
+                      <div className="relative max-w-3xl">
+                        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 glass rounded-full text-[10px] font-bold uppercase tracking-[0.22em] mb-6">
+                          <Sparkle weight="fill" size={12} className="text-accent shrink-0" />
+                          <span className="truncate">
+                            {wathPage?.mode === "carnival" 
+                              ? "WATH Carnival · Kashmir's flagship talent weekend" 
+                              : "WATH · Kashmir's flagship talent search exam"}
+                          </span>
+                        </div>
+
+                        <h2 className="font-display text-3xl sm:text-5xl lg:text-7xl font-light tracking-[-0.03em] leading-[1.05] sm:leading-[0.95]">
+                          <span className="bg-gradient-to-br from-primary via-accent to-primary bg-clip-text text-transparent font-medium">
+                            {wathPage?.mode === "carnival" ? (wathPage?.carnival?.title || "WATH Carnival") : "WATH"}
+                          </span>
+                          <span className="block text-lg sm:text-xl lg:text-2xl text-foreground/85 mt-3 font-light">
+                            {wathPage?.mode === "carnival" ? (
+                              "Choose your Date  →  Book your Slot  →  Earn your Scholarship"
+                            ) : (
+                              <><span className="text-accent italic font-medium">Wisdom</span> · <span className="text-accent italic font-medium">Aptitude</span> · <span className="text-accent italic font-medium">Talent</span> · <span className="text-accent italic font-medium">Hunt</span></>
+                            )}
+                          </span>
+                        </h2>
+
+                        <p className="mt-6 text-sm sm:text-base lg:text-lg text-muted-foreground max-w-xl leading-relaxed">
+                          {wathPage?.mode === "carnival" 
+                            ? (wathPage?.carnival?.description || "A week-long WATH scholarship examination window. Choose the exam date and time slot that works for you. Unlock up to 100% fee waiver.") 
+                            : "Kashmir's flagship talent search exam. Recognise your potential. Unlock up to 100% scholarship and cash prizes across NEET, JEE, Foundation programmes."
+                          }
+                        </p>
+
+                        <div className="mt-8 flex items-center gap-4 flex-wrap">
+                          <span className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-accent text-accent-foreground text-xs font-bold uppercase tracking-[0.18em] glow-accent group-hover:translate-y-[-2px] transition-transform">
+                            Explore {wathPage?.mode === "carnival" ? "Carnival" : "WATH"} <ArrowUpRight weight="bold" size={14} />
+                          </span>
+                          <div className="flex items-center gap-3 sm:gap-6 text-[10px] sm:text-[11px] uppercase tracking-[0.22em] text-muted-foreground font-bold flex-wrap">
+                            <span>Free entry</span>
+                            <span>·</span>
+                            <span>
+                              {wathPage?.mode === "carnival" 
+                                ? (wathPage?.carnival?.available_venues?.length || 5) 
+                                : (wathPage?.exam?.available_venues?.length || 5)} centres
+                            </span>
+                            <span>·</span>
+                            <span>Class 7–12 · Droppers</span>
+                          </div>
+                        </div>
+                      </div>
+                    </GlassPanel>
+                  </Link>
+                )}
+              </Reveal>
+            </div>
+          </section>
+        )}
 
         {/* ============================== FEATURED COURSES ============================== */}
         <section className="relative py-12 lg:py-16 overflow-hidden">
@@ -452,43 +502,48 @@ export default function Home() {
         </section>
 
         {/* ============================== CENTERS QUICK MAP ============================== */}
-        {centers.length > 0 && (
-          <section className="relative py-12 lg:py-16">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="grid lg:grid-cols-12 gap-6 lg:gap-8 mb-10 items-end">
-                <div className="lg:col-span-7">
-                  <Eyebrow>Network</Eyebrow>
-                  <Reveal>
-                    <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-light tracking-tight mt-4">
-                      Five centres.<br/>
-                      <span className="font-medium italic text-accent">One valley.</span>
-                    </h2>
-                  </Reveal>
+        {centers.length > 0 && (() => {
+          const countWords = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"];
+          const centreWord = countWords[centers.length] || centers.length;
+
+          return (
+            <section className="relative py-12 lg:py-16">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="grid lg:grid-cols-12 gap-6 lg:gap-8 mb-10 items-end">
+                  <div className="lg:col-span-7">
+                    <Eyebrow>Network</Eyebrow>
+                    <Reveal>
+                      <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-light tracking-tight mt-4">
+                        {centreWord} centres.<br/>
+                        <span className="font-medium italic text-accent">One valley.</span>
+                      </h2>
+                    </Reveal>
+                  </div>
+                  <div className="lg:col-span-5 flex lg:justify-end">
+                    <Link to="/centers"><CTAGhost iconRight data-testid="all-centers-btn">Visit any centre</CTAGhost></Link>
+                  </div>
                 </div>
-                <div className="lg:col-span-5 flex lg:justify-end">
-                  <Link to="/centers"><CTAGhost iconRight data-testid="all-centers-btn">Visit any centre</CTAGhost></Link>
-                </div>
-              </div>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {centers.slice(0, 6).map((c, i) => (
-                  <Reveal key={c.id} delay={i * 0.05}>
-                    <GlassPanel className="p-6 h-full group transition-all hover:-translate-y-1 hover:border-accent/30 flex flex-col justify-between" data-testid={`center-${c.id}`}>
-                      <div>
-                        <div className="flex items-start justify-between mb-3">
-                          <MapPin weight="duotone" size={22} className="text-accent" />
-                          <ArrowUpRight weight="bold" size={16} className="text-muted-foreground group-hover:text-accent group-hover:rotate-45 transition-all" />
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {centers.slice(0, 6).map((c, i) => (
+                    <Reveal key={c.id} delay={i * 0.05}>
+                      <GlassPanel className="p-6 h-full group transition-all hover:-translate-y-1 hover:border-accent/30 flex flex-col justify-between" data-testid={`center-${c.id}`}>
+                        <div>
+                          <div className="flex items-start justify-between mb-3">
+                            <MapPin weight="duotone" size={22} className="text-accent" />
+                            <ArrowUpRight weight="bold" size={16} className="text-muted-foreground group-hover:text-accent group-hover:rotate-45 transition-all" />
+                          </div>
+                          <h3 className="font-display text-xl font-medium">{c.name}</h3>
+                          <p className="text-xs text-muted-foreground mt-1">{c.address}</p>
                         </div>
-                        <h3 className="font-display text-xl font-medium">{c.name}</h3>
-                        <p className="text-xs text-muted-foreground mt-1">{c.address}</p>
-                      </div>
-                      <p className="text-xs text-muted-foreground/80 mt-4 font-mono">{c.phone}</p>
-                    </GlassPanel>
-                  </Reveal>
-                ))}
+                        <p className="text-xs text-muted-foreground/80 mt-4 font-mono">{c.phone}</p>
+                      </GlassPanel>
+                    </Reveal>
+                  ))}
+                </div>
               </div>
-            </div>
-          </section>
-        )}
+            </section>
+          );
+        })()}
 
         {/* ============================== FINAL CTA ============================== */}
         <section className="relative py-16 lg:py-24 text-center">
