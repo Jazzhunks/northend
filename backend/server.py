@@ -1834,13 +1834,26 @@ async def admit_card(application_no: str, phone: Optional[str] = Query(None), re
 
     if not app_doc:
         raise HTTPException(404, "Application not found")
+
+    # Resolve exam context: prefer carnival (if this app booked a slot), then scholarship campaign.
+    carnival = None
     campaign = None
-    if app_doc.get("scholarship_id"):
+    if app_doc.get("carnival_id"):
+        carnival = await db.wath_carnivals.find_one({"id": app_doc["carnival_id"]}, {"_id": 0})
+    if app_doc.get("scholarship_id") and not carnival:
         campaign = await db.scholarships.find_one({"id": app_doc["scholarship_id"]}, {"_id": 0})
-    if not campaign:
+    if not carnival and not campaign:
         campaign = await db.scholarships.find_one({"active": True}, {"_id": 0}, sort=[("created_at", -1)])
-    
+
     venue_name = _sanitize_venue(app_doc.get("venue") or (campaign or {}).get("venue") or app_doc.get("city"))
+    if carnival:
+        title = carnival.get("title") or "WATH Carnival"
+        exam_date = app_doc.get("chosen_date") or (carnival.get("exam_dates") or [{}])[0].get("date", "TBA")
+        exam_time = app_doc.get("chosen_slot_time") or "10:00 AM"
+    else:
+        title = (campaign or {}).get("title") or app_doc.get("scholarship_title", "Scholarship Test")
+        exam_date = (campaign or {}).get("exam_date", "TBA")
+        exam_time = (campaign or {}).get("exam_time", "10:00 AM")
 
     pdf_bytes = admit_card_pdf(
         application_no=application_no,
@@ -1849,10 +1862,10 @@ async def admit_card(application_no: str, phone: Optional[str] = Query(None), re
         school=app_doc.get("school", ""),
         standard=app_doc.get("standard", ""),
         target_exam=app_doc.get("target_exam", ""),
-        exam_date=(campaign or {}).get("exam_date", "TBA"),
+        exam_date=exam_date,
         venue=venue_name,
-        exam_time=(campaign or {}).get("exam_time", "10:00 AM"),
-        scholarship_title=(campaign or {}).get("title") or app_doc.get("scholarship_title", "Scholarship Test"),
+        exam_time=exam_time,
+        scholarship_title=title,
     )
     return Response(content=pdf_bytes, media_type="application/pdf",
                     headers={"Content-Disposition": f'attachment; filename="admit-card-{application_no}.pdf"'})
@@ -1868,7 +1881,11 @@ async def result_card(application_no: str, phone: Optional[str] = None):
     if phone and app_doc.get("phone") != phone.strip():
         raise HTTPException(403, "Phone does not match application")
     campaign = None
-    if app_doc.get("scholarship_id"):
+    if app_doc.get("carnival_id"):
+        car = await db.wath_carnivals.find_one({"id": app_doc["carnival_id"]}, {"_id": 0})
+        if car:
+            campaign = {"title": car.get("title") or "WATH Carnival"}
+    if not campaign and app_doc.get("scholarship_id"):
         campaign = await db.scholarships.find_one({"id": app_doc["scholarship_id"]}, {"_id": 0})
     pdf_bytes = result_card_pdf(
         application_no=application_no,

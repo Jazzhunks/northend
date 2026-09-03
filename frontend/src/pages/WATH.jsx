@@ -77,18 +77,34 @@ export default function WATH() {
   const [pageState, setPageState] = useState(null);   // {mode, exam?, carnival?, disabled_message?}
   const [loading, setLoading] = useState(true);
 
-  const load = () => {
-    setLoading(true);
+  const load = (silent = false) => {
+    if (!silent) setLoading(true);
     api.get("/wath/page")
       .then(r => setPageState(r.data || null))
-      .catch(() => setPageState(null))
-      .finally(() => setLoading(false));
+      .catch(() => { if (!silent) setPageState(null); })
+      .finally(() => { if (!silent) setLoading(false); });
   };
   useEffect(() => { load(); }, []);
 
   const mode = pageState?.mode || "exam";
   const campaign = mode === "exam" ? pageState?.exam : null;
   const carnival = mode === "carnival" ? pageState?.carnival : null;
+
+  if (loading || !pageState) {
+    return (
+      <div className="min-h-screen grid place-items-center bg-background" data-testid="wath-loading">
+        <div className="text-center">
+          <div className="relative w-16 h-16 mx-auto">
+            <div className="absolute inset-0 rounded-full border-2 border-accent/20"/>
+            <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-accent animate-spin"/>
+            <div className="absolute inset-3 rounded-full bg-accent/10 blur-md animate-pulse"/>
+          </div>
+          <div className="mt-6 text-[10px] uppercase tracking-[0.32em] text-accent font-bold">Loading</div>
+          <div className="mt-1 text-xs text-muted-foreground">Preparing your WATH experience…</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative" data-testid="wath-page" data-mode={mode}>
@@ -103,7 +119,7 @@ export default function WATH() {
             carnival={carnival}
             mode={mode}
             loading={loading}
-            onRegistered={load}
+            onRegistered={() => load(true)}
           />
           <AboutSection />
           <FormatSection />
@@ -214,9 +230,7 @@ function HeroSection({ campaign, carnival, mode, loading, onRegistered }) {
   });
   const [submitted, setSubmitted] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Available venues come from exam campaign OR fall back to a fixed list during carnival
   const venueOptions = useMemo(() => {
     if (isCarnival) return carnival.available_venues || ["Northend 90 FT", "Northend Anantnag", "Northend Zakura", "Northend Parraypora"];
     return campaign?.available_venues || [];
@@ -304,17 +318,28 @@ function HeroSection({ campaign, carnival, mode, loading, onRegistered }) {
             </motion.div>
 
             <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, ease: EASE, delay: 0.2 }} className="font-display text-2xl lg:text-4xl font-light tracking-[-0.02em] leading-tight">
-              <span className="text-accent italic font-medium">Wisdom</span> · <span className="text-accent italic font-medium">Aptitude</span> · <span className="text-accent italic font-medium">Talent</span> · <span className="text-accent italic font-medium">Hunt</span>
+              {isCarnival ? (
+                <>
+                  <span className="text-accent italic font-medium">{carnival.title}</span>
+                  <span className="block text-lg lg:text-2xl text-foreground/70 mt-2 font-light">Pick your date · pick your slot · win a scholarship</span>
+                </>
+              ) : (
+                <><span className="text-accent italic font-medium">Wisdom</span> · <span className="text-accent italic font-medium">Aptitude</span> · <span className="text-accent italic font-medium">Talent</span> · <span className="text-accent italic font-medium">Hunt</span></>
+              )}
             </motion.h1>
 
             <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: EASE, delay: 0.3 }} className="mt-6 text-lg text-muted-foreground max-w-xl leading-relaxed font-light">
-              Kashmir's flagship talent search exam. Recognise your potential. Unlock up to <b className="text-accent">100% scholarship</b> and <b className="text-foreground">cash prizes</b> across NEET, JEE, Foundation programmes.
+              {isCarnival
+                ? (carnival.description || `A week-long WATH scholarship examination window. Choose the exam date and time slot that works for you across ${(carnival.exam_dates || []).length} available dates.`)
+                : (<>Kashmir's flagship talent search exam. Recognise your potential. Unlock up to <b className="text-accent">100% scholarship</b> and <b className="text-foreground">cash prizes</b> across NEET, JEE, Foundation programmes.</>)}
             </motion.p>
 
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: EASE, delay: 0.5 }} className="mt-10 flex flex-wrap gap-3">
-              <div onClick={() => setIsModalOpen(true)}>
-                <CTAPrimary data-testid="hero-register-btn">Register — it's free</CTAPrimary>
-              </div>
+              <a href="#register">
+                <CTAPrimary data-testid="hero-register-btn">
+                  {isCarnival ? "Register for Carnival — it's free" : "Register — it's free"}
+                </CTAPrimary>
+              </a>
               <a href="#admit-card"><CTAGhost iconRight data-testid="hero-admit-btn">Get Admit Card</CTAGhost></a>
             </motion.div>
           </div>
@@ -325,7 +350,7 @@ function HeroSection({ campaign, carnival, mode, loading, onRegistered }) {
                 <div className="absolute -top-20 -right-20 w-60 h-60 rounded-full bg-accent/10 blur-3xl" />
                 <div className="relative">
                   <div className="text-[10px] uppercase tracking-[0.28em] text-accent font-bold mb-5 flex items-center justify-between">
-                    <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-accent pulse-ring"/>Register for WATH</span>
+                    <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-accent pulse-ring"/>{isCarnival ? "Register for Carnival" : "Register for WATH"}</span>
                     <span className="text-muted-foreground font-normal lowercase">free entry</span>
                   </div>
 
@@ -335,32 +360,42 @@ function HeroSection({ campaign, carnival, mode, loading, onRegistered }) {
                         <Check weight="bold" size={14}/> Registration successful
                       </div>
                       <h3 className="font-display text-2xl font-light tracking-tight mt-2">
-                        Welcome to <span className="font-medium italic text-accent">WATH.</span>
+                        Welcome to <span className="font-medium italic text-accent">{isCarnival ? (carnival.title || "WATH Carnival") : "WATH"}.</span>
                       </h3>
-                      <div className="mt-4 grid grid-cols-2 gap-2">
+                      
+                      <div className="mt-4 grid grid-cols-2 gap-3">
                         <InfoBlock label="Application no" value={submitted.application_no} testid="app-no" mono/>
                         <InfoBlock label="Venue" value={submitted.venue}/>
+                        {(submitted.chosen_date || form.chosen_date) && <InfoBlock label="Exam date" value={submitted.chosen_date || form.chosen_date}/>}
+                        {(submitted.chosen_slot_time || form.chosen_slot_time) && <InfoBlock label="Slot" value={submitted.chosen_slot_time || form.chosen_slot_time}/>}
                       </div>
-                      <div className="mt-4 p-4 glass rounded-xl border border-accent/25">
+
+                      <div className="mt-5 p-5 glass rounded-2xl border border-accent/25 space-y-4">
                         <p className="text-xs text-muted-foreground leading-relaxed">Download your admit card and save it to your phone for exam day entry.</p>
-                        <div className="mt-4 flex flex-col gap-2">
+                        <div className="flex flex-col gap-3">
                           <a href={`${API_BASE}/scholarship-applications/${submitted.application_no}/admit-card?phone=${encodeURIComponent(submitted.phone || form.phone)}`} target="_blank" rel="noreferrer" data-testid="download-admit-card">
-                            <CTAPrimary className="w-full justify-center text-xs py-2"><Download weight="bold" size={14}/> Download admit card</CTAPrimary>
+                            <button type="button" className="w-full flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl bg-gradient-to-r from-[#1380d0] to-accent text-accent-foreground font-medium text-xs uppercase tracking-[0.15em] shadow-lg shadow-accent/20 hover:opacity-95 transition">
+                              <Download weight="bold" size={16}/> Download Admit Card <ArrowRight weight="bold" size={14}/>
+                            </button>
                           </a>
-                          {campaign?.whatsapp_community_url && (
-                            <a href={campaign.whatsapp_community_url} target="_blank" rel="noreferrer" data-testid="join-wa">
-                              <CTAGhost className="w-full justify-center text-xs py-2" iconRight><WhatsappLogo weight="fill" size={14}/> Join WhatsApp</CTAGhost>
+                          
+                          {(campaign?.whatsapp_community_url || carnival?.whatsapp_community_url) && (
+                            <a href={campaign?.whatsapp_community_url || carnival?.whatsapp_community_url} target="_blank" rel="noreferrer" data-testid="join-wa">
+                              <button type="button" className="w-full flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl glass border border-accent/30 text-foreground font-medium text-xs uppercase tracking-[0.15em] hover:bg-accent/10 transition">
+                                <WhatsappLogo weight="fill" size={16} className="text-accent"/> Join WhatsApp <ArrowRight weight="bold" size={14}/>
+                              </button>
                             </a>
                           )}
                         </div>
                       </div>
-                      <button onClick={() => setSubmitted(null)} className="mt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground flex items-center gap-1.5" data-testid="register-another">
+
+                      <button onClick={() => setSubmitted(null)} className="mt-5 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground flex items-center gap-1.5" data-testid="register-another">
                         Register another aspirant <ArrowRight weight="bold" size={12} />
                       </button>
                     </div>
                   ) : (
                     <form onSubmit={submit} data-testid="wath-register-form" className="space-y-3">
-                      {!campaign && (
+                      {!campaign && !isCarnival && (
                         <div className="p-3 rounded-xl glass border border-amber-500/30 text-xs">
                           <span className="font-bold uppercase text-amber-400">Opening soon</span> — drop details to get notified.
                         </div>
@@ -419,109 +454,6 @@ function HeroSection({ campaign, carnival, mode, loading, onRegistered }) {
             </motion.div>
           </div>
         </div>
-
-        {/* Modal Popup Form for Hero Section Button */}
-        <AnimatePresence>
-          {isModalOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                transition={{ duration: 0.3, ease: EASE }}
-                className="w-full max-w-lg relative"
-              >
-                <GlassPanel elevated className="p-6 lg:p-7 relative overflow-hidden">
-                  <div className="absolute -top-20 -right-20 w-60 h-60 rounded-full bg-accent/10 blur-3xl" />
-                  
-                  {/* Fixed X button positioning with proper flex header alignment */}
-                  <div className="relative mb-5 flex items-center justify-between">
-                    <div className="text-[10px] uppercase tracking-[0.28em] text-accent font-bold flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-accent pulse-ring"/>Register for WATH
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-[10px] text-muted-foreground lowercase">free entry</span>
-                      <button 
-                        onClick={() => setIsModalOpen(false)}
-                        className="p-1.5 rounded-full glass hover:bg-muted text-muted-foreground hover:text-foreground transition flex items-center justify-center"
-                      >
-                        <X weight="bold" size={14} />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="relative">
-                    {submitted ? (
-                      <div className="py-2">
-                        <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-accent font-bold">
-                          <Check weight="bold" size={14}/> Registration successful
-                        </div>
-                        <h3 className="font-display text-2xl font-light tracking-tight mt-2">
-                          Welcome to <span className="font-medium italic text-accent">WATH.</span>
-                        </h3>
-                        <div className="mt-4 grid grid-cols-2 gap-2">
-                          <InfoBlock label="Application no" value={submitted.application_no} mono/>
-                          <InfoBlock label="Venue" value={submitted.venue}/>
-                        </div>
-                        <div className="mt-4 p-4 glass rounded-xl border border-accent/25">
-                          <p className="text-xs text-muted-foreground leading-relaxed">Download your admit card and save it to your phone for exam day entry.</p>
-                          <div className="mt-4 flex flex-col gap-2">
-                            <a href={`${API_BASE}/scholarship-applications/${submitted.application_no}/admit-card?phone=${encodeURIComponent(submitted.phone || form.phone)}`} target="_blank" rel="noreferrer">
-                              <CTAPrimary className="w-full justify-center text-xs py-2"><Download weight="bold" size={14}/> Download admit card</CTAPrimary>
-                            </a>
-                          </div>
-                        </div>
-                        <button onClick={() => setIsModalOpen(false)} className="mt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground flex items-center gap-1.5">
-                          Close modal <ArrowRight weight="bold" size={12} />
-                        </button>
-                      </div>
-                    ) : (
-                      <form onSubmit={submit} className="space-y-3">
-                        {!campaign && (
-                          <div className="p-3 rounded-xl glass border border-amber-500/30 text-xs">
-                            <span className="font-bold uppercase text-amber-400">Opening soon</span> — drop details to get notified.
-                          </div>
-                        )}
-                        <div className="grid grid-cols-2 gap-2.5">
-                          <input className={inputCls} placeholder="Full name" required value={form.name} onChange={e => setForm({...form, name: e.target.value})}/>
-                          <input className={inputCls} type="email" placeholder="Email" required value={form.email} onChange={e => setForm({...form, email: e.target.value})}/>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2.5">
-                          <input className={inputCls} placeholder="Phone number" required value={form.phone} onChange={e => setForm({...form, phone: e.target.value})}/>
-                          <div className="relative">
-                            <select className={`${inputCls} appearance-none pr-8`} required value={form.class_or_course} onChange={e => setForm({...form, class_or_course: e.target.value})}>
-                              <option value="" disabled className="bg-background text-muted-foreground">Current class</option>
-                              {CLASSES.map(c => <option key={c} value={c} className="bg-background">{c}</option>)}
-                            </select>
-                            <CaretDown weight="bold" size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                          </div>
-                        </div>
-                        <input className={inputCls} placeholder="School / current institute" required value={form.school_name} onChange={e => setForm({...form, school_name: e.target.value})}/>
-                        {campaign?.available_venues?.length > 0 ? (
-                          <div className="relative">
-                            <select className={`${inputCls} appearance-none pr-8`} required value={form.venue} onChange={e => setForm({...form, venue: e.target.value})}>
-                              <option value="" className="bg-background">— Select exam venue —</option>
-                              {campaign.available_venues.map(v => <option key={v} value={v} className="bg-background">{v}</option>)}
-                            </select>
-                            <CaretDown weight="bold" size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                          </div>
-                        ) : (
-                          <input className={inputCls} placeholder="Preferred venue (e.g. Srinagar)" required value={form.venue} onChange={e => setForm({...form, venue: e.target.value})}/>
-                        )}
-
-                        <div className="pt-1">
-                          <CTAPrimary type="submit" className="w-full justify-center text-xs py-2.5" disabled={busy || !campaign}>
-                            {busy ? "Registering…" : campaign ? "Register & get admit card" : "Notify me"}
-                          </CTAPrimary>
-                        </div>
-                      </form>
-                    )}
-                  </div>
-                </GlassPanel>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
 
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1, y: [0, 8, 0] }}
@@ -801,6 +733,9 @@ function AdmitCardDownloadSection({ campaign }) {
                   <InfoBlock label="Application no" value={appData.application_no} mono/>
                   <InfoBlock label="Venue" value={appData.venue || "Unacademy Centre"}/>
                   <InfoBlock label="Class" value={appData.standard}/>
+                  {appData.chosen_date && <InfoBlock label="Exam date" value={appData.chosen_date}/>}
+                  {appData.chosen_slot_time && <InfoBlock label="Slot" value={appData.chosen_slot_time}/>}
+                  {appData.campaign_kind && <InfoBlock label="Programme" value={appData.campaign_kind === "carnival" ? "WATH Carnival" : appData.campaign_kind === "wath" ? "WATH" : "Scholarship"}/>}
                 </div>
                 <div className="mt-6 flex flex-wrap gap-3">
                   <a href={`${API_BASE}/scholarship-applications/${appData.application_no}/admit-card?phone=${encodeURIComponent(appData.phone || phone)}`} target="_blank" rel="noreferrer" data-testid="download-fetched-admit">
