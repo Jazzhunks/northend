@@ -1,15 +1,24 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Helmet } from "react-helmet-async";
 import { Eyebrow, Reveal } from "@/components/Cinematic";
 import { galleryAPI } from "@/lib/api";
 import PageHero from "@/components/PageHero";
 import GlassPanel from "@/components/GlassPanel";
-import { Play, FileText, Image as ImageIcon, Plus } from "@phosphor-icons/react";
+import { Play, FileText, Image as ImageIcon, ArrowUpRight, Flame } from "@phosphor-icons/react";
+
+const CARD_SIZES = [
+  "tall",
+  "wide",
+  "standard",
+  "standard",
+  "tall",
+  "wide",
+];
 
 export default function Gallery() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeCategory, setActiveCategory] = useState(null);
+  const [activeCategory, setActiveCategory] = useState("All");
 
   useEffect(() => {
     galleryAPI.list()
@@ -18,15 +27,18 @@ export default function Gallery() {
       .finally(() => setLoading(false));
   }, []);
 
-  const grouped = items.reduce((acc, item) => {
-    const key = item.category || "Uncategorised";
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(item);
-    return acc;
-  }, {});
+  const categories = useMemo(() => {
+    const cats = Array.from(new Set(items.map(x => x.category).filter(Boolean)));
+    return ["All", ...cats];
+  }, [items]);
 
-  const categories = Object.keys(grouped);
-  const displayCategory = activeCategory || categories[0];
+  const visible = useMemo(() => {
+    if (activeCategory === "All") return items;
+    return items.filter(x => x.category === activeCategory || !x.category);
+  }, [items, activeCategory]);
+
+  const hero = visible[0];
+  const rest = visible.slice(1);
 
   return (
     <>
@@ -46,129 +58,171 @@ export default function Gallery() {
         <section className="relative section-padding">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             {loading ? (
-              <div className="space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-48 bg-muted/50 rounded-2xl animate-pulse" />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="h-72 bg-muted/50 rounded-3xl animate-pulse" />
                 ))}
               </div>
-            ) : items.length === 0 ? (
-              <div className="text-center py-24 glass border border-border rounded-2xl text-muted-foreground">
+            ) : visible.length === 0 ? (
+              <div className="text-center py-24 glass border border-border rounded-3xl text-muted-foreground">
                 <ImageIcon size={48} className="mx-auto mb-4 opacity-40" />
                 <p className="text-sm">The gallery is being curated. Check back soon.</p>
               </div>
             ) : (
-              <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
-                {/* Category navigation */}
-                <aside className="lg:w-64 shrink-0">
-                  <div className="lg:sticky lg:top-28">
-                    <h2 className="text-[10px] uppercase tracking-[0.22em] font-bold text-muted-foreground mb-3">Categories</h2>
-                    <div className="flex flex-wrap lg:flex-col gap-2">
-                      {categories.map((cat) => (
-                        <button
-                          key={cat}
-                          onClick={() => setActiveCategory(cat)}
-                          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all text-left ${
-                            displayCategory === cat
-                              ? "bg-primary text-primary-foreground shadow-md"
-                              : "glass border border-border text-foreground hover:border-primary/30"
-                          }`}
-                          data-testid={`gallery-cat-${cat.toLowerCase().replace(/\s+/g, "-")}`}
-                        >
-                          {cat}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </aside>
+              <>
+                {/* Category filters */}
+                <div className="flex flex-wrap gap-2 mb-8">
+                  {categories.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setActiveCategory(cat)}
+                      className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${
+                        activeCategory === cat
+                          ? "bg-primary text-primary-foreground shadow-md"
+                          : "glass border border-border text-foreground hover:border-primary/30"
+                      }`}
+                      data-testid={`gallery-cat-${cat.toLowerCase().replace(/\s+/g, "-")}`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
 
-                {/* Category content */}
-                <div className="flex-1 min-w-0">
-                  {displayCategory && grouped[displayCategory] && (
-                    <div className="space-y-8">
-                      <div className="flex items-end justify-between flex-wrap gap-4">
-                        <div>
-                          <h2 className="font-display text-3xl sm:text-4xl font-light tracking-tight">{displayCategory}</h2>
-                          <p className="text-muted-foreground mt-2 max-w-2xl">
-                            {grouped[displayCategory][0]?.description || `Moments from ${displayCategory} at Northend Educational World.`}
-                          </p>
-                        </div>
-                        <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">
-                          {grouped[displayCategory].length} {grouped[displayCategory].length === 1 ? "item" : "items"}
-                        </span>
-                      </div>
-                      <div className="h-px bg-border" />
-
-                      {/* Editorial flow layout */}
-                      <div className="space-y-10">
-                        {grouped[displayCategory].map((item, idx) => (
-                          <Reveal key={item.id} delay={idx * 0.05}>
-                            <article className="gallery-item" data-testid={`gallery-${item.id}`}>
-                              {item.media_type === "video" && item.media_url ? (
-                                <div className="rounded-2xl overflow-hidden bg-muted/30 mb-5">
-                                  <video
-                                    controls
-                                    className="w-full"
-                                    style={{ maxHeight: "70vh" }}
-                                  >
-                                    <source src={item.media_url} />
-                                  </video>
-                                </div>
-                              ) : item.media_type === "text" ? (
-                                <div className="mb-5">
-                                  <p className="text-base sm:text-lg text-foreground leading-relaxed whitespace-pre-wrap">
-                                    {item.description || item.title}
-                                  </p>
-                                </div>
-                              ) : (
-                                <div className="rounded-2xl overflow-hidden bg-muted/30 mb-5">
-                                  {item.media_url ? (
-                                    <img
-                                      src={item.media_url}
-                                      alt={item.title}
-                                      className="w-full"
-                                      style={{ maxHeight: "70vh", objectFit: "cover" }}
-                                      loading="lazy"
-                                    />
-                                  ) : (
-                                    <div className="aspect-video flex items-center justify-center">
-                                      <ImageIcon size={48} className="text-muted-foreground/40" />
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-
-                              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
-                                <div>
-                                  {item.title && (
-                                    <h3 className="font-display text-xl sm:text-2xl font-medium tracking-tight">{item.title}</h3>
-                                  )}
-                                  {item.description && item.media_type !== "text" && (
-                                    <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed max-w-3xl">{item.description}</p>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground font-bold">
-                                  {item.media_type === "video" ? <Play size={14} /> : item.media_type === "text" ? <FileText size={14} /> : <ImageIcon size={14} />}
-                                  <span className="capitalize">{item.media_type}</span>
-                                  {item.category && (
-                                    <>
-                                      <span className="text-border">·</span>
-                                      <span>{item.category}</span>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                            </article>
-                          </Reveal>
-                        ))}
-                      </div>
+                {/* Masonry-style grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 auto-rows-[280px]">
+                  {/* Hero card */}
+                  {hero && (
+                    <div className="md:col-span-2 md:row-span-2" data-testid={`gallery-${hero.id}`}>
+                      <GalleryCard item={hero} size="hero" />
                     </div>
                   )}
+
+                  {/* Rest of the grid */}
+                  {rest.map((item, idx) => {
+                    const size = CARD_SIZES[idx % CARD_SIZES.length];
+                    return (
+                      <div key={item.id} data-testid={`gallery-${item.id}`}>
+                        <GalleryCard item={item} size={size} />
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
+
+                {/* View all categories */}
+                <div className="mt-10 flex justify-center">
+                  <button className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-muted/50 border border-border text-sm font-bold text-foreground hover:bg-muted transition">
+                    View All Categories
+                    <ArrowUpRight size={16} />
+                  </button>
+                </div>
+              </>
             )}
           </div>
         </section>
       </div>
     </>
+  );
+}
+
+function GalleryCard({ item, size }) {
+  const isHero = size === "hero";
+  const isTall = size === "tall";
+  const isWide = size === "wide";
+
+  const media = (
+    <div
+      className={`relative w-full h-full rounded-3xl overflow-hidden bg-muted/30 ${
+        isHero ? "md:h-full" : isTall ? "h-full" : isWide ? "h-full" : "h-full"
+      }`}
+    >
+      {item.media_type === "video" && item.media_url ? (
+        <video
+          controls
+          className="w-full h-full object-cover"
+          poster={item.media_url?.startsWith("/api/files/") ? undefined : item.media_url}
+        >
+          <source src={item.media_url} />
+        </video>
+      ) : item.media_type === "text" ? (
+        <div className="h-full overflow-y-auto p-6 bg-background/40">
+          <p className="text-sm sm:text-base text-foreground leading-relaxed whitespace-pre-wrap">
+            {item.description || item.title}
+          </p>
+        </div>
+      ) : (
+        item.media_url && (
+          <img
+            src={item.media_url}
+            alt={item.title}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        )
+      )}
+
+      {/* Overlay for non-text items */}
+      {item.media_type !== "text" && (
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+      )}
+
+      {/* Content overlay */}
+      <div className="absolute inset-0 p-5 flex flex-col justify-between">
+        <div className="flex items-start justify-between">
+          {item.category && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 text-black text-[10px] font-bold uppercase tracking-wider">
+              {item.category}
+            </span>
+          )}
+          {item.media_type === "video" && (
+            <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/90">
+              <Play weight="fill" size={16} className="text-black" />
+            </span>
+          )}
+        </div>
+
+        <div>
+          {item.title && (
+            <h3 className={`font-display font-semibold text-white leading-tight ${isHero ? "text-3xl sm:text-4xl" : "text-lg sm:text-xl"}`}>
+              {item.title}
+            </h3>
+          )}
+          {item.description && item.media_type !== "text" && (
+            <p className="text-white/80 text-xs sm:text-sm mt-2 line-clamp-2 leading-relaxed">
+              {item.description}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Text-only card style
+  if (item.media_type === "text") {
+    return (
+      <div className="h-full rounded-3xl border border-border bg-background/40 p-5 flex flex-col justify-between">
+        <div>
+          {item.category && (
+            <span className="inline-block px-2.5 py-1 rounded-full bg-muted/50 text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-3">
+              {item.category}
+            </span>
+          )}
+          <p className="text-sm sm:text-base text-foreground leading-relaxed whitespace-pre-wrap">
+            {item.description || item.title}
+          </p>
+        </div>
+        {item.title && item.description && (
+          <div className="mt-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            {item.title}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Standard card with image/video
+  return (
+    <div className={`group relative h-full ${isHero ? "md:row-span-2" : ""}`}>
+      {media}
+    </div>
   );
 }
