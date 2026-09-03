@@ -179,10 +179,10 @@ function CarnivalSlotPicker({ carnival, chosenDate, chosenSlot, onPick }) {
               key={d.date}
               onClick={() => setActiveDate(d.date)}
               disabled={fullyBooked}
-              className={`shrink-0 px-3 py-2 rounded-xl text-[11px] font-medium transition ${isActive ? "bg-accent text-accent-foreground" : fullyBooked ? "bg-white/[0.02] text-muted-foreground/40 line-through" : "glass text-foreground/80 hover:text-foreground"}`}
+              className={`shrink-0 px-4 py-2 rounded-xl text-[11px] font-medium text-center transition ${isActive ? "bg-accent text-accent-foreground" : fullyBooked ? "bg-white/[0.02] text-muted-foreground/40 line-through" : "glass text-foreground/80 hover:text-foreground"}`}
               data-testid={`slot-date-${d.date}`}
             >
-              <div>{new Date(d.date).toLocaleDateString("en-IN", { weekday: "short", day: "2-digit", month: "short" })}</div>
+              <div className="text-center">{new Date(d.date).toLocaleDateString("en-IN", { weekday: "short", day: "2-digit", month: "short" })}</div>
               <div className={`text-[9px] mt-0.5 flex items-center justify-center gap-1 ${fillingFast && !isActive ? "text-amber-500 font-semibold" : "opacity-70"}`}>
                 {fullyBooked ? "Full" : fillingFast ? (<><span className="inline-block w-1 h-1 rounded-full bg-amber-500 animate-pulse"/>{remaining} left</>) : `${remaining} left`}
               </div>
@@ -202,11 +202,11 @@ function CarnivalSlotPicker({ carnival, chosenDate, chosenSlot, onPick }) {
                 key={s.time}
                 disabled={disabled}
                 onClick={() => onPick(active.date, s.time)}
-                className={`px-2.5 py-2 rounded-lg text-[11px] font-medium transition text-left ${selected ? "bg-accent text-accent-foreground" : disabled ? "bg-white/[0.02] text-muted-foreground/40 line-through cursor-not-allowed" : low ? "glass border border-amber-500/40 hover:border-amber-500/60" : "glass hover:border-accent/40"}`}
+                className={`px-3 py-2.5 rounded-xl text-[11px] font-medium text-center flex flex-col items-center justify-center gap-0.5 transition ${selected ? "bg-accent text-accent-foreground" : disabled ? "bg-white/[0.02] text-muted-foreground/40 line-through cursor-not-allowed" : low ? "glass border border-amber-500/40 hover:border-amber-500/60" : "glass hover:border-accent/40"}`}
                 data-testid={`slot-time-${active.date}-${s.time.replace(/[^0-9A-Za-z]/g,'')}`}
               >
-                <div className="flex items-center gap-1"><Clock size={10}/>{s.time}</div>
-                <div className={`text-[9px] mt-0.5 flex items-center gap-1 ${low && !selected ? "text-amber-500 font-semibold" : "opacity-70"}`}>
+                <div className="flex items-center justify-center gap-1"><Clock size={11}/>{s.time}</div>
+                <div className={`text-[9px] flex items-center justify-center gap-1 ${low && !selected ? "text-amber-500 font-semibold" : "opacity-70"}`}>
                   {disabled ? "Full" : low ? (<><span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"/>Only {s.remaining} left!</>) : `${s.remaining}/${s.capacity} left`}
                 </div>
               </button>
