@@ -51,8 +51,9 @@ ALLOWED_UPLOAD_TYPES = {
     "application/pdf": "pdf",
     "image/jpeg": "jpg", "image/jpg": "jpg",
     "image/png": "png", "image/webp": "webp",
+    "video/mp4": "mp4", "video/webm": "webm", "video/quicktime": "mov",
 }
-MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+MAX_UPLOAD_BYTES = 50 * 1024 * 1024  # 50 MB
 
 # ---------- Rate Limiter & Security Lockout ----------
 _rate_limit_store: dict[str, list[float]] = {}
@@ -399,6 +400,14 @@ class TestimonialIn(BaseModel):
     name: str
     role: str
     quote: str
+
+class GalleryItemIn(BaseModel):
+    title: str
+    description: Optional[str] = None
+    media_type: str = "image"  # image | video | text
+    media_url: Optional[str] = None
+    category: Optional[str] = None
+    order: int = 0
 
 def now_iso():
     return datetime.now(timezone.utc).isoformat()
@@ -1767,6 +1776,34 @@ async def update_testimonial(tid: str, payload: TestimonialIn, _admin = Depends(
 @api.delete("/testimonials/{tid}")
 async def delete_testimonial(tid: str, _admin = Depends(require_admin)):
     await db.testimonials.delete_one({"id": tid})
+    return {"ok": True}
+
+# ---------- Gallery ----------
+@api.get("/gallery")
+async def list_gallery():
+    return await db.gallery.find({}, {"_id": 0}).sort("order", 1).to_list(200)
+
+@api.get("/admin/gallery")
+async def list_admin_gallery(_admin = Depends(require_admin)):
+    return await db.gallery.find({}, {"_id": 0}).sort("order", 1).to_list(200)
+
+@api.post("/admin/gallery")
+async def create_gallery_item(payload: GalleryItemIn, _admin = Depends(require_admin)):
+    doc = payload.model_dump()
+    doc["id"] = new_id()
+    doc["created_at"] = now_iso()
+    await db.gallery.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+@api.put("/admin/gallery/{gid}")
+async def update_gallery_item(gid: str, payload: GalleryItemIn, _admin = Depends(require_admin)):
+    await db.gallery.update_one({"id": gid}, {"$set": payload.model_dump()})
+    return await db.gallery.find_one({"id": gid}, {"_id": 0})
+
+@api.delete("/admin/gallery/{gid}")
+async def delete_gallery_item(gid: str, _admin = Depends(require_admin)):
+    await db.gallery.delete_one({"id": gid})
     return {"ok": True}
 
 # ---------- Contact ----------

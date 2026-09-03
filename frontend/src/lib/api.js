@@ -319,6 +319,14 @@ export const testimonialsAPI = {
   delete: (id) => api.delete(`/testimonials/${id}`).then(resData),
 };
 
+export const galleryAPI = {
+  list: () => api.get("/gallery").then(resData),
+  listAdmin: () => api.get("/admin/gallery").then(resData),
+  create: (data) => api.post("/admin/gallery", data).then(resData),
+  update: (id, data) => api.put(`/admin/gallery/${id}`, data).then(resData),
+  delete: (id) => api.delete(`/admin/gallery/${id}`).then(resData),
+};
+
 export const adminAPI = {
   getSummary: () => api.get("/admin/summary").then(resData),
   setFeatured: (kind, id) =>

@@ -12,9 +12,10 @@ import {
   HelpCircle, Megaphone, Trophy, Search, Menu, X,
   Loader2, CheckCircle2, AlertCircle, Send, FileSpreadsheet,
   UploadCloud, PlaySquare, Filter, RefreshCw, Eye, ExternalLink,
-  User, UserPlus, Printer, Wand2
+  User, UserPlus, Printer, Wand2, Image
 } from "lucide-react";
 import ChipInput from "@/components/ChipInput";
+import FileUpload from "@/components/FileUpload";
 import { usePaged, Paginator } from "@/components/Paginator";
 import WhatsAppInbox from "@/pages/WhatsAppInbox";
 import WATHManagement from "@/pages/WATHManagement";
@@ -75,6 +76,7 @@ const SIDE_NAV = [
   { id: "results", label: "Honors Deck", icon: Trophy },
   { id: "campaigns", label: "Campaigns", icon: Megaphone },
   { id: "inquiries", label: "Inquiries", icon: HelpCircle },
+  { id: "gallery", label: "Gallery", icon: Image },
 ];
 
 function StatCard({ label, value, icon: Icon, testId }) {
@@ -971,6 +973,7 @@ export default function AdminDashboard() {
   const [centers, setCenters] = useState([]);
   const [testimonials, setTestimonials] = useState([]);
   const [results, setResults] = useState([]);
+  const [gallery, setGallery] = useState([]);
   const [adminCampaigns, setAdminCampaigns] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
@@ -986,6 +989,7 @@ export default function AdminDashboard() {
   const [newTestimonial, setNewTestimonial] = useState({ name:"", role:"", quote:"" });
   const [newResult, setNewResult] = useState({ student_name:"", exam:"", rank:"", year:new Date().getFullYear(), course:"NEET", photo_url:"", quote:"" });
   const [newCampaign, setNewCampaign] = useState({ title:"", description:"", exam_date:"", deadline:"", eligibility:"", venue:"", available_venues: [], whatsapp_community_url:"", exam_time:"10:00 AM", total_marks:100, active:true, is_featured:false });
+  const [newGallery, setNewGallery] = useState({ title:"", description:"", media_type:"image", media_url:"", category:"", order:0 });
   
   const [resultEditor, setResultEditor] = useState({});
   const [appEditor, setAppEditor] = useState({});
@@ -1037,16 +1041,16 @@ export default function AdminDashboard() {
   const load = async () => {
     setLoadingData(true);
     try {
-      const [s, e, sa, ja, iq, c, n, j, ce, ts, rs, acm] = await Promise.all([
+      const [s, e, sa, ja, iq, c, n, j, ce, ts, rs, g, acm] = await Promise.all([
         api.get("/admin/summary"), api.get("/enrollments"), api.get("/scholarship-applications"),
         api.get("/job-applications"), api.get("/inquiries"), api.get("/courses"),
         api.get("/notices"), api.get("/jobs/all"),
-        api.get("/centers"), api.get("/testimonials"), api.get("/results"),
+        api.get("/centers"), api.get("/testimonials"), api.get("/results"), api.get("/admin/gallery"),
         api.get("/admin/scholarships"),
       ]);
       setSummary(s.data || {}); setEnrollments(e.data || []); setScholarshipApps(sa.data || []);
       setJobApps(ja.data || []); setInquiries(iq.data || []); setCourses(c.data || []); setNotices(n.data || []); setJobs(j.data || []);
-      setCenters(ce.data || []); setTestimonials(ts.data || []); setResults(rs.data || []); setAdminCampaigns(acm.data || []);
+      setCenters(ce.data || []); setTestimonials(ts.data || []); setResults(rs.data || []); setGallery(g.data || []); setAdminCampaigns(acm.data || []);
     } catch (err) { toast.error(formatError(err.response?.data?.detail) || err.message); }
     finally { setLoadingData(false); }
   };
@@ -1070,6 +1074,7 @@ export default function AdminDashboard() {
   const filteredResults = useMemo(() => results.filter(x => searchMatch(x, ["student_name", "exam", "rank", "course"])), [results, innerSearch]);
   const filteredCampaigns = useMemo(() => adminCampaigns.filter(x => searchMatch(x, ["title", "eligibility", "exam_date"])), [adminCampaigns, innerSearch]);
   const filteredInquiries = useMemo(() => inquiries.filter(x => searchMatch(x, ["name", "email", "subject", "message"])), [inquiries, innerSearch]);
+  const filteredGallery = useMemo(() => gallery.filter(x => searchMatch(x, ["title", "description", "category"])), [gallery, innerSearch]);
 
   const enrPage = usePaged(filteredEnrollments, 25);
   const schPage = usePaged(filteredScholarships, 25);
@@ -1868,6 +1873,60 @@ export default function AdminDashboard() {
                         </tbody>
                       </table>
                     </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === "gallery" && (
+              <div className="space-y-4 animate-fadeIn">
+                <div className="font-display font-bold text-xl text-foreground">Media Gallery Console</div>
+                <form onSubmit={(e)=>{e.preventDefault(); const payload = { ...newGallery }; if (payload.media_url === "") delete payload.media_url; post("/admin/gallery", payload, ()=>setNewGallery({title:"",description:"",media_type:"image",media_url:"",category:"",order:0}), "Gallery item");}} className="glass border border-border p-4 sm:p-5 rounded-2xl grid grid-cols-1 sm:grid-cols-2 gap-4 bg-background/20">
+                  <Input placeholder="Media title" value={newGallery.title} onChange={e=>setNewGallery({...newGallery, title:e.target.value})} required data-testid="ng-title" className="rounded-xl border-border bg-background/50 text-foreground"/>
+                  <Input placeholder="Category (e.g. Campus, Events)" value={newGallery.category} onChange={e=>setNewGallery({...newGallery, category:e.target.value})} data-testid="ng-category" className="rounded-xl border-border bg-background/50 text-foreground"/>
+                  <select className="border border-border rounded-xl px-3 py-2 bg-background text-sm text-foreground focus:outline-none focus:border-accent cursor-pointer" value={newGallery.media_type} onChange={e=>setNewGallery({...newGallery, media_type:e.target.value})}>
+                    <option value="image">Image</option>
+                    <option value="video">Video</option>
+                    <option value="text">Text / Paragraph</option>
+                  </select>
+                  <Input placeholder="Display order (0)" type="number" value={newGallery.order} onChange={e=>setNewGallery({...newGallery, order:Number(e.target.value)})} data-testid="ng-order" className="rounded-xl border-border bg-background/50 text-foreground font-mono"/>
+                  <div className="sm:col-span-2">
+                    <FileUpload
+                      label="Upload media"
+                      accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"
+                      onUploaded={(file) => file && setNewGallery(prev => ({ ...prev, media_url: file.url }))}
+                      testId="gallery-upload"
+                    />
+                  </div>
+                  <textarea className="sm:col-span-2 border border-border rounded-xl px-3 py-2 bg-background/50 text-sm focus:outline-none focus:border-accent text-foreground min-h-20 resize-none" placeholder="Short description or caption..." value={newGallery.description} onChange={e=>setNewGallery({...newGallery, description:e.target.value})} />
+                  <Button type="submit" className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2 cursor-pointer"><Plus size={14} className="mr-1.5"/>Add Gallery Item</Button>
+                </form>
+                {filteredGallery.length === 0 ? (
+                  <EmptyState title="No gallery items" description="Upload images, videos, or text blocks to populate the public gallery." />
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredGallery.map((item) => (
+                      <div key={item.id} className="border border-border bg-background/30 p-4 rounded-2xl flex flex-col gap-3">
+                        <div className="aspect-[4/3] rounded-xl overflow-hidden bg-muted/30 flex items-center justify-center">
+                          {item.media_type === "video" && item.media_url ? (
+                            <video src={item.media_url} className="w-full h-full object-cover" controls />
+                          ) : item.media_type === "text" ? (
+                            <p className="text-xs text-muted-foreground p-3 line-clamp-4 whitespace-pre-wrap">{item.description || item.title}</p>
+                          ) : item.media_url ? (
+                            <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
+                          ) : (
+                            <Image size={32} className="text-muted-foreground/40" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-bold text-foreground text-sm">{item.title}</div>
+                          <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mt-1">{item.media_type} {item.category ? `· ${item.category}` : ""}</div>
+                        </div>
+                        <div className="flex justify-end pt-2 border-t border-border">
+                          <Button size="sm" variant="outline" onClick={() => del(`/admin/gallery/${item.id}`, "gallery item")} className="rounded-xl border-transparent text-rose-600 hover:bg-rose-500/5 cursor-pointer"><Trash2 size={14}/></Button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

@@ -22,6 +22,7 @@ import AdminDashboard from "@/pages/AdminDashboard";
 import ScholarshipDashboard from "@/pages/ScholarshipDashboard";
 import Examiner from "@/pages/Examiner";
 import Privacy from "@/pages/Privacy";
+import Gallery from "./pages/Gallery";
 
 // --- ERP Console Infrastructure Imports ---
 import ErpLayout from "@/pages/erp/ErpLayout";
@@ -106,6 +107,7 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="/gallery" element={<Gallery />} />
             
             {/* Unprotected Public Scholarship Dashboards */}
             <Route path="/scholarships/:id/dashboard" element={<ScholarshipDashboard />} />
