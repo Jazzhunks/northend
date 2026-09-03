@@ -32,12 +32,30 @@ const REWARDS = [
 ];
 
 const FAQS = [
-  { q: "Who can appear for WATH?", a: "Any student from Class 7 to Class 12 studying in J&K, plus current NEET/JEE droppers." },
-  { q: "Is there a registration fee?", a: "No — WATH is completely free to register and appear." },
-  { q: "What's the exam format?", a: "A 2-hour objective-type paper covering Mental Ability, Science, Mathematics and Aptitude. Difficulty is calibrated to your class/target exam." },
-  { q: "Where will the exam be held?", a: "Across Unacademy Kashmir Offline centre — you choose the closest venue during registration." },
-  { q: "When is the result declared?", a: "Result is declared within 7 days of the exam. You'll receive an SMS + can also check on this page using your application number." },
-  { q: "How do I claim my scholarship?", a: "Result card carries your scholarship percentage. Walk into any Unacademy Kashmir Offline centre with the printed result card — admissions team will apply the waiver on your fee." },
+  { 
+    q: "Who is eligible to appear for the WATH exam?", 
+    a: "The Wisdom Aptitude Talent Hunt (WATH) is open to a broad spectrum of ambitious students across the region. This includes any regular student currently studying in Class 7, Class 8, Class 9, Class 10, Class 11, or Class 12 anywhere within Jammu and Kashmir, as well as dedicated students who are currently enrolled as NEET or JEE droppers aiming for top medical and engineering ranks." 
+  },
+  { 
+    q: "Is there any registration fee or hidden charge?", 
+    a: "No, WATH is entirely free of cost from start to finish. There are zero registration fees, zero exam fees, and no hidden charges whatsoever. Registering, downloading your admit card, and checking your detailed result card are all 100% free." 
+  },
+  { 
+    q: "What is the exact exam format, duration, and syllabus structure?", 
+    a: "The assessment is a comprehensive 2-hour objective-type paper designed to test your core analytical and academic capabilities. It features multiple-choice questions spanning Mental Ability, Core Sciences, Mathematics, and General Aptitude. Crucially, the difficulty level and question sets are customized and calibrated to match your specific grade level or target competitive exam track (Foundation, JEE, or NEET)." 
+  },
+  { 
+    q: "Where will the exam be conducted, and how do I select my venue?", 
+    a: "The test is conducted across designated Unacademy Kashmir offline testing centers. During the online registration process, you will be presented with a dropdown list of available testing locations so you can easily choose the closest and most convenient venue for your exam day." 
+  },
+  { 
+    q: "When and how will the exam results be declared?", 
+    a: "Results are typically evaluated and declared within 7 days of the exam date. Once published, you will receive an automated SMS notification on your registered phone number. Alternatively, you can instantly look up your performance, marks, and rank right on this webpage by entering your unique application number." 
+  },
+  { 
+    q: "How do I redeem and claim my scholarship or fee waiver?", 
+    a: "Your final result card will clearly indicate your earned scholarship percentage based on your performance slabs. To redeem your waiver, simply walk into any Unacademy Kashmir offline center carrying a printed copy of your official result card, and our admissions counselors will apply the discount directly to your tuition for classroom programs." 
+  },
 ];
 
 function formatDate(dateStr) {
