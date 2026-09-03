@@ -19,7 +19,7 @@ export default function About() {
       />
 
       {/* Mission / Vision / Philosophy */}
-      <section className="relative section">
+      <section className="relative section pb-12 lg:pb-16">
         <div className="max-w-7xl mx-auto px-4 lg:px-8 grid md:grid-cols-3 gap-5">
           {[
             { Icon: Target, t: "Mission", d: "Make national-grade competitive coaching universally accessible to every Kashmiri student — regardless of locality or income." },
@@ -38,7 +38,7 @@ export default function About() {
       </section>
 
       {/* Timeline — scroll storytelling */}
-      <section className="relative section">
+      <section className="relative section pt-8 lg:pt-12">
         <div className="max-w-5xl mx-auto px-4 lg:px-8">
           <div className="text-center mb-16">
             <Eyebrow className="justify-center">Our journey</Eyebrow>
@@ -57,7 +57,7 @@ export default function About() {
               { y: "2026", t: "Four centres, one valley", d: "Soura, Zakura and Parraypora join the network. ERP platform launches for transparent fee + attendance tracking." },
             ].map((s, i) => (
               <Reveal key={s.y} delay={i * 0.1}>
-                <div className={`relative grid md:grid-cols-2 gap-8 mb-16 ${i % 2 ? "" : "md:[&>*:first-child]:order-2"}`}>
+                <div className={`relative grid md:grid-cols-2 gap-8 mb-16 items-center ${i % 2 ? "" : "md:[&>*:first-child]:order-2"}`}>
                   <div className={`md:text-${i % 2 ? "right" : "left"}`}>
                     <GlassPanel className="p-7">
                       <div className="font-mono text-xs text-accent">{s.y}</div>
@@ -66,7 +66,7 @@ export default function About() {
                     </GlassPanel>
                   </div>
                   <div className="hidden md:block" />
-                  <div className="absolute left-1/2 -translate-x-1/2 top-8 w-3 h-3 rounded-full bg-accent glow-accent" />
+                  <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-accent glow-accent" />
                 </div>
               </Reveal>
             ))}
@@ -97,14 +97,14 @@ export default function About() {
       </section>
 
       {/* Final CTA */}
-      <section className="relative section">
+      <section className="relative pb-24 lg:pb-32 pt-16 lg:pt-24">
         <div className="max-w-3xl mx-auto px-4 lg:px-8 text-center">
           <Reveal>
             <h2 className="font-display text-4xl lg:text-5xl font-light tracking-tight">
               Ready to be part of the<br/><span className="font-medium italic text-accent">next chapter?</span>
             </h2>
             <div className="mt-10">
-              <Link to="/enroll"><CTAPrimary data-testid="about-cta-btn">Enrol with Northend</CTAPrimary></Link>
+              <Link to="/enroll"><CTAPrimary data-testid="about-cta-btn">Enroll with Northend</CTAPrimary></Link>
             </div>
           </Reveal>
         </div>

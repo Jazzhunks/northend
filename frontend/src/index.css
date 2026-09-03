@@ -67,10 +67,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  height: 2.75rem;
-  padding-left: 1.5rem;
-  padding-right: 1.5rem;
+  box-sizing: border-box;
+  gap: 0.75rem;
+  padding-block: 0.875rem;
+  padding-inline: 2.25rem;
   background: linear-gradient(135deg, #08BD80 0%, #06a36e 100%);
   color: #ffffff;
   border-radius: 9999px;
@@ -98,10 +98,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  height: 2.75rem;
-  padding-left: 1.5rem;
-  padding-right: 1.5rem;
+  box-sizing: border-box;
+  gap: 0.75rem;
+  padding-block: 0.875rem;
+  padding-inline: 2.25rem;
   background: linear-gradient(135deg, #1380d0 0%, #0f6bb0 100%);
   color: #ffffff;
   border-radius: 9999px;
@@ -123,6 +123,33 @@
   box-shadow:
     6px 8px 18px rgba(19, 128, 208, 0.40),
     -2px -2px 8px rgba(255, 255, 255, 0.9);
+}
+
+.clay-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  gap: 0.75rem;
+  padding-block: 0.875rem;
+  padding-inline: 2.25rem;
+  background: rgba(19, 128, 208, 0.04);
+  color: #1380d0;
+  border-radius: 9999px;
+  border: 1px solid rgba(19, 128, 208, 0.2);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.clay-btn-ghost:hover {
+  background: rgba(19, 128, 208, 0.08);
+  border-color: rgba(19, 128, 208, 0.4);
+  transform: translateY(-2px);
 }
 
 .clay-pill {

@@ -104,9 +104,9 @@ export default function Scholarship() {
                 <div className="font-display font-bold text-lg mb-3">Scholarship Calculator</div>
                 <p className="text-sm text-muted-foreground mb-3">Enter your last academic year percentage to estimate your scholarship.</p>
                 <Input type="number" placeholder="e.g. 85" value={calc.marks} onChange={e => setCalc({ marks: e.target.value })} data-testid="calc-input"/>
-                <div className="mt-4 p-4 bg-primary text-primary-foreground rounded-md">
-                  <div className="text-xs uppercase tracking-[0.18em] text-accent">Estimated Scholarship</div>
-                  <div className="font-display text-4xl font-black mt-1" data-testid="calc-result">{scholarshipPct}%</div>
+                <div className="mt-4 p-4 bg-background border border-border rounded-md">
+                  <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Estimated Scholarship</div>
+                  <div className="font-display text-4xl font-black mt-1 text-accent" data-testid="calc-result">{scholarshipPct}%</div>
                 </div>
               </div>
             </div>

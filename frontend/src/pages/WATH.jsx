@@ -10,12 +10,12 @@ import { AnimatedCounter } from "@/components/Metrics";
 import {
   Trophy, Sparkle, GraduationCap, MedalMilitary, Clock, MapPin,
   CalendarBlank, Coins, ChartLineUp, ArrowRight, ArrowDown, FileText,
-  Download, Check, WhatsappLogo, Question, Certificate, IdentificationCard
+  Download, Check, WhatsappLogo, Question, Certificate, IdentificationCard, X, CaretDown
 } from "@phosphor-icons/react";
 
 const EASE = [0.16, 1, 0.3, 1];
 
-const CLASSES = ["Class 7", "Class 8", "Class 9", "Class 10", "Class 11", "Class 12", "Dropper (JEE)", "Dropper (NEET)"];
+const CLASSES = ["Class 7", "Class 8", "Class 9", "Class 10", "Class 11 (NEET)", "Class 11 (IIT-JEE)", "Class 12 (NEET)", "Class 12 (IIT-JEE)", "Dropper (NEET)", "Dropper (IIT-JEE)"];
 
 const SLABS = [
   { pct: "100%", marks: "≥ 90%", tag: "Star Scholar" },
@@ -39,6 +39,21 @@ const FAQS = [
   { q: "When is the result declared?", a: "Result is declared within 7 days of the exam. You'll receive an SMS + can also check on this page using your application number." },
   { q: "How do I claim my scholarship?", a: "Result card carries your scholarship percentage. Walk into any Unacademy Kashmir Offline centre with the printed result card — admissions team will apply the waiver on your fee." },
 ];
+
+function formatDate(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  return isNaN(d.getTime()) ? dateStr : d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function InfoBlock({ label, value, testid, mono }) {
+  return (
+    <div className="glass rounded-2xl p-4" data-testid={testid}>
+      <div className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-bold">{label}</div>
+      <div className={`text-sm font-medium mt-1 ${mono ? "font-mono" : ""}`}>{value || "—"}</div>
+    </div>
+  );
+}
 
 export default function WATH() {
   const [campaign, setCampaign] = useState(null);
@@ -67,7 +82,6 @@ export default function WATH() {
       <RewardsSection />
       <SlabsSection />
       <TimelineSection campaign={campaign} />
-      <RegisterSection campaign={campaign} />
       <AdmitCardDownloadSection campaign={campaign} />
       <ResultCheckSection />
       <FAQSection />
@@ -80,6 +94,47 @@ export default function WATH() {
 
 function HeroSection({ campaign, loading }) {
   const examDate = campaign?.exam_date;
+  const [form, setForm] = useState({
+    name: "", email: "", phone: "", class_or_course: "", school_name: "", venue: "",
+  });
+  const [submitted, setSubmitted] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (campaign?.available_venues?.length && !form.venue) {
+      setForm(f => ({ ...f, venue: campaign.available_venues[0] }));
+    }
+  }, [campaign, form.venue]);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!campaign) { toast.error("Registration is not open yet — please check back soon."); return; }
+    setBusy(true);
+    try {
+      const [d1, d2] = form.class_or_course.includes("(") ? form.class_or_course.split("(") : [form.class_or_course, ""];
+      const targetExam = d2.includes("NEET") ? "NEET" : d2.includes("JEE") ? "JEE" : form.class_or_course.includes("11") || form.class_or_course.includes("12") ? "NEET/JEE" : "Foundation";
+      
+      const { data } = await api.post("/scholarship-applications", {
+        scholarship_id: campaign.id,
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        school: form.school_name,
+        standard: form.class_or_course,
+        target_exam: targetExam,
+        city: (form.venue || "Srinagar").replace(/^Northend\s+/i, "") || "Srinagar",
+        venue: form.venue || undefined,
+      });
+      setSubmitted(data);
+      toast.success("Registered — download your admit card below.");
+    } catch (e) {
+      toast.error(formatError(e.response?.data?.detail) || "Registration failed. Please try again.");
+    } finally { setBusy(false); }
+  };
+
+  const inputCls = "w-full px-3 py-2.5 rounded-xl glass text-xs placeholder:text-muted-foreground/60 focus:outline-none focus:border-accent/50 transition";
+
   return (
     <>
       <Helmet>
@@ -111,7 +166,7 @@ function HeroSection({ campaign, loading }) {
             </motion.div>
 
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, ease: EASE, delay: 0.1 }} className="mb-4">
-              <div className="font-display text-[110px] lg:text-[180px] font-medium tracking-[-0.08em] leading-[0.85] bg-gradient-to-br from-accent via-amber-300 to-accent bg-clip-text text-transparent text-glow-accent">
+              <div className="font-display text-[110px] lg:text-[180px] font-medium tracking-[-0.08em] leading-[0.85] bg-gradient-to-br from-[#1380d0] via-accent to-[#1380d0] bg-clip-text text-transparent text-glow-accent">
                 WATH
               </div>
             </motion.div>
@@ -125,37 +180,206 @@ function HeroSection({ campaign, loading }) {
             </motion.p>
 
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: EASE, delay: 0.5 }} className="mt-10 flex flex-wrap gap-3">
-              <a href="#register"><CTAPrimary data-testid="hero-register-btn">Register — it's free</CTAPrimary></a>
+              <div onClick={() => setIsModalOpen(true)}>
+                <CTAPrimary data-testid="hero-register-btn">Register — it's free</CTAPrimary>
+              </div>
               <a href="#admit-card"><CTAGhost iconRight data-testid="hero-admit-btn">Get Admit Card</CTAGhost></a>
             </motion.div>
           </div>
 
-          <div className="lg:col-span-5">
+          <div className="lg:col-span-5" id="register">
             <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, ease: EASE, delay: 0.4 }}>
-              <GlassPanel elevated className="p-7 lg:p-8 relative overflow-hidden" data-testid="hero-exam-details">
+              <GlassPanel elevated className="p-6 lg:p-7 relative overflow-hidden" data-testid="hero-exam-details">
                 <div className="absolute -top-20 -right-20 w-60 h-60 rounded-full bg-accent/10 blur-3xl" />
                 <div className="relative">
-                  <div className="text-[10px] uppercase tracking-[0.28em] text-accent font-bold mb-6 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-accent pulse-ring"/>Exam schedule
+                  <div className="text-[10px] uppercase tracking-[0.28em] text-accent font-bold mb-5 flex items-center justify-between">
+                    <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-accent pulse-ring"/>Register for WATH</span>
+                    <span className="text-muted-foreground font-normal lowercase">free entry</span>
                   </div>
-                  <div className="space-y-5">
-                    <DetailRow Icon={CalendarBlank} label="Exam date" value={loading ? "…" : (examDate ? formatDate(examDate) : "TBA")} testid="detail-exam-date"/>
-                    <DetailRow Icon={Clock} label="Duration" value="2 hours"/>
-                    <DetailRow Icon={GraduationCap} label="Eligibility" value="Class 7–12 · NEET/JEE Droppers"/>
-                    <DetailRow Icon={MapPin} label="Venues" value={`${campaign?.available_venues?.length || 6} centres · Kashmir`} testid="detail-venues"/>
-                    <DetailRow Icon={Coins} label="Registration" value="₹0 — completely free"/>
-                  </div>
-                   <div className="mt-6 pt-6 border-t border-border">
-                    <div className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-bold">Registration closes</div>
-                    <div className="font-display text-lg font-medium text-accent mt-1" data-testid="detail-deadline">
-                      {loading ? "…" : (campaign?.deadline ? formatDate(campaign.deadline) : "Check with your centre")}
+
+                  {submitted ? (
+                    <div id="admit-card-block" className="py-2">
+                      <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-accent font-bold">
+                        <Check weight="bold" size={14}/> Registration successful
+                      </div>
+                      <h3 className="font-display text-2xl font-light tracking-tight mt-2">
+                        Welcome to <span className="font-medium italic text-accent">WATH.</span>
+                      </h3>
+                      <div className="mt-4 grid grid-cols-2 gap-2">
+                        <InfoBlock label="Application no" value={submitted.application_no} testid="app-no" mono/>
+                        <InfoBlock label="Venue" value={submitted.venue}/>
+                      </div>
+                      <div className="mt-4 p-4 glass rounded-xl border border-accent/25">
+                        <p className="text-xs text-muted-foreground leading-relaxed">Download your admit card and save it to your phone for exam day entry.</p>
+                        <div className="mt-4 flex flex-col gap-2">
+                          <a href={`${API_BASE}/scholarship-applications/${submitted.application_no}/admit-card?phone=${encodeURIComponent(submitted.phone || form.phone)}`} target="_blank" rel="noreferrer" data-testid="download-admit-card">
+                            <CTAPrimary className="w-full justify-center text-xs py-2"><Download weight="bold" size={14}/> Download admit card</CTAPrimary>
+                          </a>
+                          {campaign?.whatsapp_community_url && (
+                            <a href={campaign.whatsapp_community_url} target="_blank" rel="noreferrer" data-testid="join-wa">
+                              <CTAGhost className="w-full justify-center text-xs py-2" iconRight><WhatsappLogo weight="fill" size={14}/> Join WhatsApp</CTAGhost>
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                      <button onClick={() => setSubmitted(null)} className="mt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground flex items-center gap-1.5" data-testid="register-another">
+                        Register another aspirant <ArrowRight weight="bold" size={12} />
+                      </button>
                     </div>
-                  </div>
+                  ) : (
+                    <form onSubmit={submit} data-testid="wath-register-form" className="space-y-3">
+                      {!campaign && (
+                        <div className="p-3 rounded-xl glass border border-amber-500/30 text-xs">
+                          <span className="font-bold uppercase text-amber-400">Opening soon</span> — drop details to get notified.
+                        </div>
+                      )}
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <input className={inputCls} placeholder="Full name" required value={form.name} onChange={e => setForm({...form, name: e.target.value})} data-testid="wath-name"/>
+                        <input className={inputCls} type="email" placeholder="Email" required value={form.email} onChange={e => setForm({...form, email: e.target.value})} data-testid="wath-email"/>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <input className={inputCls} placeholder="Phone number" required value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} data-testid="wath-phone"/>
+                        <div className="relative">
+                          <select className={`${inputCls} appearance-none pr-8`} required value={form.class_or_course} onChange={e => setForm({...form, class_or_course: e.target.value})} data-testid="wath-class">
+                            <option value="" disabled className="bg-background text-muted-foreground">Current class</option>
+                            {CLASSES.map(c => <option key={c} value={c} className="bg-background">{c}</option>)}
+                          </select>
+                          <CaretDown weight="bold" size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                        </div>
+                      </div>
+                      <input className={inputCls} placeholder="School / current institute" required value={form.school_name} onChange={e => setForm({...form, school_name: e.target.value})} data-testid="wath-school"/>
+                      {campaign?.available_venues?.length > 0 ? (
+                        <div className="relative">
+                          <select className={`${inputCls} appearance-none pr-8`} required value={form.venue} onChange={e => setForm({...form, venue: e.target.value})} data-testid="wath-venue">
+                            <option value="" className="bg-background">— Select exam venue —</option>
+                            {campaign.available_venues.map(v => <option key={v} value={v} className="bg-background">{v}</option>)}
+                          </select>
+                          <CaretDown weight="bold" size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                        </div>
+                      ) : (
+                        <input className={inputCls} placeholder="Preferred venue (e.g. Srinagar)" required value={form.venue} onChange={e => setForm({...form, venue: e.target.value})} data-testid="wath-venue-text"/>
+                      )}
+
+                      <div className="pt-1">
+                        <CTAPrimary type="submit" className="w-full justify-center text-xs py-2.5" data-testid="wath-submit" disabled={busy || !campaign}>
+                          {busy ? "Registering…" : campaign ? "Register & get admit card" : "Notify me"}
+                        </CTAPrimary>
+                      </div>
+
+                      <div className="pt-3 border-t border-border flex items-center justify-between text-[11px] text-muted-foreground">
+                        <span>Exam: {loading ? "…" : (examDate ? formatDate(examDate) : "TBA")}</span>
+                        <span>Fee: ₹0 (Free)</span>
+                      </div>
+                    </form>
+                  )}
                 </div>
               </GlassPanel>
             </motion.div>
           </div>
         </div>
+
+        {/* Modal Popup Form for Hero Section Button */}
+        <AnimatePresence>
+          {isModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ duration: 0.3, ease: EASE }}
+                className="w-full max-w-lg relative"
+              >
+                <GlassPanel elevated className="p-6 lg:p-7 relative overflow-hidden">
+                  <div className="absolute -top-20 -right-20 w-60 h-60 rounded-full bg-accent/10 blur-3xl" />
+                  
+                  {/* Fixed X button positioning with proper flex header alignment */}
+                  <div className="relative mb-5 flex items-center justify-between">
+                    <div className="text-[10px] uppercase tracking-[0.28em] text-accent font-bold flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-accent pulse-ring"/>Register for WATH
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-[10px] text-muted-foreground lowercase">free entry</span>
+                      <button 
+                        onClick={() => setIsModalOpen(false)}
+                        className="p-1.5 rounded-full glass hover:bg-muted text-muted-foreground hover:text-foreground transition flex items-center justify-center"
+                      >
+                        <X weight="bold" size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="relative">
+                    {submitted ? (
+                      <div className="py-2">
+                        <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-accent font-bold">
+                          <Check weight="bold" size={14}/> Registration successful
+                        </div>
+                        <h3 className="font-display text-2xl font-light tracking-tight mt-2">
+                          Welcome to <span className="font-medium italic text-accent">WATH.</span>
+                        </h3>
+                        <div className="mt-4 grid grid-cols-2 gap-2">
+                          <InfoBlock label="Application no" value={submitted.application_no} mono/>
+                          <InfoBlock label="Venue" value={submitted.venue}/>
+                        </div>
+                        <div className="mt-4 p-4 glass rounded-xl border border-accent/25">
+                          <p className="text-xs text-muted-foreground leading-relaxed">Download your admit card and save it to your phone for exam day entry.</p>
+                          <div className="mt-4 flex flex-col gap-2">
+                            <a href={`${API_BASE}/scholarship-applications/${submitted.application_no}/admit-card?phone=${encodeURIComponent(submitted.phone || form.phone)}`} target="_blank" rel="noreferrer">
+                              <CTAPrimary className="w-full justify-center text-xs py-2"><Download weight="bold" size={14}/> Download admit card</CTAPrimary>
+                            </a>
+                          </div>
+                        </div>
+                        <button onClick={() => setIsModalOpen(false)} className="mt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground flex items-center gap-1.5">
+                          Close modal <ArrowRight weight="bold" size={12} />
+                        </button>
+                      </div>
+                    ) : (
+                      <form onSubmit={submit} className="space-y-3">
+                        {!campaign && (
+                          <div className="p-3 rounded-xl glass border border-amber-500/30 text-xs">
+                            <span className="font-bold uppercase text-amber-400">Opening soon</span> — drop details to get notified.
+                          </div>
+                        )}
+                        <div className="grid grid-cols-2 gap-2.5">
+                          <input className={inputCls} placeholder="Full name" required value={form.name} onChange={e => setForm({...form, name: e.target.value})}/>
+                          <input className={inputCls} type="email" placeholder="Email" required value={form.email} onChange={e => setForm({...form, email: e.target.value})}/>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2.5">
+                          <input className={inputCls} placeholder="Phone number" required value={form.phone} onChange={e => setForm({...form, phone: e.target.value})}/>
+                          <div className="relative">
+                            <select className={`${inputCls} appearance-none pr-8`} required value={form.class_or_course} onChange={e => setForm({...form, class_or_course: e.target.value})}>
+                              <option value="" disabled className="bg-background text-muted-foreground">Current class</option>
+                              {CLASSES.map(c => <option key={c} value={c} className="bg-background">{c}</option>)}
+                            </select>
+                            <CaretDown weight="bold" size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                          </div>
+                        </div>
+                        <input className={inputCls} placeholder="School / current institute" required value={form.school_name} onChange={e => setForm({...form, school_name: e.target.value})}/>
+                        {campaign?.available_venues?.length > 0 ? (
+                          <div className="relative">
+                            <select className={`${inputCls} appearance-none pr-8`} required value={form.venue} onChange={e => setForm({...form, venue: e.target.value})}>
+                              <option value="" className="bg-background">— Select exam venue —</option>
+                              {campaign.available_venues.map(v => <option key={v} value={v} className="bg-background">{v}</option>)}
+                            </select>
+                            <CaretDown weight="bold" size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                          </div>
+                        ) : (
+                          <input className={inputCls} placeholder="Preferred venue (e.g. Srinagar)" required value={form.venue} onChange={e => setForm({...form, venue: e.target.value})}/>
+                        )}
+
+                        <div className="pt-1">
+                          <CTAPrimary type="submit" className="w-full justify-center text-xs py-2.5" disabled={busy || !campaign}>
+                            {busy ? "Registering…" : campaign ? "Register & get admit card" : "Notify me"}
+                          </CTAPrimary>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                </GlassPanel>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
 
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1, y: [0, 8, 0] }}
@@ -169,24 +393,10 @@ function HeroSection({ campaign, loading }) {
   );
 }
 
-function DetailRow({ Icon, label, value, testid }) {
-  return (
-    <div className="flex items-center gap-4" data-testid={testid}>
-      <div className="h-10 w-10 rounded-xl glass grid place-items-center flex-shrink-0">
-        <Icon weight="duotone" size={18} className="text-accent"/>
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-bold">{label}</div>
-        <div className="text-sm font-medium mt-0.5">{value}</div>
-      </div>
-    </div>
-  );
-}
-
 function AboutSection() {
   return (
-    <section id="about" className="relative section">
-      <div className="max-w-7xl mx-auto px-4 lg:px-8">
+    <section id="about" className="relative section-padding">
+      <div className="container-custom">
         <div className="grid lg:grid-cols-12 gap-8 mb-14">
           <div className="lg:col-span-7">
             <Eyebrow>What is WATH</Eyebrow>
@@ -226,8 +436,8 @@ function AboutSection() {
 
 function FormatSection() {
   return (
-    <section className="relative section">
-      <div className="max-w-7xl mx-auto px-4 lg:px-8">
+    <section className="relative section-padding">
+      <div className="container-custom">
         <div className="text-center mb-14">
           <Eyebrow className="justify-center">Exam format</Eyebrow>
           <Reveal>
@@ -288,8 +498,8 @@ function ItemCheck({ children }) {
 
 function RewardsSection() {
   return (
-    <section className="relative section">
-      <div className="max-w-7xl mx-auto px-4 lg:px-8">
+    <section className="relative section-padding">
+      <div className="container-custom">
         <div className="grid lg:grid-cols-12 gap-8 mb-14">
           <div className="lg:col-span-7">
             <Eyebrow>Rewards</Eyebrow>
@@ -317,8 +527,8 @@ function RewardsSection() {
 
 function SlabsSection() {
   return (
-    <section className="relative section">
-      <div className="max-w-6xl mx-auto px-4 lg:px-8">
+    <section className="relative section-padding">
+      <div className="container-custom max-w-6xl">
         <Reveal>
           <GlassPanel elevated className="relative overflow-hidden p-8 lg:p-14">
             <div className="absolute inset-0 bg-grid opacity-20" />
@@ -352,7 +562,7 @@ function SlabsSection() {
 
 function TimelineSection({ campaign }) {
   const steps = useMemo(() => [
-    { n: "01", t: "Register online", d: "Fill the form below · takes 90 seconds · no fee." },
+    { n: "01", t: "Register online", d: "Fill the form above · takes 90 seconds · no fee." },
     { n: "02", t: "Download admit card", d: "Instant PDF with your seat + QR — save it to your phone." },
     { n: "03", t: "Appear on exam day", d: campaign?.exam_date ? `Report to venue by 9:30 AM on ${formatDate(campaign.exam_date)}.` : "Report to venue 30 minutes before start." },
     { n: "04", t: "Result within 7 days", d: "Result card PDF · shows your scholarship slab & rank." },
@@ -360,8 +570,8 @@ function TimelineSection({ campaign }) {
   ], [campaign?.exam_date]);
 
   return (
-    <section className="relative section">
-      <div className="max-w-5xl mx-auto px-4 lg:px-8">
+    <section className="relative section-padding">
+      <div className="container-custom max-w-5xl">
         <div className="text-center mb-14">
           <Eyebrow className="justify-center">How it works</Eyebrow>
           <Reveal>
@@ -384,133 +594,6 @@ function TimelineSection({ campaign }) {
             </Reveal>
           ))}
         </div>
-      </div>
-    </section>
-  );
-}
-
-function RegisterSection({ campaign }) {
-  const [form, setForm] = useState({
-    name: "", email: "", phone: "", class_or_course: "Class 10", school_name: "", venue: "",
-  });
-  const [submitted, setSubmitted] = useState(null);
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (campaign?.available_venues?.length && !form.venue) {
-      setForm(f => ({ ...f, venue: campaign.available_venues[0] }));
-    }
-  }, [campaign, form.venue]);
-
-  const submit = async (e) => {
-    e.preventDefault();
-    if (!campaign) { toast.error("Registration is not open yet — please check back soon."); return; }
-    setBusy(true);
-    try {
-      const [d1, d2] = form.class_or_course.includes("(") ? form.class_or_course.split("(") : [form.class_or_course, ""];
-      const targetExam = d2.includes("NEET") ? "NEET" : d2.includes("JEE") ? "JEE" : form.class_or_course.includes("11") || form.class_or_course.includes("12") ? "NEET/JEE" : "Foundation";
-      
-      const { data } = await api.post("/scholarship-applications", {
-        scholarship_id: campaign.id,
-        name: form.name,
-        email: form.email,
-        phone: form.phone,
-        school: form.school_name,
-        standard: form.class_or_course,
-        target_exam: targetExam,
-        city: (form.venue || "Srinagar").replace(/^Northend\s+/i, "") || "Srinagar",
-        venue: form.venue || undefined,
-      });
-      setSubmitted(data);
-      toast.success("Registered — download your admit card below.");
-      setTimeout(() => document.getElementById("admit-card-block")?.scrollIntoView({ behavior: "smooth", block: "center" }), 200);
-    } catch (e) {
-      toast.error(formatError(e.response?.data?.detail) || "Registration failed. Please try again.");
-    } finally { setBusy(false); }
-  };
-
-  const inputCls = "w-full px-4 py-3 rounded-xl glass text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:border-accent/50 transition";
-
-  return (
-    <section id="register" className="relative section scroll-mt-20">
-      <div className="max-w-4xl mx-auto px-4 lg:px-8">
-        <div className="text-center mb-10">
-          <Eyebrow className="justify-center">Register</Eyebrow>
-          <h2 className="font-display text-4xl lg:text-6xl font-light tracking-tight mt-4">
-            Your seat is <span className="font-medium italic text-accent">one form away.</span>
-          </h2>
-        </div>
-
-        {submitted ? (
-          <div id="admit-card-block">
-            <GlassPanel elevated className="p-8 lg:p-10 relative overflow-hidden" data-testid="wath-success">
-              <div className="relative">
-                <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-accent font-bold">
-                  <Check weight="bold" size={14}/> Registration successful
-                </div>
-                <h3 className="font-display text-4xl lg:text-5xl font-light tracking-tight mt-3">
-                  Welcome to <span className="font-medium italic text-accent">WATH.</span>
-                </h3>
-                <div className="mt-6 grid sm:grid-cols-3 gap-3">
-                  <InfoBlock label="Application no" value={submitted.application_no} testid="app-no" mono/>
-                  <InfoBlock label="Venue" value={submitted.venue}/>
-                  <InfoBlock label="Exam date" value={campaign?.exam_date ? formatDate(campaign.exam_date) : "TBA"}/>
-                </div>
-                <div className="mt-8 p-5 glass rounded-2xl border border-accent/25">
-                  <div className="font-medium text-sm mb-3">Your next step</div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">Download your admit card and save it to your phone. Show it (printed or digital) with a valid photo ID at the venue on exam day.</p>
-                  <div className="mt-5 flex flex-wrap gap-3">
-                    <a href={`${API_BASE}/scholarship-applications/${submitted.application_no}/admit-card?phone=${encodeURIComponent(submitted.phone || form.phone)}`} target="_blank" rel="noreferrer" data-testid="download-admit-card">
-                      <CTAPrimary><Download weight="bold" size={14}/> Download admit card</CTAPrimary>
-                    </a>
-                    {campaign?.whatsapp_community_url && (
-                      <a href={campaign.whatsapp_community_url} target="_blank" rel="noreferrer" data-testid="join-wa">
-                        <CTAGhost iconRight><WhatsappLogo weight="fill" size={16}/> Join WhatsApp community</CTAGhost>
-                      </a>
-                    )}
-                  </div>
-                </div>
-                <button onClick={() => setSubmitted(null)} className="mt-6 text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground flex items-center gap-1.5" data-testid="register-another">
-                  Register another aspirant <ArrowRight weight="bold" size={12} />
-                </button>
-              </div>
-            </GlassPanel>
-          </div>
-        ) : (
-          <GlassPanel elevated className="p-7 lg:p-8" as="form" onSubmit={submit} data-testid="wath-register-form">
-            {!campaign && (
-              <div className="mb-5 p-4 rounded-xl glass border border-amber-500/30">
-                <div className="text-xs font-bold uppercase tracking-[0.18em] text-amber-400">Registrations opening soon</div>
-                <p className="text-sm text-muted-foreground mt-1">The next WATH sitting hasn't been announced yet. Drop your details and we'll notify you — or contact your nearest Unacademy Kashmir Offline centre.</p>
-              </div>
-            )}
-            <div className="grid sm:grid-cols-2 gap-3">
-              <input className={inputCls} placeholder="Full name" required value={form.name} onChange={e => setForm({...form, name: e.target.value})} data-testid="wath-name"/>
-              <input className={inputCls} type="email" placeholder="Email" required value={form.email} onChange={e => setForm({...form, email: e.target.value})} data-testid="wath-email"/>
-              <input className={inputCls} placeholder="Phone" required value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} data-testid="wath-phone"/>
-              <select className={inputCls} value={form.class_or_course} onChange={e => setForm({...form, class_or_course: e.target.value})} data-testid="wath-class">
-                {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-              <input className={`${inputCls} sm:col-span-2`} placeholder="School / current institute" required value={form.school_name} onChange={e => setForm({...form, school_name: e.target.value})} data-testid="wath-school"/>
-              {campaign?.available_venues?.length > 0 ? (
-                <select className={`${inputCls} sm:col-span-2`} required value={form.venue} onChange={e => setForm({...form, venue: e.target.value})} data-testid="wath-venue">
-                  <option value="">— Preferred exam venue —</option>
-                  {campaign.available_venues.map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
-              ) : (
-                <input className={`${inputCls} sm:col-span-2`} placeholder="Preferred centre (Kupwara / Anantnag / Sopore / Soura / Zakura / Parraypora)" required value={form.venue} onChange={e => setForm({...form, venue: e.target.value})} data-testid="wath-venue-text"/>
-              )}
-            </div>
-            <div className="mt-6">
-              <CTAPrimary type="submit" className="w-full justify-center" data-testid="wath-submit" disabled={busy || !campaign}>
-                {busy ? "Registering…" : campaign ? "Register & get admit card" : "Notify me when registrations open"}
-              </CTAPrimary>
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-4 text-center">
-              By registering you agree to be contacted by Unacademy Kashmir Offline centre regarding WATH schedule &amp; results.
-            </p>
-          </GlassPanel>
-        )}
       </div>
     </section>
   );
@@ -540,8 +623,8 @@ function AdmitCardDownloadSection({ campaign }) {
   const inputCls = "w-full px-4 py-3 rounded-xl glass text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:border-accent/50 transition";
 
   return (
-    <section id="admit-card" className="relative section scroll-mt-20">
-      <div className="max-w-3xl mx-auto px-4 lg:px-8">
+    <section id="admit-card" className="relative section-padding scroll-mt-20">
+      <div className="container-custom max-w-3xl">
         <div className="text-center mb-8">
           <Eyebrow className="justify-center">Admit Card</Eyebrow>
           <h2 className="font-display text-4xl lg:text-5xl font-light tracking-tight mt-4">
@@ -571,18 +654,15 @@ function AdmitCardDownloadSection({ campaign }) {
                 <div className="text-[10px] uppercase tracking-[0.22em] text-accent font-bold flex items-center gap-2">
                   <IdentificationCard weight="duotone" size={16}/> Admit Card Ready
                 </div>
-                <h3 className="font-display text-3xl font-medium mt-3">{appData.name}</h3>
-                <div className="text-sm text-muted-foreground font-mono">{appData.application_no}</div>
-
-                <div className="mt-6 grid sm:grid-cols-3 gap-3">
-                  <InfoBlock label="Candidate" value={appData.name} />
-                  <InfoBlock label="Venue" value={appData.venue || appData.city || "Srinagar"} />
-                  <InfoBlock label="Exam Date" value={campaign?.exam_date ? formatDate(campaign.exam_date) : "TBA"} />
+                <h3 className="font-display text-2xl font-medium mt-2">{appData.name}</h3>
+                <div className="mt-4 grid sm:grid-cols-3 gap-3">
+                  <InfoBlock label="Application no" value={appData.application_no} mono/>
+                  <InfoBlock label="Venue" value={appData.venue || "Unacademy Centre"}/>
+                  <InfoBlock label="Class" value={appData.standard}/>
                 </div>
-
                 <div className="mt-6 flex flex-wrap gap-3">
-                  <a href={`${API_BASE}/scholarship-applications/${appData.application_no}/admit-card?phone=${encodeURIComponent(appData.phone || '')}`} target="_blank" rel="noreferrer" data-testid="download-admit-card-btn">
-                    <CTAPrimary><Download weight="bold" size={14}/> Download PDF Admit Card</CTAPrimary>
+                  <a href={`${API_BASE}/scholarship-applications/${appData.application_no}/admit-card?phone=${encodeURIComponent(appData.phone || phone)}`} target="_blank" rel="noreferrer" data-testid="download-fetched-admit">
+                    <CTAPrimary><Download weight="bold" size={14}/> Download Admit Card PDF</CTAPrimary>
                   </a>
                 </div>
               </div>
@@ -594,133 +674,102 @@ function AdmitCardDownloadSection({ campaign }) {
   );
 }
 
-function InfoBlock({ label, value, testid, mono }) {
-  return (
-    <div className="glass rounded-xl p-4" data-testid={testid}>
-      <div className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-bold">{label}</div>
-      <div className={`text-base font-medium mt-1 ${mono ? "font-mono text-accent" : ""}`}>{value}</div>
-    </div>
-  );
-}
-
 function ResultCheckSection() {
-  const [searchParams] = useSearchParams();
-  const [applicationNo, setApplicationNo] = useState("");
-  const [phone, setPhone] = useState("");
+  const [lookup, setLookup] = useState({ application_no: "", phone: "" });
   const [result, setResult] = useState(null);
   const [busy, setBusy] = useState(false);
 
-  // Core function to retrieve student application & result details from backend API
-  const fetchResult = async (appNo, ph) => {
-    if (!appNo) return;
+  const handleLookup = async (e) => {
+    e.preventDefault();
     setBusy(true);
+    setResult(null);
     try {
-      const { data } = await api.get(`/scholarship-applications/${appNo.trim()}`, { 
-        params: { phone: ph ? ph.trim() : undefined } 
-      });
+      const { data } = await api.post("/scholarship-applications/lookup", lookup);
       setResult(data);
-      if (!data.result_published) {
-        toast.info("Result not yet declared — please check back after 7 days from exam.");
+      if (data.result_published) {
+        toast.success("Result loaded successfully.");
+      } else {
+        toast.info("Application found. Result has not been published yet.");
       }
     } catch (e) {
-      toast.error(
-        formatError(e.response?.data?.detail) || 
-        "Could not find your application. Double-check the application number and phone."
-      );
-    } finally { 
-      setBusy(false); 
+      toast.error(formatError(e.response?.data?.detail) || "Could not find result. Check your credentials.");
+    } finally {
+      setBusy(false);
     }
-  };
-
-  // Automatically read URL parameters on camera QR scan and fetch result card directly
-  useEffect(() => {
-    const urlAppNo = searchParams.get("app_no") || searchParams.get("application_no");
-    const urlPhone = searchParams.get("phone");
-
-    if (urlAppNo) {
-      setApplicationNo(urlAppNo);
-      if (urlPhone) setPhone(urlPhone);
-      
-      // Auto-trigger API lookup
-      fetchResult(urlAppNo, urlPhone || "");
-      
-      // Scroll into view on landing
-      setTimeout(() => {
-        document.getElementById("result")?.scrollIntoView({ behavior: "smooth" });
-      }, 300);
-    }
-  }, [searchParams]);
-
-  const check = (e) => {
-    e.preventDefault();
-    fetchResult(applicationNo, phone);
   };
 
   const inputCls = "w-full px-4 py-3 rounded-xl glass text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:border-accent/50 transition";
 
   return (
-    <section id="result" className="relative section scroll-mt-20">
-      <div className="max-w-3xl mx-auto px-4 lg:px-8">
+    <section id="result" className="relative section-padding scroll-mt-20">
+      <div className="container-custom max-w-3xl">
         <div className="text-center mb-8">
-          <Eyebrow className="justify-center">Result check</Eyebrow>
+          <Eyebrow className="justify-center">Results</Eyebrow>
           <h2 className="font-display text-4xl lg:text-5xl font-light tracking-tight mt-4">
-            Already appeared? <span className="font-medium italic text-accent">Check your rank.</span>
+            Check your <span className="font-medium italic text-accent">WATH Score.</span>
           </h2>
+          <p className="text-sm text-muted-foreground mt-2">
+            Enter your application number and phone number to view your scholarship percentage and rank.
+          </p>
         </div>
-        <GlassPanel elevated className="p-7" as="form" onSubmit={check}>
+
+        <GlassPanel elevated className="p-7" as="form" onSubmit={handleLookup} data-testid="result-lookup-form">
           <div className="grid sm:grid-cols-2 gap-3">
-            <input 
-              className={inputCls} 
-              placeholder="Application number" 
-              required 
-              value={applicationNo} 
-              onChange={e => setApplicationNo(e.target.value)} 
-              data-testid="res-appno"
-            />
-            <input 
-              className={inputCls} 
-              placeholder="Registered phone (optional)" 
-              value={phone} 
-              onChange={e => setPhone(e.target.value)} 
-              data-testid="res-phone"
-            />
+            <input className={inputCls} placeholder="Application number" required value={lookup.application_no} onChange={e => setLookup({...lookup, application_no: e.target.value})} data-testid="lookup-appno"/>
+            <input className={inputCls} placeholder="Registered phone" required value={lookup.phone} onChange={e => setLookup({...lookup, phone: e.target.value})} data-testid="lookup-phone"/>
           </div>
           <div className="mt-5">
-            <CTAPrimary type="submit" className="w-full justify-center" data-testid="res-submit" disabled={busy}>
-              {busy ? "Checking…" : "Check my result"}
+            <CTAPrimary type="submit" className="w-full justify-center" data-testid="lookup-submit" disabled={busy}>
+              {busy ? "Searching…" : "View Result"}
             </CTAPrimary>
           </div>
         </GlassPanel>
 
         {result && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mt-6">
-            <GlassPanel elevated className="p-7 relative overflow-hidden" data-testid="res-block">
-              <div className="relative">
-                <div className="text-[10px] uppercase tracking-[0.22em] text-accent font-bold flex items-center gap-2">
-                  <Certificate weight="duotone" size={14}/> {result.result_published ? "Result declared" : "Application on file"}
+            <GlassPanel elevated className="p-7 relative overflow-hidden" data-testid="result-card-container">
+              {!result.result_published ? (
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.22em] text-accent font-bold">Result pending</div>
+                  <h3 className="font-display text-2xl font-medium mt-2">{result.name}</h3>
+                  <p className="text-sm text-muted-foreground mt-2">Your application is confirmed, but results have not been published yet. We will notify you via SMS/Email when results go live.</p>
                 </div>
-                <h3 className="font-display text-3xl font-medium mt-3">{result.name}</h3>
-                <div className="text-sm text-muted-foreground font-mono">{result.application_no}</div>
-                {result.result_published ? (
-                  <div className="mt-6 grid sm:grid-cols-3 gap-3">
-                    <InfoBlock label="Marks" value={result.result_marks_obtained ?? "—"}/>
-                    <InfoBlock label="Scholarship" value={`${result.result_scholarship_percentage}%`}/>
-                    <InfoBlock label="Rank / band" value={result.result_rank ?? "See result card"}/>
+              ) : (
+                <div className="space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-5">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.22em] text-accent font-bold">Result Published</div>
+                      <h3 className="font-display text-3xl font-medium mt-1">{result.name}</h3>
+                      <div className="text-xs font-mono text-muted-foreground mt-0.5">{result.application_no} · {result.standard}</div>
+                    </div>
+                    <div className="glass px-5 py-3 rounded-2xl text-center">
+                      <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Scholarship Award</div>
+                      <div className="font-display text-4xl font-medium text-accent mt-0.5">{result.result_scholarship_percentage}%</div>
+                    </div>
                   </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground mt-4">Your result is being processed — you'll receive an SMS as soon as it's declared. Check back after 7 days from your exam date.</p>
-                )}
-                <div className="mt-6 flex flex-wrap gap-3">
-                  {result.result_published && (
-                    <a href={`${API_BASE}/scholarship-applications/${result.application_no}/result-card?phone=${encodeURIComponent(phone || result.phone || '')}`} target="_blank" rel="noreferrer" data-testid="dl-result-card">
-                      <CTAPrimary><FileText weight="bold" size={14}/> Download result card</CTAPrimary>
-                    </a>
+
+                  <div className="grid sm:grid-cols-3 gap-3">
+                    <InfoBlock label="Marks obtained" value={`${result.result_marks_obtained} / ${result.result_total_marks}`} mono/>
+                    <InfoBlock label="Rank" value={result.result_rank || "Qualifying"} mono/>
+                    <InfoBlock label="Percentile" value={result.result_percentile ? `${result.result_percentile}%` : "—"} mono/>
+                  </div>
+
+                  {result.result_remarks && (
+                    <div className="p-4 rounded-xl glass border-l-2 border-accent text-sm text-muted-foreground italic">
+                      "{result.result_remarks}"
+                    </div>
                   )}
-                  <a href={`${API_BASE}/scholarship-applications/${result.application_no}/admit-card?phone=${encodeURIComponent(phone || result.phone || '')}`} target="_blank" rel="noreferrer" data-testid="dl-admit">
-                    <CTAGhost><Download weight="bold" size={14}/> Admit card</CTAGhost>
-                  </a>
+
+                  <div className="flex flex-wrap gap-3 pt-2">
+                    <a href={`${API_BASE}/scholarship-applications/${result.application_no}/result-card?phone=${encodeURIComponent(result.phone)}`} target="_blank" rel="noreferrer" data-testid="download-result-pdf">
+                      <CTAPrimary><FileText weight="bold" size={14}/> Download Result Card PDF</CTAPrimary>
+                    </a>
+                    <a href={`${API_BASE}/scholarship-applications/${result.application_no}/admit-card?phone=${encodeURIComponent(result.phone)}`} target="_blank" rel="noreferrer" data-testid="download-admit-from-result">
+                      <CTAGhost><Download weight="bold" size={14}/> Download Admit Card</CTAGhost>
+                    </a>
+                  </div>
                 </div>
-              </div>
+              )}
             </GlassPanel>
           </motion.div>
         )}
@@ -730,39 +779,46 @@ function ResultCheckSection() {
 }
 
 function FAQSection() {
-  const [open, setOpen] = useState(0);
+  const [open, setOpen] = useState(null);
   return (
-    <section className="relative section">
-      <div className="max-w-3xl mx-auto px-4 lg:px-8">
-        <div className="text-center mb-10">
-          <Eyebrow className="justify-center">Questions</Eyebrow>
-          <h2 className="font-display text-4xl lg:text-5xl font-light tracking-tight mt-4">
-            Every doubt, <span className="font-medium italic text-accent">answered.</span>
-          </h2>
+    <section className="relative section-padding">
+      <div className="container-custom max-w-4xl">
+        <div className="text-center mb-14">
+          <Eyebrow className="justify-center">FAQ</Eyebrow>
+          <Reveal>
+            <h2 className="font-display text-4xl lg:text-6xl font-light tracking-tight mt-4">
+              Everything you need to <span className="font-medium italic text-accent">know.</span>
+            </h2>
+          </Reveal>
         </div>
         <div className="space-y-3">
-          {FAQS.map((f, i) => (
-            <GlassPanel key={i} className={`p-5 lg:p-6 cursor-pointer transition-all ${open === i ? "border-accent/30" : ""}`}
-              onClick={() => setOpen(open === i ? -1 : i)} data-testid={`faq-${i}`}>
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <Question weight="duotone" size={16} className="text-accent"/>
-                    <div className="font-display font-medium text-lg">{f.q}</div>
-                  </div>
-                  <AnimatePresence>
-                    {open === i && (
-                      <motion.p
-                        initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.3 }}
-                        className="text-sm text-muted-foreground mt-3 leading-relaxed"
-                      >{f.a}</motion.p>
-                    )}
-                  </AnimatePresence>
-                </div>
-                <ArrowDown weight="bold" size={18} className={`transition-transform flex-shrink-0 text-accent ${open === i ? "rotate-180" : ""}`}/>
-              </div>
-            </GlassPanel>
+          {FAQS.map((faq, i) => (
+            <Reveal key={faq.q} delay={i * 0.04}>
+              <GlassPanel className="overflow-hidden transition">
+                <button
+                  onClick={() => setOpen(open === i ? null : i)}
+                  className="w-full p-6 text-left flex items-center justify-between gap-4 font-display text-lg font-medium"
+                  data-testid={`faq-q-${i}`}
+                >
+                  <span>{faq.q}</span>
+                  <span className={`text-accent transition-transform duration-300 ${open === i ? "rotate-45" : ""}`}>+</span>
+                </button>
+                <AnimatePresence>
+                  {open === i && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.3, ease: EASE }}
+                    >
+                      <div className="px-6 pb-6 text-sm text-muted-foreground leading-relaxed border-t border-border pt-4">
+                        {faq.a}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </GlassPanel>
+            </Reveal>
           ))}
         </div>
       </div>
@@ -772,42 +828,23 @@ function FAQSection() {
 
 function FinalCTA() {
   return (
-    <section className="relative section text-center">
-      <div className="max-w-3xl mx-auto px-4 lg:px-8">
+    <section className="relative py-24 lg:py-32 overflow-hidden border-t border-border">
+      <div className="absolute inset-0 bg-dot opacity-30 pointer-events-none" />
+      <div className="container-custom max-w-4xl text-center relative">
         <Reveal>
-          <h2 className="font-display text-5xl lg:text-7xl font-light tracking-tight leading-[0.95]">
-            Your AIR begins with <span className="font-medium italic text-accent">WATH.</span>
+          <Eyebrow className="justify-center">Take the leap</Eyebrow>
+          <h2 className="font-display text-4xl lg:text-7xl font-light tracking-tight mt-4 leading-[1.05]">
+            Your national rank starts <br/><span className="font-medium italic text-accent">right here in Kashmir.</span>
           </h2>
-          <p className="mt-6 text-lg text-muted-foreground">Kashmir's most ambitious minds sit here. This year, be one of them.</p>
-          <div className="mt-10 flex justify-center gap-3 flex-wrap">
-            <a href="#register"><CTAPrimary data-testid="final-register-btn">Register for WATH</CTAPrimary></a>
-            <Link to="/contact"><CTAGhost iconRight>Talk to a counsellor</CTAGhost></Link>
+          <p className="mt-6 text-lg text-muted-foreground max-w-xl mx-auto font-light">
+            Register for WATH today. No registration fee, zero commitment — just pure evaluation and scholarships up to 100%.
+          </p>
+          <div className="mt-10 flex flex-wrap justify-center gap-4">
+            <a href="#register"><CTAPrimary data-testid="final-cta-btn">Register for WATH Now</CTAPrimary></a>
+            <Link to="/contact"><CTAGhost data-testid="final-contact-btn">Contact Centre</CTAGhost></Link>
           </div>
         </Reveal>
       </div>
     </section>
   );
-}
-
-function formatDate(iso) {
-  if (!iso) return "TBA";
-  const d = parseFlexibleDate(iso);
-  if (!d || isNaN(d.getTime())) return String(iso);
-  try {
-    return d.toLocaleDateString("en-IN", { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
-  } catch { return String(iso); }
-}
-
-function parseFlexibleDate(v) {
-  if (!v) return null;
-  if (v instanceof Date) return v;
-  const s = String(v).trim();
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return new Date(s);
-  const m = s.match(/^(\d{1,2})[\-\/](\d{1,2})[\-\/](\d{4})$/);
-  if (m) {
-    const [, dd, mm, yyyy] = m;
-    return new Date(Number(yyyy), Number(mm) - 1, Number(dd));
-  }
-  const d = new Date(s);
-  return isNaN(d.getTime()) ? null : d;
 }

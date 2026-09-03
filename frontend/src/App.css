@@ -1,136 +1,39 @@
-import React, { useState } from "react";
+/* app.css */
 
-export default function DashboardLayout() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-  return (
-    <div className="flex min-h-screen w-full overflow-x-hidden bg-background text-foreground">
-      
-      {/* ================= DESKTOP SIDEBAR ================= */}
-      <aside className="hidden md:flex flex-col w-64 flex-shrink-0 p-4 border-r border-[rgba(19,128,208,0.15)] bg-white/80 backdrop-blur-xl">
-        <div className="flex items-center gap-3 px-3 py-4 mb-6">
-          <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-[#1380d0] to-[#0f6bb0] flex items-center justify-center text-white font-display font-bold shadow-md">
-            N
-          </div>
-          <span className="font-display font-extrabold text-lg text-[#3c4952] tracking-tight">
-            Dashboard
-          </span>
-        </div>
+/* 1. Prevent global document-level horizontal overflow */
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+}
 
-        {/* Navigation Items */}
-        <nav className="space-y-1.5 flex-1">
-          <a href="#overview" className="flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold text-[#1380d0] bg-[rgba(19,128,208,0.08)] border border-[rgba(19,128,208,0.15)] shadow-sm">
-            Overview
-          </a>
-          <a href="#analytics" className="flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-[#3c4952] hover:bg-slate-50 transition-colors">
-            Analytics
-          </a>
-          <a href="#reports" className="flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-[#3c4952] hover:bg-slate-50 transition-colors">
-            Reports
-          </a>
-        </nav>
+/* 2. Fix box-sizing context globally */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
 
-        {/* Sidebar Footer Card */}
-        <div className="clay-card p-4 text-center mt-auto">
-          <p className="text-xs font-bold text-[#3c4952]">Pro Workspace</p>
-          <span className="text-[10px] text-slate-500">All systems operational</span>
-        </div>
-      </aside>
+/* 3. Utility class to guarantee flex child text/blocks don't break parent layouts */
+.min-w-0 {
+  min-width: 0;
+}
 
-      {/* ================= MOBILE DRAWER OVERLAY & NAV ================= */}
-      {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm md:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
-
-      <aside className={`
-        fixed inset-y-0 left-0 z-50 w-72 bg-white p-4 flex flex-col border-r border-[rgba(19,128,208,0.15)] shadow-2xl transition-transform duration-300 ease-in-out md:hidden
-        ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}
-      `}>
-        {/* Mobile Sidebar Header */}
-        <div className="flex items-center justify-between px-2 py-3 mb-4">
-          <span className="font-display font-extrabold text-lg text-[#3c4952]">Menu</span>
-          <button 
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold"
-          >
-            ✕
-          </button>
-        </div>
-        <nav className="space-y-1.5">
-          <a href="#overview" className="flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold text-[#1380d0] bg-[rgba(19,128,208,0.08)]">
-            Overview
-          </a>
-          <a href="#analytics" className="flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-[#3c4952]">
-            Analytics
-          </a>
-          <a href="#reports" className="flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-[#3c4952]">
-            Reports
-          </a>
-        </nav>
-      </aside>
-
-      {/* ================= MAIN CONTENT AREA ================= */}
-      <main className="flex-1 min-w-0 flex flex-col min-h-screen">
-        
-        {/* Top Header Bar */}
-        <header className="sticky top-0 z-30 flex items-center justify-between px-4 sm:px-6 lg:px-8 h-20 bg-white/80 backdrop-blur-xl border-b border-[rgba(19,128,208,0.1)]">
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setIsMobileMenuOpen(true)}
-              className="md:hidden p-2 rounded-xl border border-[rgba(19,128,208,0.2)] text-[#1380d0]"
-            >
-              ☰
-            </button>
-            <h1 className="text-xl font-display font-extrabold text-[#3c4952]">
-              Dashboard Overview
-            </h1>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <button className="clay-btn-primary text-xs">
-              + New Entry
-            </button>
-          </div>
-        </header>
-
-        {/* Dynamic View Content Container */}
-        <div className="flex-1 container-custom section-padding space-y-6">
-          
-          {/* Example Responsive Card Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="clay-card p-6">
-              <span className="clay-pill mb-3 inline-block">Active Users</span>
-              <h3 className="text-3xl font-display font-black text-[#3c4952]">2,480</h3>
-              <p className="text-xs text-slate-500 mt-1">+12% from last month</p>
-            </div>
-
-            <div className="clay-card p-6">
-              <span className="clay-pill mb-3 inline-block">Revenue</span>
-              <h3 className="text-3xl font-display font-black text-[#3c4952]">$48,250</h3>
-              <p className="text-xs text-slate-500 mt-1">+8.4% from last month</p>
-            </div>
-
-            <div className="clay-card p-6 sm:col-span-2 lg:col-span-1">
-              <span className="clay-pill mb-3 inline-block">Efficiency</span>
-              <h3 className="text-3xl font-display font-black text-[#3c4952]">99.4%</h3>
-              <p className="text-xs text-slate-500 mt-1">Optimal performance</p>
-            </div>
-          </div>
-
-          {/* Main Display Panel */}
-          <div className="clay-card p-6 sm:p-8">
-            <h2 className="text-lg font-display font-bold text-[#3c4952] mb-4">Analytics Workspace</h2>
-            <div className="h-64 rounded-2xl bg-slate-50 border border-dashed border-[rgba(19,128,208,0.2)] flex items-center justify-center text-slate-400 text-sm font-medium">
-              Responsive Chart Area Content
-            </div>
-          </div>
-
-        </div>
-      </main>
-
-    </div>
-  );
+/* 4. Custom scrollbar polish (optional) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
