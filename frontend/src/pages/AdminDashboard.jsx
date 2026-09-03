@@ -1905,7 +1905,7 @@ export default function AdminDashboard() {
                           </div>
 
                           <div className="grid grid-cols-2 sm:flex sm:flex-row gap-1.5 shrink-0 w-full sm:w-auto">
-                            <Button size="sm" variant="default" onClick={() => navigate(`/admin/scholarships/${c.id}/dashboard`)} className="rounded-lg text-xs font-bold bg-accent text-accent-foreground hover:bg-accent/90 cursor-pointer" data-testid={`campaign-dashboard-${c.id}`}>Dashboard</Button>
+                            <Button size="sm" variant="default" onClick={() => navigate(`/admin/scholarships/${c.slug || c.id}/dashboard`)} className="rounded-lg text-xs font-bold bg-accent text-accent-foreground hover:bg-accent/90 cursor-pointer" data-testid={`campaign-dashboard-${c.id}`}>Dashboard</Button>
                             
                             <Button size="sm" onClick={() => setBroadcastModalId(c.id)} className="rounded-lg text-xs font-bold bg-[#25D366] hover:bg-[#20b858] text-black cursor-pointer shadow-md">
                               <MessageSquare size={13} className="mr-1.5"/> Broadcast

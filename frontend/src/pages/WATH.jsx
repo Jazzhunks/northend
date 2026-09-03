@@ -172,6 +172,7 @@ function CarnivalSlotPicker({ carnival, chosenDate, chosenSlot, onPick }) {
           const isActive = d.date === activeDate;
           const remaining = (d.slots || []).reduce((sum, s) => sum + (s.remaining || 0), 0);
           const fullyBooked = remaining === 0;
+          const fillingFast = !fullyBooked && remaining <= 10;
           return (
             <button
               type="button"
@@ -182,7 +183,9 @@ function CarnivalSlotPicker({ carnival, chosenDate, chosenSlot, onPick }) {
               data-testid={`slot-date-${d.date}`}
             >
               <div>{new Date(d.date).toLocaleDateString("en-IN", { weekday: "short", day: "2-digit", month: "short" })}</div>
-              <div className="text-[9px] opacity-70 mt-0.5">{fullyBooked ? "Full" : `${remaining} left`}</div>
+              <div className={`text-[9px] mt-0.5 flex items-center justify-center gap-1 ${fillingFast && !isActive ? "text-amber-500 font-semibold" : "opacity-70"}`}>
+                {fullyBooked ? "Full" : fillingFast ? (<><span className="inline-block w-1 h-1 rounded-full bg-amber-500 animate-pulse"/>{remaining} left</>) : `${remaining} left`}
+              </div>
             </button>
           );
         })}
@@ -192,17 +195,20 @@ function CarnivalSlotPicker({ carnival, chosenDate, chosenSlot, onPick }) {
           {(active.slots || []).map(s => {
             const disabled = !s.available;
             const selected = chosenDate === active.date && chosenSlot === s.time;
+            const low = !disabled && s.remaining > 0 && s.remaining <= 5;
             return (
               <button
                 type="button"
                 key={s.time}
                 disabled={disabled}
                 onClick={() => onPick(active.date, s.time)}
-                className={`px-2.5 py-2 rounded-lg text-[11px] font-medium transition text-left ${selected ? "bg-accent text-accent-foreground" : disabled ? "bg-white/[0.02] text-muted-foreground/40 line-through cursor-not-allowed" : "glass hover:border-accent/40"}`}
+                className={`px-2.5 py-2 rounded-lg text-[11px] font-medium transition text-left ${selected ? "bg-accent text-accent-foreground" : disabled ? "bg-white/[0.02] text-muted-foreground/40 line-through cursor-not-allowed" : low ? "glass border border-amber-500/40 hover:border-amber-500/60" : "glass hover:border-accent/40"}`}
                 data-testid={`slot-time-${active.date}-${s.time.replace(/[^0-9A-Za-z]/g,'')}`}
               >
                 <div className="flex items-center gap-1"><Clock size={10}/>{s.time}</div>
-                <div className="text-[9px] opacity-70 mt-0.5">{disabled ? "Full" : `${s.remaining}/${s.capacity} left`}</div>
+                <div className={`text-[9px] mt-0.5 flex items-center gap-1 ${low && !selected ? "text-amber-500 font-semibold" : "opacity-70"}`}>
+                  {disabled ? "Full" : low ? (<><span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"/>Only {s.remaining} left!</>) : `${s.remaining}/${s.capacity} left`}
+                </div>
               </button>
             );
           })}

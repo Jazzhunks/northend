@@ -98,7 +98,7 @@ export default function Courses() {
               >
                 {filtered.map((c, i) => (
                   <Reveal key={c.id} delay={i * 0.04}>
-                    <Link to={`/courses/${c.id}`} className="h-full block"><CourseCard3D course={c} /></Link>
+                    <Link to={`/courses/${c.slug || c.id}`} className="h-full block"><CourseCard3D course={c} /></Link>
                   </Reveal>
                 ))}
               </motion.div>

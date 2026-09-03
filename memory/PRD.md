@@ -48,7 +48,6 @@ Create a modern, premium, mobile-first educational website for Northend Educatio
 
 ## Backlog / Not Yet Done
 ### P1
-- **Slug URLs** — replace `/courses/:id` and `/scholarships/:id` with title-based slugs; keep ID→slug redirects for backwards compatibility.
 - **WhatsApp Inbox polish** — auto-refresh polling every 5s (currently 60s) + log every outbound WhatsApp we send (admit-card, exam-details notifications, receipts) into `wa_messages` so they appear in the applicant's thread.
 
 ### P2 — refactor
@@ -78,6 +77,8 @@ Create a modern, premium, mobile-first educational website for Northend Educatio
 ```
 
 ## Recent History
+- **Jun 2026** — **Slug URLs**: courses & scholarships now carry a title-based `slug` (auto-generated on create/update with collision suffixes + startup backfill for existing docs). Public routes `GET /courses/{cid}` and `GET /scholarships/{sid}/stats` resolve by slug OR id (backwards compatible). Frontend links now use `/courses/:slug` and `/admin/scholarships/:slug/dashboard`. Verified via slug fetch + admin stats-by-slug.
+- **Jun 2026** — **Slot Countdown Nudge** (WATH Carnival): per-slot amber "Only X left!" cue with pulsing dot when a time slot has ≤5 seats; date tabs show amber "filling fast" indicator when a date has ≤10 seats left. Verified visually.
 - **Jun 2026** — Fixed WATH Carnival post-registration UX bug: `onRegistered` was calling full `load()` which flipped parent into loading state, unmounted the form and wiped the `submitted` success card (looked like a reload + only toast shown). Made refresh silent (`load(true)`) so inline success card (App No, Venue, Exam Date, Slot, Download Admit Card, Join WhatsApp) persists. Verified via live registration screenshot.
 - **Feb 2026** — WATH Carnival: kind separation, page-config toggle, atomic slot booking (with over-book race fix via unique index).
 - **Feb 2026** — WhatsApp Inbox: Meta Cloud API v20 webhook + admin inbox + template send. Full 17/17 pytest coverage.

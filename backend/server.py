@@ -13,6 +13,7 @@ NVIDIA_MODEL = os.getenv("NVIDIA_MODEL", "nvidia/nemotron-3.5-lightning-30b-a3b"
 
 # 2. STANDARD LIBRARY IMPORTS
 import io
+import re
 import uuid
 import random
 import logging
@@ -394,6 +395,25 @@ def now_iso():
 def new_id():
     return str(uuid.uuid4())
 
+def slugify(text: str) -> str:
+    text = (text or "").strip().lower()
+    text = re.sub(r"[^a-z0-9\s-]", "", text)
+    text = re.sub(r"[\s_-]+", "-", text).strip("-")
+    return text or "item"
+
+async def unique_slug(collection: str, base: str, exclude_id: str | None = None) -> str:
+    slug = slugify(base)
+    candidate = slug
+    i = 2
+    while True:
+        q: Dict[str, Any] = {"slug": candidate}
+        if exclude_id:
+            q["id"] = {"$ne": exclude_id}
+        if not await db[collection].find_one(q):
+            return candidate
+        candidate = f"{slug}-{i}"
+        i += 1
+
 # ---------- Auth Routes ----------
 @api.post("/auth/register")
 async def register(payload: RegisterIn, response: Response):
@@ -519,7 +539,7 @@ async def list_courses(category: Optional[str] = None, featured: Optional[bool] 
 
 @api.get("/courses/{cid}")
 async def get_course(cid: str):
-    c = await db.courses.find_one({"id": cid}, {"_id": 0})
+    c = await db.courses.find_one({"$or": [{"id": cid}, {"slug": cid}]}, {"_id": 0})
     if not c: raise HTTPException(404, "Course not found")
     return c
 
@@ -527,6 +547,7 @@ async def get_course(cid: str):
 async def create_course(payload: CourseIn, _admin = Depends(require_admin)):
     doc = payload.model_dump()
     doc["id"] = new_id()
+    doc["slug"] = await unique_slug("courses", doc["title"])
     doc["created_at"] = now_iso()
     await db.courses.insert_one(doc)
     doc.pop("_id", None)
@@ -534,7 +555,9 @@ async def create_course(payload: CourseIn, _admin = Depends(require_admin)):
 
 @api.put("/courses/{cid}")
 async def update_course(cid: str, payload: CourseIn, _admin = Depends(require_admin)):
-    res = await db.courses.update_one({"id": cid}, {"$set": payload.model_dump()})
+    data = payload.model_dump()
+    data["slug"] = await unique_slug("courses", data["title"], exclude_id=cid)
+    res = await db.courses.update_one({"id": cid}, {"$set": data})
     if not res.matched_count: raise HTTPException(404, "Course not found")
     return await db.courses.find_one({"id": cid}, {"_id": 0})
 
@@ -564,6 +587,7 @@ async def list_scholarships_admin(_admin = Depends(require_admin)):
 async def create_scholarship(payload: ScholarshipIn, _admin = Depends(require_admin)):
     doc = payload.model_dump()
     doc["id"] = new_id()
+    doc["slug"] = await unique_slug("scholarships", doc["title"])
     doc["created_at"] = now_iso()
     doc["examiner_token"] = uuid.uuid4().hex
     if doc.get("available_venues"):
@@ -577,6 +601,7 @@ async def create_scholarship(payload: ScholarshipIn, _admin = Depends(require_ad
 @api.put("/scholarships/{sid}")
 async def update_scholarship(sid: str, payload: ScholarshipIn, _admin = Depends(require_admin)):
     data = payload.model_dump()
+    data["slug"] = await unique_slug("scholarships", data["title"], exclude_id=sid)
     if data.get("available_venues"):
         data["available_venues"] = [_sanitize_venue(v) for v in data["available_venues"]]
     await db.scholarships.update_one({"id": sid}, {"$set": data})
@@ -798,6 +823,11 @@ async def notify_scholarship_applicants(
 # ---------- Per-campaign Registrations Dashboard ----------
 @api.get("/scholarships/{sid}/stats")
 async def scholarship_stats(sid: str, request: Request, token: str | None = None):
+    camp = await db.scholarships.find_one({"$or": [{"id": sid}, {"slug": sid}]}, {"_id": 0})
+    if not camp:
+        raise HTTPException(404, "Campaign not found")
+    real_id = camp["id"]
+
     # Check authorization or examiner token
     is_authorized = False
     try:
@@ -807,16 +837,11 @@ async def scholarship_stats(sid: str, request: Request, token: str | None = None
     except HTTPException:
         pass
 
-    if not is_authorized and token:
-        token_camp = await db.scholarships.find_one({"examiner_token": token, "id": sid}, {"_id": 0})
-        if token_camp:
-            is_authorized = True
+    if not is_authorized and token and camp.get("examiner_token") == token:
+        is_authorized = True
 
     if not is_authorized:
         raise HTTPException(401, "Authentication required to view stats")
-    camp = await db.scholarships.find_one({"id": sid}, {"_id": 0})
-    if not camp:
-        raise HTTPException(404, "Campaign not found")
 
     now = datetime.now(timezone.utc)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -824,7 +849,7 @@ async def scholarship_stats(sid: str, request: Request, token: str | None = None
     prev_week_start = today_start - timedelta(days=14)
 
     apps = await db.scholarship_applications.find(
-        {"scholarship_id": sid}, {"_id": 0, "venue": 1, "created_at": 1}
+        {"scholarship_id": real_id}, {"_id": 0, "venue": 1, "created_at": 1}
     ).to_list(None)
 
     def _parse(ts):
@@ -868,7 +893,7 @@ async def scholarship_stats(sid: str, request: Request, token: str | None = None
         wow_growth_pct = 100.0 if this_week > 0 else 0.0
 
     return {
-        "campaign": {"id": camp["id"], "title": camp.get("title"), "exam_date": camp.get("exam_date")},
+        "campaign": {"id": camp["id"], "slug": camp.get("slug"), "title": camp.get("title"), "exam_date": camp.get("exam_date")},
         "total_registrations": total,
         "wow_growth_pct": wow_growth_pct,
         "this_week": this_week,
@@ -2173,7 +2198,19 @@ async def _run_boot_tasks():
         await init_storage()
     except Exception as e:
         logging.error(f"init_storage() failed: {e}")
+    try:
+        await _backfill_slugs()
+    except Exception as e:
+        logging.error(f"_backfill_slugs() failed: {e}")
     logging.info("Unacademy Offline Centre backend ready.")
+
+
+async def _backfill_slugs():
+    for coll in ("courses", "scholarships"):
+        cursor = db[coll].find({"$or": [{"slug": {"$exists": False}}, {"slug": None}, {"slug": ""}]}, {"id": 1, "title": 1})
+        async for doc in cursor:
+            slug = await unique_slug(coll, doc.get("title") or "item", exclude_id=doc.get("id"))
+            await db[coll].update_one({"id": doc["id"]}, {"$set": {"slug": slug}})
 
 @app.on_event("startup")
 async def on_start():
