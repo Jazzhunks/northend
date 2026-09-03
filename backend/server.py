@@ -1909,6 +1909,11 @@ async def upload(request: Request, file: UploadFile = File(...)):
     path = f"{APP_NAME}/uploads/{file_id}.{ext}"
     try:
         result = await put_object(path, data, ctype)
+    except RuntimeError as e:
+        msg = str(e)
+        if "not initialised" in msg.lower():
+            raise HTTPException(500, "File upload is currently unavailable because object storage is not configured on the server. Please contact the administrator.")
+        raise HTTPException(500, f"Upload failed: {e}")
     except Exception as e:
         raise HTTPException(500, f"Upload failed: {e}")
     record = {
