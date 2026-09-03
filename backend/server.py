@@ -1806,6 +1806,60 @@ async def delete_gallery_item(gid: str, _admin = Depends(require_admin)):
     await db.gallery.delete_one({"id": gid})
     return {"ok": True}
 
+# ---------- Blog ----------
+class PostIn(BaseModel):
+    title: str
+    slug: str
+    excerpt: Optional[str] = None
+    content: str
+    category: Optional[str] = None
+    tags: List[str] = []
+    author: str = "Admin"
+    featured_image_url: Optional[str] = None
+    image_alt: Optional[str] = None
+    og_image_url: Optional[str] = None
+    meta_title: Optional[str] = None
+    meta_description: Optional[str] = None
+    status: str = "draft"
+    visibility: str = "public"
+    published_at: Optional[str] = None
+
+@api.get("/posts")
+async def list_posts():
+    return await db.posts.find({"status": "published", "visibility": "public"}, {"_id": 0}).sort("published_at", -1).to_list(100)
+
+@api.get("/posts/{slug}")
+async def get_post(slug: str):
+    post = await db.posts.find_one({"slug": slug, "status": "published", "visibility": "public"}, {"_id": 0})
+    if not post:
+        raise HTTPException(404, "Post not found")
+    return post
+
+@api.get("/admin/posts")
+async def list_admin_posts(_admin = Depends(require_admin)):
+    return await db.posts.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+
+@api.post("/admin/posts")
+async def create_post(payload: PostIn, _admin = Depends(require_admin)):
+    doc = payload.model_dump()
+    doc["id"] = new_id()
+    doc["created_at"] = now_iso()
+    if not doc.get("published_at") and doc.get("status") == "published":
+        doc["published_at"] = now_iso()
+    await db.posts.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+@api.put("/admin/posts/{pid}")
+async def update_post(pid: str, payload: PostIn, _admin = Depends(require_admin)):
+    await db.posts.update_one({"id": pid}, {"$set": payload.model_dump()})
+    return await db.posts.find_one({"id": pid}, {"_id": 0})
+
+@api.delete("/admin/posts/{pid}")
+async def delete_post(pid: str, _admin = Depends(require_admin)):
+    await db.posts.delete_one({"id": pid})
+    return {"ok": True}
+
 # ---------- Contact ----------
 @api.post("/contact")
 async def contact(payload: ContactIn, request: Request):

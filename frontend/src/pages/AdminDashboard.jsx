@@ -12,7 +12,7 @@ import {
   HelpCircle, Megaphone, Trophy, Search, Menu, X,
   Loader2, CheckCircle2, AlertCircle, Send, FileSpreadsheet,
   UploadCloud, PlaySquare, Filter, RefreshCw, Eye, ExternalLink,
-  User, UserPlus, Printer, Wand2, Image
+  User, UserPlus, Printer, Wand2, Image, FileText
 } from "lucide-react";
 import ChipInput from "@/components/ChipInput";
 import FileUpload from "@/components/FileUpload";
@@ -62,6 +62,12 @@ const normalizeVenue = (rawVenue) => {
   return "Unassigned";
 };
 
+const slugify = (text) => {
+  const str = String(text || "").trim().toLowerCase();
+  const cleaned = str.replace(/[^a-z0-9\s-]/g, "").replace(/[\s_-]+/g, "-").replace(/^-+|-+$/g, "");
+  return cleaned || "post";
+};
+
 const SIDE_NAV = [
   { id: "enrollments", label: "Enrollments", icon: ClipboardList },
   { id: "wath", label: "WATH Management", icon: Trophy },
@@ -77,6 +83,7 @@ const SIDE_NAV = [
   { id: "campaigns", label: "Campaigns", icon: Megaphone },
   { id: "inquiries", label: "Inquiries", icon: HelpCircle },
   { id: "gallery", label: "Gallery", icon: Image },
+  { id: "blog", label: "Blog", icon: FileText },
 ];
 
 function StatCard({ label, value, icon: Icon, testId }) {
@@ -991,6 +998,13 @@ export default function AdminDashboard() {
   const [newCampaign, setNewCampaign] = useState({ title:"", description:"", exam_date:"", deadline:"", eligibility:"", venue:"", available_venues: [], whatsapp_community_url:"", exam_time:"10:00 AM", total_marks:100, active:true, is_featured:false });
   const [newGallery, setNewGallery] = useState({ title:"", description:"", media_type:"image", media_url:"", category:"", order:0 });
   const [selectedGalleryCategory, setSelectedGalleryCategory] = useState("");
+  const [posts, setPosts] = useState([]);
+  const [newPost, setNewPost] = useState({ 
+    title:"", slug:"", excerpt:"", content:"", category:"", tags:[], 
+    author:"Admin", featured_image_url:"", image_alt:"", og_image_url:"", 
+    meta_title:"", meta_description:"", status:"draft", visibility:"public", published_at:"" 
+  });
+  const [editingPostId, setEditingPostId] = useState(null);
   
   const [resultEditor, setResultEditor] = useState({});
   const [appEditor, setAppEditor] = useState({});
@@ -1042,16 +1056,16 @@ export default function AdminDashboard() {
   const load = async () => {
     setLoadingData(true);
     try {
-      const [s, e, sa, ja, iq, c, n, j, ce, ts, rs, g, acm] = await Promise.all([
+      const [s, e, sa, ja, iq, c, n, j, ce, ts, rs, g, p, acm] = await Promise.all([
         api.get("/admin/summary"), api.get("/enrollments"), api.get("/scholarship-applications"),
         api.get("/job-applications"), api.get("/inquiries"), api.get("/courses"),
         api.get("/notices"), api.get("/jobs/all"),
-        api.get("/centers"), api.get("/testimonials"), api.get("/results"), api.get("/admin/gallery"),
+        api.get("/centers"), api.get("/testimonials"), api.get("/results"), api.get("/admin/gallery"), api.get("/admin/posts"),
         api.get("/admin/scholarships"),
       ]);
       setSummary(s.data || {}); setEnrollments(e.data || []); setScholarshipApps(sa.data || []);
       setJobApps(ja.data || []); setInquiries(iq.data || []); setCourses(c.data || []); setNotices(n.data || []); setJobs(j.data || []);
-      setCenters(ce.data || []); setTestimonials(ts.data || []); setResults(rs.data || []); setGallery(g.data || []); setAdminCampaigns(acm.data || []);
+      setCenters(ce.data || []); setTestimonials(ts.data || []); setResults(rs.data || []); setGallery(g.data || []); setPosts(p.data || []); setAdminCampaigns(acm.data || []);
     } catch (err) { toast.error(formatError(err.response?.data?.detail) || err.message); }
     finally { setLoadingData(false); }
   };
@@ -1077,6 +1091,7 @@ export default function AdminDashboard() {
   const filteredInquiries = useMemo(() => inquiries.filter(x => searchMatch(x, ["name", "email", "subject", "message"])), [inquiries, innerSearch]);
   const filteredGallery = useMemo(() => gallery.filter(x => searchMatch(x, ["title", "description", "category"])), [gallery, innerSearch]);
   const galleryCategories = useMemo(() => Array.from(new Set(gallery.map(x => x.category).filter(Boolean))).sort(), [gallery]);
+  const filteredPosts = useMemo(() => posts.filter(x => searchMatch(x, ["title", "excerpt", "category", "author", "status"])), [posts, innerSearch]);
 
   const enrPage = usePaged(filteredEnrollments, 25);
   const schPage = usePaged(filteredScholarships, 25);
@@ -1983,6 +1998,70 @@ export default function AdminDashboard() {
                     )}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {activeTab === "blog" && (
+              <div className="space-y-4 animate-fadeIn">
+                <div className="font-display font-bold text-xl text-foreground">Blog Studio</div>
+                <form onSubmit={(e)=>{e.preventDefault(); const payload = { ...newPost, tags: (newPost.tags || []).filter(Boolean) }; if (!payload.slug) payload.slug = slugify(payload.title); if (!payload.meta_title) payload.meta_title = payload.title.slice(0, 60); if (!payload.meta_description) payload.meta_description = payload.excerpt || payload.title.slice(0, 160); post("/admin/posts", payload, ()=>setNewPost({ title:"", slug:"", excerpt:"", content:"", category:"", tags:[], author:"Admin", featured_image_url:"", image_alt:"", og_image_url:"", meta_title:"", meta_description:"", status:"draft", visibility:"public", published_at:"" }), "Post");}} className="glass border border-border p-4 sm:p-5 rounded-2xl grid grid-cols-1 sm:grid-cols-2 gap-4 bg-background/20">
+                  <Input placeholder="Post title" value={newPost.title} onChange={e=>setNewPost({...newPost, title:e.target.value})} required data-testid="np-title" className="rounded-xl border-border bg-background/50 text-foreground"/>
+                  <Input placeholder="Slug / permalink" value={newPost.slug} onChange={e=>setNewPost({...newPost, slug:e.target.value})} required data-testid="np-slug" className="rounded-xl border-border bg-background/50 text-foreground font-mono"/>
+                  <Input placeholder="Category (e.g. Exam Tips)" value={newPost.category} onChange={e=>setNewPost({...newPost, category:e.target.value})} data-testid="np-category" className="rounded-xl border-border bg-background/50 text-foreground"/>
+                  <Input placeholder="Author" value={newPost.author} onChange={e=>setNewPost({...newPost, author:e.target.value})} data-testid="np-author" className="rounded-xl border-border bg-background/50 text-foreground"/>
+                  <div className="sm:col-span-2">
+                    <label className="text-xs uppercase tracking-widest text-muted-foreground font-bold mb-1.5 block">Content</label>
+                    <textarea className="w-full border border-border rounded-xl px-3 py-2 bg-background/50 text-sm focus:outline-none focus:border-accent text-foreground min-h-48 resize-y font-mono" placeholder="HTML or plain text content..." value={newPost.content} onChange={e=>setNewPost({...newPost, content:e.target.value})} required data-testid="np-content" />
+                  </div>
+                  <textarea className="sm:col-span-2 border border-border rounded-xl px-3 py-2 bg-background/50 text-sm focus:outline-none focus:border-accent text-foreground min-h-20 resize-none" placeholder="Short excerpt / summary..." value={newPost.excerpt} onChange={e=>setNewPost({...newPost, excerpt:e.target.value})} data-testid="np-excerpt" />
+                  <div className="sm:col-span-2">
+                    <FileUpload label="Featured image" accept="image/jpeg,image/png,image/webp" onUploaded={(file) => file && setNewPost(prev => ({ ...prev, featured_image_url: file.url }))} testId="post-featured-image" />
+                  </div>
+                  <Input placeholder="Image alt text" value={newPost.image_alt} onChange={e=>setNewPost({...newPost, image_alt:e.target.value})} data-testid="np-image-alt" className="rounded-xl border-border bg-background/50 text-foreground"/>
+                  <Input placeholder="OG image URL (optional)" value={newPost.og_image_url} onChange={e=>setNewPost({...newPost, og_image_url:e.target.value})} data-testid="np-og-image" className="rounded-xl border-border bg-background/50 text-foreground"/>
+                  <Input placeholder="Meta title" value={newPost.meta_title} onChange={e=>setNewPost({...newPost, meta_title:e.target.value})} data-testid="np-meta-title" className="rounded-xl border-border bg-background/50 text-foreground"/>
+                  <Input placeholder="Meta description" value={newPost.meta_description} onChange={e=>setNewPost({...newPost, meta_description:e.target.value})} data-testid="np-meta-desc" className="rounded-xl border-border bg-background/50 text-foreground"/>
+                  <select className="border border-border rounded-xl px-3 py-2 bg-background text-sm text-foreground focus:outline-none focus:border-accent cursor-pointer" value={newPost.status} onChange={e=>setNewPost({...newPost, status:e.target.value})} data-testid="np-status">
+                    <option value="draft">Draft</option>
+                    <option value="published">Published</option>
+                  </select>
+                  <select className="border border-border rounded-xl px-3 py-2 bg-background text-sm text-foreground focus:outline-none focus:border-accent cursor-pointer" value={newPost.visibility} onChange={e=>setNewPost({...newPost, visibility:e.target.value})} data-testid="np-visibility">
+                    <option value="public">Public</option>
+                    <option value="private">Private</option>
+                  </select>
+                  <Button type="submit" className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2 cursor-pointer"><Plus size={14} className="mr-1.5"/>Save Post</Button>
+                </form>
+                {filteredPosts.length === 0 ? (
+                  <EmptyState title="No posts" description="Create your first blog post to get started." />
+                ) : (
+                  <div className="glass border border-border rounded-2xl overflow-hidden w-full">
+                    <div className="overflow-x-auto w-full">
+                      <table className="w-full text-sm min-w-[900px] table-auto">
+                        <thead className="bg-muted text-muted-foreground text-xs uppercase tracking-wider">
+                          <tr><th className="p-3 sm:p-4 text-left bg-muted">Title</th><th className="p-3 sm:p-4 text-left bg-muted">Category</th><th className="p-3 sm:p-4 text-left bg-muted">Author</th><th className="p-3 sm:p-4 text-left bg-muted">Status</th><th className="p-3 sm:p-4 text-left bg-muted">Visibility</th><th className="p-3 sm:p-4 text-left bg-muted">Published</th><th className="p-3 sm:p-4 text-right bg-muted"></th></tr>
+                        </thead>
+                        <tbody className="divide-y divide-border text-foreground bg-background/20">
+                          {filteredPosts.map((p) => (
+                            <tr key={p.id} className="hover:bg-muted/50 transition-colors">
+                              <td className="p-3 sm:p-4 font-bold text-foreground">{p.title}</td>
+                              <td className="p-3 sm:p-4 text-muted-foreground">{p.category || "—"}</td>
+                              <td className="p-3 sm:p-4 text-muted-foreground">{p.author}</td>
+                              <td className="p-3 sm:p-4"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${p.status === "published" ? "bg-accent/10 text-accent border border-accent/20" : "bg-muted/50 text-muted-foreground border border-border"}`}>{p.status}</span></td>
+                              <td className="p-3 sm:p-4 text-muted-foreground capitalize">{p.visibility}</td>
+                              <td className="p-3 sm:p-4 text-muted-foreground">{p.published_at ? new Date(p.published_at).toLocaleDateString() : "—"}</td>
+                              <td className="p-3 sm:p-4 text-right">
+                                <div className="inline-flex gap-1.5">
+                                  <Button size="sm" variant="outline" onClick={() => { setEditingPostId(p.id); setNewPost(p); }} className="rounded-xl border-transparent text-primary hover:bg-primary/5 cursor-pointer"><Eye size={14}/></Button>
+                                  <Button size="sm" variant="outline" onClick={() => del(`/admin/posts/${p.id}`, "post")} className="rounded-xl border-transparent text-rose-600 hover:bg-rose-500/5 cursor-pointer"><Trash2 size={14}/></Button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

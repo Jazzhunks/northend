@@ -327,6 +327,15 @@ export const galleryAPI = {
   delete: (id) => api.delete(`/admin/gallery/${id}`).then(resData),
 };
 
+export const postsAPI = {
+  list: () => api.get("/posts").then(resData),
+  get: (slug) => api.get(`/posts/${slug}`).then(resData),
+  listAdmin: () => api.get("/admin/posts").then(resData),
+  create: (data) => api.post("/admin/posts", data).then(resData),
+  update: (id, data) => api.put(`/admin/posts/${id}`, data).then(resData),
+  delete: (id) => api.delete(`/admin/posts/${id}`).then(resData),
+};
+
 export const adminAPI = {
   getSummary: () => api.get("/admin/summary").then(resData),
   setFeatured: (kind, id) =>
