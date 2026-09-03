@@ -15,7 +15,7 @@ export default function FileUpload({ label = "Upload file", accept = "applicatio
   const pick = async (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    if (f.size > 10 * 1024 * 1024) { toast.error("File too large (max 10 MB)"); return; }
+    if (f.size > 50 * 1024 * 1024) { toast.error("File too large (max 50 MB)"); return; }
     setBusy(true);
     try {
       const fd = new FormData();
@@ -52,7 +52,7 @@ export default function FileUpload({ label = "Upload file", accept = "applicatio
           {busy ? "Uploading…" : label}
         </button>
       )}
-      <div className="text-[11px] text-muted-foreground mt-1">PDF / JPG / PNG · max 10 MB</div>
+      <div className="text-[11px] text-muted-foreground mt-1">PDF / JPG / PNG / WEBP / MP4 / WEBM / MOV · max 50 MB</div>
     </div>
   );
 }

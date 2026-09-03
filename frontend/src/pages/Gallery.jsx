@@ -4,18 +4,10 @@ import { Eyebrow, Reveal } from "@/components/Cinematic";
 import { galleryAPI } from "@/lib/api";
 import PageHero from "@/components/PageHero";
 import GlassPanel from "@/components/GlassPanel";
-import { Play, FileText, Image as ImageIcon, ArrowUpRight } from "@phosphor-icons/react";
-import { Maximize2 } from "lucide-react";
+import { Play, FileText, Image as ImageIcon, ArrowUpRight, Maximize2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
-const CARD_SIZES = [
-  "tall",
-  "wide",
-  "standard",
-  "standard",
-  "tall",
-  "wide",
-];
+const CARD_SIZES = ["tall", "wide", "standard", "standard", "tall", "wide"];
 
 export default function Gallery() {
   const [items, setItems] = useState([]);
@@ -40,8 +32,11 @@ export default function Gallery() {
     return items.filter(x => x.category === activeCategory || !x.category);
   }, [items, activeCategory]);
 
-  const hero = visible[0];
-  const rest = visible.slice(1);
+  const mediaItems = useMemo(() => visible.filter(x => x.media_type !== "text"), [visible]);
+  const textItems = useMemo(() => visible.filter(x => x.media_type === "text"), [visible]);
+
+  const hero = mediaItems[0];
+  const mediaRest = mediaItems.slice(1);
 
   return (
     <>
@@ -91,33 +86,51 @@ export default function Gallery() {
                   ))}
                 </div>
 
-                {/* Masonry-style grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 auto-rows-[280px]">
-                  {/* Hero card */}
-                  {hero && (
-                    <div className="md:col-span-2 md:row-span-2" data-testid={`gallery-${hero.id}`}>
-                      <GalleryCard item={hero} size="hero" onClick={() => setSelectedItem(hero)} />
-                    </div>
-                  )}
+                {/* Text items as full-width paragraphs */}
+                {textItems.length > 0 && (
+                  <div className="space-y-6 mb-10">
+                    {textItems.map((item, idx) => (
+                      <Reveal key={item.id} delay={idx * 0.05}>
+                        <div
+                          className="glass border border-border rounded-3xl p-6 sm:p-8 cursor-pointer hover:border-primary/30 transition"
+                          onClick={() => setSelectedItem(item)}
+                          data-testid={`gallery-${item.id}`}
+                        >
+                          {item.category && (
+                            <span className="inline-block px-3 py-1 rounded-full bg-muted/50 text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-4">
+                              {item.category}
+                            </span>
+                          )}
+                          <p className="text-base sm:text-lg text-foreground leading-relaxed whitespace-pre-wrap">
+                            {item.description || item.title}
+                          </p>
+                        </div>
+                      </Reveal>
+                    ))}
+                  </div>
+                )}
 
-                  {/* Rest of the grid */}
-                  {rest.map((item, idx) => {
-                    const size = CARD_SIZES[idx % CARD_SIZES.length];
-                    return (
-                      <div key={item.id} data-testid={`gallery-${item.id}`}>
-                        <GalleryCard item={item} size={size} onClick={() => setSelectedItem(item)} />
+                {/* Media masonry grid */}
+                {mediaItems.length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 auto-rows-[280px]">
+                    {/* Hero card */}
+                    {hero && (
+                      <div className="md:col-span-2 md:row-span-2" data-testid={`gallery-${hero.id}`}>
+                        <GalleryCard item={hero} size="hero" onClick={() => setSelectedItem(hero)} />
                       </div>
-                    );
-                  })}
-                </div>
+                    )}
 
-                {/* View all categories */}
-                <div className="mt-10 flex justify-center">
-                  <button className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-muted/50 border border-border text-sm font-bold text-foreground hover:bg-muted transition">
-                    View All Categories
-                    <ArrowUpRight size={16} />
-                  </button>
-                </div>
+                    {/* Rest of the grid */}
+                    {mediaRest.map((item, idx) => {
+                      const size = CARD_SIZES[idx % CARD_SIZES.length];
+                      return (
+                        <div key={item.id} data-testid={`gallery-${item.id}`}>
+                          <GalleryCard item={item} size={size} onClick={() => setSelectedItem(item)} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </>
             )}
           </div>

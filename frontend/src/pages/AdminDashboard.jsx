@@ -998,6 +998,7 @@ export default function AdminDashboard() {
   const [newCampaign, setNewCampaign] = useState({ title:"", description:"", exam_date:"", deadline:"", eligibility:"", venue:"", available_venues: [], whatsapp_community_url:"", exam_time:"10:00 AM", total_marks:100, active:true, is_featured:false });
   const [newGallery, setNewGallery] = useState({ title:"", description:"", media_type:"image", media_url:"", category:"", order:0 });
   const [selectedGalleryCategory, setSelectedGalleryCategory] = useState("");
+  const [editingGalleryId, setEditingGalleryId] = useState(null);
   const [posts, setPosts] = useState([]);
   const [newPost, setNewPost] = useState({ 
     title:"", slug:"", excerpt:"", content:"", category:"", tags:[], 
@@ -1898,106 +1899,88 @@ export default function AdminDashboard() {
             {activeTab === "gallery" && (
               <div className="space-y-4 animate-fadeIn">
                 <div className="font-display font-bold text-xl text-foreground">Gallery Studio</div>
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-                  <div className="lg:col-span-4 space-y-4">
-                    <div className="glass border border-border p-4 sm:p-5 rounded-2xl bg-background/20">
-                      <div className="text-xs uppercase tracking-widest text-muted-foreground font-bold mb-3">Step 1 — Category</div>
-                      <form onSubmit={(e)=>{e.preventDefault(); const label = newGallery.category?.trim(); if (!label) return; post("/admin/gallery", { ...newGallery, title: label, description: label, media_type:"text", order:0 }, ()=>setNewGallery(prev => ({...prev, category:""})), "Category");}} className="space-y-3">
-                        <Input placeholder="New category name" value={newGallery.category} onChange={e=>setNewGallery({...newGallery, category:e.target.value})} required data-testid="ng-category" className="rounded-xl border-border bg-background/50 text-foreground"/>
-                        <Button type="submit" className="w-full bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2 cursor-pointer"><Plus size={14} className="mr-1.5"/>Create category</Button>
-                      </form>
-                    </div>
-
-                    <div className="glass border border-border p-4 sm:p-5 rounded-2xl bg-background/20">
-                      <div className="text-xs uppercase tracking-widest text-muted-foreground font-bold mb-3">Step 2 — Description</div>
-                      <form onSubmit={(e)=>{e.preventDefault(); if (!selectedGalleryCategory) return; post("/admin/gallery", { ...newGallery, title: selectedGalleryCategory, description: newGallery.description || selectedGalleryCategory, media_type:"text", category: selectedGalleryCategory, order:0 }, ()=>setNewGallery(prev => ({...prev, description:"", media_url:"", media_type:"image"})), "Description");}} className="space-y-3">
-                        <select className="border border-border rounded-xl px-3 py-2 bg-background text-sm text-foreground focus:outline-none focus:border-accent cursor-pointer w-full" value={selectedGalleryCategory || ""} onChange={e=>setSelectedGalleryCategory(e.target.value)}>
-                          <option value="">Select category</option>
-                          {galleryCategories.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                        <textarea className="w-full border border-border rounded-xl px-3 py-2 bg-background/50 text-sm focus:outline-none focus:border-accent text-foreground min-h-24 resize-none" placeholder="Write a short description for this category..." value={newGallery.description} onChange={e=>setNewGallery({...newGallery, description:e.target.value})} />
-                        <Button type="submit" className="w-full bg-accent text-accent-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2 cursor-pointer">Save description</Button>
-                      </form>
-                    </div>
+                <form onSubmit={(e)=>{e.preventDefault(); const payload = { ...newGallery, category: newGallery.category || "Uncategorised" }; if (!payload.media_url && payload.media_type !== "text") delete payload.media_url; if (editingGalleryId) { api.put(`/admin/gallery/${editingGalleryId}`, payload).then(() => { toast.success("Gallery item updated"); setEditingGalleryId(null); setNewGallery({ title:"", description:"", media_type:"image", media_url:"", category:"", order:0 }); load(); }).catch(err => toast.error(formatError(err.response?.data?.detail))); } else { post("/admin/gallery", payload, ()=>setNewGallery({ title:"", description:"", media_type:"image", media_url:"", category:"", order:0 }), "Gallery item"); }}} className="glass border border-border p-4 sm:p-5 rounded-2xl grid grid-cols-1 sm:grid-cols-2 gap-4 bg-background/20">
+                  <Input placeholder="Title" value={newGallery.title} onChange={e=>setNewGallery({...newGallery, title:e.target.value})} required data-testid="ng-title" className="rounded-xl border-border bg-background/50 text-foreground"/>
+                  <Input placeholder="Category (e.g. Campus, Events)" value={newGallery.category} onChange={e=>setNewGallery({...newGallery, category:e.target.value})} list="gallery-categories" data-testid="ng-category" className="rounded-xl border-border bg-background/50 text-foreground"/>
+                  <datalist id="gallery-categories">
+                    {galleryCategories.map(c => <option key={c} value={c} />)}
+                  </datalist>
+                  <select className="border border-border rounded-xl px-3 py-2 bg-background text-sm text-foreground focus:outline-none focus:border-accent cursor-pointer" value={newGallery.media_type} onChange={e=>setNewGallery({...newGallery, media_type:e.target.value})}>
+                    <option value="image">Image</option>
+                    <option value="video">Video</option>
+                    <option value="text">Text / Paragraph</option>
+                  </select>
+                  <div className="sm:col-span-2">
+                    <FileUpload
+                      label={newGallery.media_type === "video" ? "Upload video" : newGallery.media_type === "text" ? "Optional image for text post" : "Upload image"}
+                      accept={newGallery.media_type === "video" ? "video/mp4,video/webm,video/quicktime" : "image/jpeg,image/png,image/webp"}
+                      onUploaded={(file) => file && setNewGallery(prev => ({ ...prev, media_url: file.url }))}
+                      testId="gallery-upload"
+                    />
                   </div>
-
-                  <div className="lg:col-span-8 space-y-4">
-                    <div className="glass border border-border p-4 sm:p-5 rounded-2xl bg-background/20">
-                      <div className="text-xs uppercase tracking-widest text-muted-foreground font-bold mb-3">Step 3 — Media</div>
-                      <form onSubmit={(e)=>{e.preventDefault(); if (!selectedGalleryCategory) { toast.error("Select a category first"); return; } const payload = { ...newGallery, category: selectedGalleryCategory }; if (!payload.media_url) delete payload.media_url; post("/admin/gallery", payload, ()=>setNewGallery(prev => ({...prev, media_url:"", title:"", description:""})), "Media");}} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <select className="border border-border rounded-xl px-3 py-2 bg-background text-sm text-foreground focus:outline-none focus:border-accent cursor-pointer" value={selectedGalleryCategory || ""} onChange={e=>setSelectedGalleryCategory(e.target.value)}>
-                          <option value="">Select category</option>
-                          {galleryCategories.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                        <select className="border border-border rounded-xl px-3 py-2 bg-background text-sm text-foreground focus:outline-none focus:border-accent cursor-pointer" value={newGallery.media_type} onChange={e=>setNewGallery({...newGallery, media_type:e.target.value})}>
-                          <option value="image">Image</option>
-                          <option value="video">Video</option>
-                          <option value="text">Text / Paragraph</option>
-                        </select>
-                        <div className="sm:col-span-2">
-                          <FileUpload
-                            label="Upload media"
-                            accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"
-                            onUploaded={(file) => file && setNewGallery(prev => ({ ...prev, media_url: file.url }))}
-                            testId="gallery-upload"
-                          />
-                        </div>
-                        <textarea className="sm:col-span-2 border border-border rounded-xl px-3 py-2 bg-background/50 text-sm focus:outline-none focus:border-accent text-foreground min-h-24 resize-none" placeholder="Caption or paragraph text..." value={newGallery.description} onChange={e=>setNewGallery({...newGallery, description:e.target.value})} />
-                        <div className="sm:col-span-2">
-                          <Button type="submit" className="w-full bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2 cursor-pointer"><Plus size={14} className="mr-1.5"/>Add to gallery</Button>
-                        </div>
-                      </form>
-                    </div>
-
-                    {filteredGallery.length === 0 ? (
-                      <EmptyState title="No gallery items" description="Create a category, then add images, videos, or paragraphs." />
-                    ) : (
-                      <div className="space-y-6">
-                        {galleryCategories.map((cat) => {
-                          const items = filteredGallery.filter(x => x.category === cat || (!x.category && cat === "Uncategorised"));
-                          if (items.length === 0) return null;
-                          return (
-                            <div key={cat} className="space-y-3">
-                              <div className="flex items-center justify-between">
-                                <h3 className="font-display text-lg font-medium">{cat}</h3>
-                                <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">{items.length} items</span>
-                              </div>
-                              <div className="space-y-4">
-                                {items.map((item) => (
-                                  <div key={item.id} className="border border-border bg-background/30 rounded-2xl p-5 sm:p-6">
-                                    <div className="flex flex-col lg:flex-row gap-5">
-                                      {item.media_url && item.media_type !== "text" && (
-                                        <div className="lg:w-80 shrink-0">
-                                          {item.media_type === "video" ? (
-                                            <video src={item.media_url} controls className="w-full rounded-xl" />
-                                          ) : (
-                                            <img src={item.media_url} alt={item.title} className="w-full rounded-xl object-cover" style={{ maxHeight: "220px" }} />
-                                          )}
-                                        </div>
-                                      )}
-                                      <div className="flex-1 min-w-0">
-                                        <div className="font-bold text-foreground text-base mb-1">{item.title}</div>
-                                        {item.description && (
-                                          <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{item.description}</p>
-                                        )}
-                                        <div className="flex items-center gap-2 mt-3 text-[10px] uppercase tracking-widest text-muted-foreground font-bold">
-                                          <span className="capitalize">{item.media_type}</span>
-                                        </div>
-                                      </div>
-                                      <div className="shrink-0 flex lg:flex-col gap-2">
-                                        <Button size="sm" variant="outline" onClick={() => del(`/admin/gallery/${item.id}`, "gallery item")} className="rounded-xl border-transparent text-rose-600 hover:bg-rose-500/5 cursor-pointer"><Trash2 size={14}/></Button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        })}
+                  {newGallery.media_url && (
+                    <div className="sm:col-span-2">
+                      <div className="relative inline-block">
+                        {newGallery.media_type === "video" ? (
+                          <video src={newGallery.media_url} controls className="max-h-40 rounded-xl" />
+                        ) : (
+                          <img src={newGallery.media_url} alt="Preview" className="max-h-40 rounded-xl object-cover" />
+                        )}
+                        <button type="button" onClick={()=>setNewGallery(prev => ({...prev, media_url:""}))} className="absolute -top-2 -right-2 p-1 bg-rose-500 text-white rounded-full shadow-lg"><X size={14}/></button>
                       </div>
-                    )}
+                    </div>
+                  )}
+                  <textarea className="sm:col-span-2 border border-border rounded-xl px-3 py-2 bg-background/50 text-sm focus:outline-none focus:border-accent text-foreground min-h-24 resize-none" placeholder="Caption or paragraph text..." value={newGallery.description} onChange={e=>setNewGallery({...newGallery, description:e.target.value})} />
+                  <div className="sm:col-span-2 flex gap-3">
+                    <Button type="submit" className="flex-1 bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2 cursor-pointer"><Plus size={14} className="mr-1.5"/>{editingGalleryId ? "Update Item" : "Add to gallery"}</Button>
+                    {editingGalleryId && <Button type="button" onClick={()=>{setEditingGalleryId(null); setNewGallery({ title:"", description:"", media_type:"image", media_url:"", category:"", order:0 });}} className="px-4 py-2 border border-border rounded-xl text-xs font-bold uppercase tracking-wider cursor-pointer">Cancel</Button>}
                   </div>
-                </div>
+                </form>
+                {filteredGallery.length === 0 ? (
+                  <EmptyState title="No gallery items" description="Add your first image, video, or paragraph to get started." />
+                ) : (
+                  <div className="space-y-6">
+                    {galleryCategories.map((cat) => {
+                      const items = filteredGallery.filter(x => x.category === cat || (!x.category && cat === "Uncategorised"));
+                      if (items.length === 0) return null;
+                      return (
+                        <div key={cat} className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-display text-lg font-medium">{cat}</h3>
+                            <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">{items.length} items</span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {items.map((item) => (
+                              <div key={item.id} className="border border-border bg-background/30 rounded-2xl p-4 flex flex-col gap-3">
+                                <div className="aspect-video rounded-xl overflow-hidden bg-muted/30 flex items-center justify-center">
+                                  {item.media_type === "video" && item.media_url ? (
+                                    <video src={item.media_url} controls className="w-full h-full object-cover" />
+                                  ) : item.media_type === "text" ? (
+                                    <p className="text-xs text-muted-foreground p-3 line-clamp-4 whitespace-pre-wrap">{item.description || item.title}</p>
+                                  ) : item.media_url ? (
+                                    <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <Image size={32} className="text-muted-foreground/40" />
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="font-bold text-foreground text-sm">{item.title}</div>
+                                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mt-1">{item.media_type} {item.category ? `· ${item.category}` : ""}</div>
+                                </div>
+                                <div className="flex justify-end pt-2 border-t border-border">
+                                  <div className="inline-flex gap-1.5">
+                                    <Button size="sm" variant="outline" onClick={() => { setEditingGalleryId(item.id); setNewGallery(item); }} className="rounded-xl border-transparent text-primary hover:bg-primary/5 cursor-pointer"><Eye size={14}/></Button>
+                                    <Button size="sm" variant="outline" onClick={() => del(`/admin/gallery/${item.id}`, "gallery item")} className="rounded-xl border-transparent text-rose-600 hover:bg-rose-500/5 cursor-pointer"><Trash2 size={14}/></Button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 
