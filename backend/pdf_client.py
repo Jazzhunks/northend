@@ -25,6 +25,19 @@ BLUE_BRAND = HexColor("#2D81F7")
 GREEN_BRAND = HexColor("#08BD80")
 RED = HexColor("#EF4444")
 
+# ---- Website-matched brand palette (light, print-friendly) ----
+BRAND_BLUE = HexColor("#1483D2")   # site --primary
+BRAND_GREEN = HexColor("#08BA7F")  # site --accent
+BRAND_BLUE_RGB = (20/255, 131/255, 210/255)
+BRAND_GREEN_RGB = (8/255, 186/255, 127/255)
+INK = HexColor("#334155")
+INK_SOFT = HexColor("#7C8CA0")
+CARD_BG = HexColor("#F5FAFD")
+CARD_LINE = HexColor("#E3EDF5")
+GREEN_SOFT = HexColor("#EAFBF4")
+BLUE_SOFT = HexColor("#EAF4FC")
+HEADER_TINT = HexColor("#CFEDE2")
+
 ALLOWED_VENUES = {"90 FT", "Anantnag", "Sopore", "Soura", "Zakura", "Parraypora"}
 
 # Official Unacademy SVG Vector Paths (Emblem + Wordmark)
@@ -159,155 +172,181 @@ def _qr_bytes(data: str) -> ImageReader:
     buf.seek(0)
     return ImageReader(buf)
 
+def _h_gradient(c: canvas.Canvas, x, y, w, h, rgb1, rgb2, steps=160):
+    """Draw a smooth horizontal gradient rectangle from rgb1 (left) to rgb2 (right)."""
+    r1, g1, b1 = rgb1
+    r2, g2, b2 = rgb2
+    sw = w / steps
+    for i in range(steps):
+        t = i / (steps - 1)
+        c.setFillColorRGB(r1 + (r2 - r1) * t, g1 + (g2 - g1) * t, b1 + (b2 - b1) * t)
+        c.rect(x + i * sw, y, sw + 0.6, h, stroke=0, fill=1)
+
 def admit_card_pdf(application_no, name, phone, school, standard, target_exam,
                    exam_date, venue=None, exam_time=None, scholarship_title=None) -> bytes:
-    """Generate a modern, highly detailed Admit Card A5 PDF."""
+    """Generate a modern Admit Card A5 PDF matched to the northendedu.com brand
+    (blue → green gradient, glass-card layout, QR)."""
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=A5)
     W, H = A5
 
     # Safe fallback string handling
     app_no_str = str(application_no or "")
-    name_str = str(name or "")[:30]
+    name_str = str(name or "")[:32]
     phone_str = str(phone or "N/A")
-    school_str = str(school or "")[:30]
-    
+    school_str = str(school or "")[:34]
+
     clean_std = str(standard or "").strip()
-    std_display = clean_std if clean_std.lower().startswith("class") else f"Class {clean_std}"
-    
+    std_display = clean_std if clean_std.lower().startswith("class") else (f"Class {clean_std}" if clean_std else "—")
+
     target_exam_str = str(target_exam or "N/A")
     exam_date_str = str(exam_date or "TBA")
     exam_time_str = str(exam_time or "10:00 AM")
-    title_str = str(scholarship_title or "Scholarship Aptitude Test")
-    
+    title_str = str(scholarship_title or "Scholarship Aptitude Test")[:40]
     valid_venue = _sanitize_venue(venue)
 
-    # ---- Outer Decorative Border ----
-    c.setStrokeColor(PRIMARY)
-    c.setLineWidth(0.8)
-    c.rect(4 * mm, 4 * mm, W - 8 * mm, H - 8 * mm, stroke=1, fill=0)
+    # ---- Page background + subtle frame ----
+    c.setFillColor(WHITE)
+    c.rect(0, 0, W, H, stroke=0, fill=1)
 
-    # ---- Header Band ----
-    c.setFillColor(PRIMARY)
-    c.rect(5 * mm, H - 32 * mm, W - 10 * mm, 27 * mm, stroke=0, fill=1)
-    
-    # Left Header Text
-    c.setFillColor(ACCENT)
+    # ---- Gradient Header (full-bleed top) ----
+    hdr_h = 42 * mm
+    _h_gradient(c, 0, H - hdr_h, W, hdr_h, BRAND_BLUE_RGB, BRAND_GREEN_RGB)
+
+    # Overline
+    c.setFillColor(HEADER_TINT)
     c.setFont("Helvetica-Bold", 7.5)
-    c.drawString(10 * mm, H - 11 * mm, "UNACADEMY OFFLINE CENTRE")
-    
+    c.drawString(11 * mm, H - 12 * mm, "U N A C A D E M Y   K A S H M I R")
+
+    # Big title
     c.setFillColor(WHITE)
-    c.setFont("Helvetica-Bold", 15)
-    c.drawString(10 * mm, H - 19 * mm, "EXAMINATION ADMIT CARD")
+    c.setFont("Helvetica-Bold", 21)
+    c.drawString(11 * mm, H - 22 * mm, "ADMIT CARD")
+
+    # Programme subtitle
     c.setFont("Helvetica", 8.5)
-    c.drawString(10 * mm, H - 26 * mm, title_str)
-
-    # Top-Right Header Container + Vector Unacademy Logo
     c.setFillColor(WHITE)
-    c.roundRect(W - 44 * mm, H - 25 * mm, 38 * mm, 14 * mm, 3, stroke=0, fill=1)
-    _draw_unacademy_logo(c, X0=W - 41.5 * mm, Ytop=H - 15 * mm, target_width=33 * mm)
+    c.drawString(11 * mm, H - 29 * mm, title_str)
 
-    # ---- Candidate Profile Block ----
-    box1_y = H - 82 * mm
-    box1_h = 47 * mm
-    c.setFillColor(BG_LIGHT)
-    c.setStrokeColor(LINE)
+    # Tagline chip
+    c.setFillColor(HexColor("#FFFFFF"))
+    c.setFont("Helvetica-Oblique", 7)
+    c.setFillColor(HEADER_TINT)
+    c.drawString(11 * mm, H - 36 * mm, "Wisdom  ·  Aptitude  ·  Talent  ·  Hunt")
+
+    # Unacademy logo in a white rounded pill (top-right)
+    c.setFillColor(WHITE)
+    c.roundRect(W - 46 * mm, H - 26 * mm, 39 * mm, 14.5 * mm, 3.2, stroke=0, fill=1)
+    _draw_unacademy_logo(c, X0=W - 43 * mm, Ytop=H - 15.5 * mm, target_width=33 * mm)
+
+    # ---- Candidate Profile Card ----
+    card_h = 48 * mm
+    card_y = H - hdr_h - 6 * mm - card_h
+    c.setFillColor(CARD_BG)
+    c.setStrokeColor(CARD_LINE)
     c.setLineWidth(1)
-    c.roundRect(8 * mm, box1_y, W - 16 * mm, box1_h, 4, stroke=1, fill=1)
+    c.roundRect(8 * mm, card_y, W - 16 * mm, card_h, 5, stroke=1, fill=1)
 
-    # QR Code Block Encoding Results URL + Application Info
-    # (Phone Camera -> opens results page; Attendance Scanner App -> reads app_no to mark attendance)
+    # accent tab
+    c.setFillColor(BRAND_GREEN)
+    c.roundRect(8 * mm, card_y + card_h - 1.2 * mm, 26 * mm, 1.2 * mm, 0.6, stroke=0, fill=1)
+
+    # QR (encodes result lookup)
     qr_url = f"https://northendedu.com/wath?app_no={app_no_str}&phone={phone_str}#result"
     c.setFillColor(WHITE)
-    c.roundRect(W - 35 * mm, box1_y + 8 * mm, 23 * mm, 23 * mm, 3, stroke=1, fill=1)
-    qr = _qr_bytes(qr_url)
-    c.drawImage(qr, W - 34 * mm, box1_y + 9 * mm, 21 * mm, 21 * mm, mask='auto')
+    c.setStrokeColor(CARD_LINE)
+    c.roundRect(W - 36 * mm, card_y + 9 * mm, 24 * mm, 24 * mm, 3, stroke=1, fill=1)
+    c.drawImage(_qr_bytes(qr_url), W - 35 * mm, card_y + 10 * mm, 22 * mm, 22 * mm, mask='auto')
+    c.setFillColor(INK_SOFT)
+    c.setFont("Helvetica-Bold", 5)
+    c.drawCentredString(W - 24 * mm, card_y + 6 * mm, "SCAN FOR RESULT")
 
-    # Candidate Profile Fields (Grid)
-    c.setFillColor(MUTED)
-    c.setFont("Helvetica-Bold", 6.5)
-    c.drawString(12 * mm, box1_y + 39 * mm, "APPLICATION NO.")
-    c.setFillColor(PRIMARY)
-    c.setFont("Helvetica-Bold", 11)
-    c.drawString(12 * mm, box1_y + 33 * mm, app_no_str)
+    def field(x, y, label, value, value_color=INK, value_font=("Helvetica-Bold", 10)):
+        c.setFillColor(INK_SOFT)
+        c.setFont("Helvetica-Bold", 6.3)
+        c.drawString(x, y, label)
+        c.setFillColor(value_color)
+        c.setFont(value_font[0], value_font[1])
+        c.drawString(x, y - 6 * mm, str(value))
 
-    c.setFillColor(MUTED)
-    c.setFont("Helvetica-Bold", 6.5)
-    c.drawString(62 * mm, box1_y + 39 * mm, "MOBILE / PHONE")
-    c.setFillColor(TEXT)
-    c.setFont("Helvetica-Bold", 9.5)
-    c.drawString(62 * mm, box1_y + 33 * mm, phone_str)
+    field(13 * mm, card_y + 39 * mm, "APPLICATION NO.", app_no_str, BRAND_BLUE, ("Helvetica-Bold", 12))
+    field(13 * mm, card_y + 25 * mm, "CANDIDATE NAME", name_str, INK, ("Helvetica-Bold", 11))
+    field(13 * mm, card_y + 11 * mm, "SCHOOL & CLASS", f"{school_str} · {std_display}", INK, ("Helvetica", 8.5))
+    field(66 * mm, card_y + 39 * mm, "MOBILE / PHONE", phone_str, INK, ("Helvetica-Bold", 10))
 
-    c.setFillColor(MUTED)
-    c.setFont("Helvetica-Bold", 6.5)
-    c.drawString(12 * mm, box1_y + 25 * mm, "CANDIDATE NAME")
-    c.setFillColor(TEXT)
-    c.setFont("Helvetica-Bold", 10.5)
-    c.drawString(12 * mm, box1_y + 19 * mm, name_str)
-
-    c.setFillColor(MUTED)
-    c.setFont("Helvetica-Bold", 6.5)
-    c.drawString(12 * mm, box1_y + 11 * mm, "SCHOOL & ACADEMIC CLASS")
-    c.setFillColor(TEXT)
-    c.setFont("Helvetica", 8.5)
-    c.drawString(12 * mm, box1_y + 5 * mm, f"{school_str} | {std_display}")
-
-    # ---- Exam Details Block ----
-    box2_y = box1_y - 42 * mm
-    box2_h = 38 * mm
+    # ---- Exam Details Card ----
+    ex_h = 39 * mm
+    ex_y = card_y - 6 * mm - ex_h
     c.setFillColor(WHITE)
-    c.roundRect(8 * mm, box2_y, W - 16 * mm, box2_h, 4, stroke=1, fill=1)
+    c.setStrokeColor(CARD_LINE)
+    c.roundRect(8 * mm, ex_y, W - 16 * mm, ex_h, 5, stroke=1, fill=1)
 
-    c.setFillColor(MUTED)
-    c.setFont("Helvetica-Bold", 6.5)
-    c.drawString(12 * mm, box2_y + 30 * mm, "TARGET EXAM TRACK")
-    c.setFillColor(TEXT)
+    # Target track (blue soft pill)
+    c.setFillColor(BLUE_SOFT)
+    c.roundRect(12 * mm, ex_y + 25 * mm, 58 * mm, 9 * mm, 2.5, stroke=0, fill=1)
+    c.setFillColor(INK_SOFT)
+    c.setFont("Helvetica-Bold", 6.3)
+    c.drawString(15 * mm, ex_y + 30.5 * mm, "TARGET EXAM TRACK")
+    c.setFillColor(BRAND_BLUE)
     c.setFont("Helvetica-Bold", 10)
-    c.drawString(12 * mm, box2_y + 24 * mm, target_exam_str)
+    c.drawString(15 * mm, ex_y + 26.5 * mm, target_exam_str)
 
-    c.setFillColor(MUTED)
-    c.setFont("Helvetica-Bold", 6.5)
-    c.drawString(W/2 + 2 * mm, box2_y + 30 * mm, "DATE & SCHEDULED TIME")
-    c.setFillColor(TEXT)
-    c.setFont("Helvetica-Bold", 8.5)
-    c.drawString(W/2 + 2 * mm, box2_y + 24 * mm, f"{exam_date_str} • {exam_time_str}")
+    # Date & time (green soft pill)
+    c.setFillColor(GREEN_SOFT)
+    c.roundRect(W / 2 + 2 * mm, ex_y + 25 * mm, W / 2 - 14 * mm, 9 * mm, 2.5, stroke=0, fill=1)
+    c.setFillColor(INK_SOFT)
+    c.setFont("Helvetica-Bold", 6.3)
+    c.drawString(W / 2 + 5 * mm, ex_y + 30.5 * mm, "DATE & TIME")
+    c.setFillColor(BRAND_GREEN)
+    c.setFont("Helvetica-Bold", 9)
+    c.drawString(W / 2 + 5 * mm, ex_y + 26.5 * mm, f"{exam_date_str} · {exam_time_str}")
 
-    c.setStrokeColor(LINE)
-    c.line(12 * mm, box2_y + 19 * mm, W - 12 * mm, box2_y + 19 * mm)
+    c.setStrokeColor(CARD_LINE)
+    c.line(12 * mm, ex_y + 19 * mm, W - 12 * mm, ex_y + 19 * mm)
 
-    c.setFillColor(MUTED)
-    c.setFont("Helvetica-Bold", 6.5)
-    c.drawString(12 * mm, box2_y + 13 * mm, "DESIGNATED EXAM VENUE")
-    c.setFillColor(PRIMARY)
-    c.setFont("Helvetica-Bold", 10.5)
-    c.drawString(12 * mm, box2_y + 7 * mm, f"Unacademy Offline Centre – {valid_venue}")
+    c.setFillColor(INK_SOFT)
+    c.setFont("Helvetica-Bold", 6.3)
+    c.drawString(13 * mm, ex_y + 12.5 * mm, "DESIGNATED EXAM VENUE")
+    c.setFillColor(BRAND_BLUE)
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(13 * mm, ex_y + 6 * mm, f"Unacademy Kashmir – {valid_venue}")
 
     # ---- Instructions ----
-    y3 = box2_y - 7 * mm
-    c.setFillColor(PRIMARY)
+    y3 = ex_y - 8 * mm
+    c.setFillColor(BRAND_BLUE)
     c.setFont("Helvetica-Bold", 7.5)
-    c.drawString(8 * mm, y3, "IMPORTANT CANDIDATE INSTRUCTIONS")
-    y3 -= 5 * mm
-    
+    c.drawString(9 * mm, y3, "IMPORTANT CANDIDATE INSTRUCTIONS")
+    y3 -= 5.5 * mm
     c.setFont("Helvetica", 7)
-    c.setFillColor(TEXT)
     notes = [
-        "1. Carry a printed hard copy of this admit card and a valid school photo ID.",
-        "2. Arrive at your designated center at least 30 minutes prior to exam time.",
-        "3. Mobile phones, smart watches, calculators, and gadgets are prohibited.",
-        "4. Results will be declared within 7 days at northendedu.com.",
+        "Carry a printed hard copy of this admit card and a valid school photo ID.",
+        "Arrive at your designated centre at least 30 minutes prior to exam time.",
+        "Mobile phones, smart watches, calculators and gadgets are prohibited.",
+        "Results will be declared within 7 days at northendedu.com.",
     ]
     for n in notes:
-        c.drawString(8 * mm, y3, n)
-        y3 -= 4 * mm
+        c.setFillColor(BRAND_GREEN)
+        c.setFont("Helvetica-Bold", 7)
+        c.drawString(9 * mm, y3, "•")
+        c.setFillColor(INK)
+        c.setFont("Helvetica", 7)
+        c.drawString(12 * mm, y3, n)
+        y3 -= 4.4 * mm
 
-    # ---- Signature ----
-    c.setStrokeColor(LINE)
+    # ---- Signature + footer ----
+    c.setStrokeColor(CARD_LINE)
     c.setFillColor(WHITE)
-    c.rect(W - 43 * mm, 10 * mm, 35 * mm, 11 * mm, stroke=1, fill=1)
-    c.setFillColor(MUTED)
+    c.roundRect(W - 44 * mm, 12 * mm, 36 * mm, 12 * mm, 2, stroke=1, fill=1)
+    c.setFillColor(INK_SOFT)
     c.setFont("Helvetica-Bold", 5.5)
-    c.drawCentredString(W - 25.5 * mm, 7 * mm, "CANDIDATE SIGNATURE")
+    c.drawCentredString(W - 26 * mm, 9 * mm, "CANDIDATE SIGNATURE")
+
+    c.setFillColor(BRAND_GREEN)
+    c.setFont("Helvetica-Bold", 7)
+    c.drawString(9 * mm, 16 * mm, "northendedu.com")
+    c.setFillColor(INK_SOFT)
+    c.setFont("Helvetica", 6)
+    c.drawString(9 * mm, 12 * mm, "System-generated · Verify via QR")
 
     c.showPage()
     c.save()

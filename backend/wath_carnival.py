@@ -88,13 +88,17 @@ def build_wath_router(db, require_admin_dep) -> APIRouter:
                 # `available` is ALWAYS based on the real remaining capacity.
                 s["available"] = bool(s.get("is_open", True)) and real_remaining > 0
                 if pad and capacity > 0:
-                    padded_booked = max(real_booked, round(capacity * _fill_fraction(carnival["id"], d["date"], s["time"])))
-                    padded_booked = min(padded_booked, capacity)
-                    if real_remaining > 0:
+                    if not s["available"]:
+                        # Public view: closed/full slots read "Full" and add 0 to date totals.
+                        s["booked_count"] = capacity
+                        s["remaining"] = 0
+                    else:
+                        padded_booked = max(real_booked, round(capacity * _fill_fraction(carnival["id"], d["date"], s["time"])))
                         padded_booked = min(padded_booked, capacity - 1)  # always show ≥1 left while real seats exist
-                    s["booked_count"] = padded_booked
-                    s["remaining"] = max(0, capacity - padded_booked)
+                        s["booked_count"] = padded_booked
+                        s["remaining"] = max(0, capacity - padded_booked)
                 else:
+                    # Admin view: always real numbers.
                     s["booked_count"] = real_booked
                     s["remaining"] = real_remaining
         return carnival
