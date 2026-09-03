@@ -226,14 +226,14 @@ export const scholarshipsAPI = {
   getResultsTemplateUrl: (id) => `/admin/scholarships/${id}/results-template`,
   uploadBulkResults: (id, formData) =>
     api.post(`/admin/scholarships/${id}/bulk-results`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
+      headers: {},
     }).then(resData),
 
   // Bulk Registration Endpoints
   getBulkRegisterTemplateUrl: (id) => `/admin/scholarships/${id}/bulk-register-template`,
   uploadBulkRegister: (id, formData) =>
     api.post(`/admin/scholarships/${id}/bulk-register`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
+      headers: {},
     }).then(resData),
 };
 
@@ -347,7 +347,7 @@ export const adminAPI = {
 export const filesAPI = {
   upload: (formData) =>
     api.post("/upload", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
+      headers: {},
     }).then(resData),
   getFileUrl: (fileId) => `${API_BASE}/files/${fileId}`,
 };

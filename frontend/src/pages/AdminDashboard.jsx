@@ -440,7 +440,7 @@ function AsyncBulkRegModal({ scholarshipId, onClose }) {
 
     try {
       const { data } = await api.post(`/admin/scholarships/${scholarshipId}/bulk-register`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: {},
       });
       setJobId(data.job_id);
       toast.success("Bulk job started successfully");
@@ -1234,7 +1234,6 @@ export default function AdminDashboard() {
       }));
 
       const { data } = await api.post(`/admin/scholarships/${sid}/bulk-results`, fd, {
-        headers: { "Content-Type": "multipart/form-data" },
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 100));
           setBulkState((prev) => ({ ...prev, progress: Math.min(percentCompleted, 50) }));

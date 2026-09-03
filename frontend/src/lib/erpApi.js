@@ -61,14 +61,14 @@ export const erp = {
   createStudent: (body) => {
     const isFormData = body instanceof FormData;
     return api.post("/erp/students", body, {
-      headers: isFormData ? { "Content-Type": "multipart/form-data" } : {},
+      headers: isFormData ? {} : {},
     }).then(resData);
   },
   
   updateStudent: (id, body) => {
     const isFormData = body instanceof FormData;
     return api.patch(`/erp/students/${encodeURIComponent(id)}`, body, {
-      headers: isFormData ? { "Content-Type": "multipart/form-data" } : {},
+      headers: isFormData ? {} : {},
     }).then(resData);
   },
   

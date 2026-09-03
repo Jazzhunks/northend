@@ -20,7 +20,7 @@ export default function FileUpload({ label = "Upload file", accept = "applicatio
     try {
       const fd = new FormData();
       fd.append("file", f);
-      const { data } = await api.post("/upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      const { data } = await api.post("/upload", fd);
       const fullUrl = `${API_BASE.replace(/\/api$/, "")}${data.url}`;
       const obj = { id: data.id, url: fullUrl, name: data.original_filename };
       setInfo(obj);

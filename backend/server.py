@@ -1898,11 +1898,11 @@ async def upload(request: Request, file: UploadFile = File(...)):
     check_rate_limit(f"upload:{client_ip}", max_requests=20, window_seconds=60)
     ctype = file.content_type or "application/octet-stream"
     if ctype not in ALLOWED_UPLOAD_TYPES:
-        raise HTTPException(415, f"Unsupported type {ctype}. Allowed: pdf, jpg, png, webp.")
+        raise HTTPException(415, f"Unsupported type {ctype}. Allowed: pdf, jpg, png, webp, mp4, webm, mov.")
     ext = ALLOWED_UPLOAD_TYPES[ctype]
     data = await file.read()
     if len(data) > MAX_UPLOAD_BYTES:
-        raise HTTPException(413, "File too large (max 10 MB)")
+        raise HTTPException(413, "File too large (max 50 MB)")
     if len(data) == 0:
         raise HTTPException(400, "Empty file")
     file_id = new_id()
