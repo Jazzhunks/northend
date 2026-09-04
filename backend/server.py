@@ -49,6 +49,7 @@ from notifications import (
     emit_scholarship_application,
     emit_enrollment,
     emit_job_application,
+    emit_whatsapp_message,
     emit_result_published,
     emit_broadcast_complete,
 )
