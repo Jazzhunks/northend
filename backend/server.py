@@ -178,7 +178,10 @@ api = APIRouter(prefix="/api")
 JWT_ALGORITHM = "HS256"
 
 def jwt_secret() -> str:
-    return os.environ["JWT_SECRET"]
+    secret = os.getenv("JWT_SECRET")
+    if not secret:
+        raise RuntimeError("JWT_SECRET is not configured on the server")
+    return secret
 
 def hash_password(p: str) -> str:
     return bcrypt.hashpw(p.encode(), bcrypt.gensalt()).decode()
