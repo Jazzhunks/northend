@@ -295,6 +295,7 @@ class ScholarshipIn(BaseModel):
     active: bool = True
     is_featured: bool = False
     kind: Literal["scholarship", "wath"] = "scholarship"
+    type: Literal["general", "school"] = "general"
 
 class ScholarshipApplicationIn(BaseModel):
     name: str
@@ -641,13 +642,18 @@ async def delete_course(cid: str, _admin = Depends(require_admin)):
 
 # ---------- Scholarships ----------
 @api.get("/scholarships")
-async def list_scholarships(include_wath: bool = False):
+async def list_scholarships(include_wath: bool = False, type: Optional[str] = Query(None)):
     """Public scholarships list. WATH campaigns are excluded by default so they only appear on /wath."""
     q: Dict[str, Any] = {}
     if not include_wath:
         q["$and"] = [
             {"$or": [{"kind": {"$exists": False}}, {"kind": {"$ne": "wath"}}]},
             {"$or": [{"title": {"$not": {"$regex": "^WATH", "$options": "i"}}}, {"kind": "scholarship"}]},
+        ]
+    if type:
+        q["$or"] = [
+            {"type": type},
+            {"type": {"$exists": False}},
         ]
     items = await db.scholarships.find(q, {"_id": 0, "examiner_token": 0}).sort("created_at", -1).to_list(100)
     return items

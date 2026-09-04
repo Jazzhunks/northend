@@ -45,7 +45,7 @@ export default function SchoolDashboard() {
   };
 
   useEffect(() => {
-    api.get("/scholarships").then(r => {
+    api.get("/scholarships", { params: { type: "school" } }).then(r => {
       const active = r.data.filter(c => c.active);
       setCampaigns(active);
       if (active.length) setSelectedCampaign(active[0].id);
