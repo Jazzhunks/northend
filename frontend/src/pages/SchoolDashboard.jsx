@@ -49,7 +49,7 @@ export default function SchoolDashboard() {
       const start = toMinutes(slot.from_time);
       const end = toMinutes(slot.to_time);
       if (start < 0 || end < 0 || start >= end) continue;
-      for (let mins = start; mins < end; mins += 30) {
+      for (let mins = start; mins <= end; mins += 30) {
         const hh = Math.floor(mins / 60);
         const mm = mins % 60;
         const key = `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
