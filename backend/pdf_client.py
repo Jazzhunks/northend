@@ -194,7 +194,8 @@ def _fmt_dob(dob):
 
 def admit_card_pdf(application_no, name, phone, school, standard, target_exam,
                    exam_date, venue=None, exam_time=None, scholarship_title=None,
-                   father_name=None, gender=None, dob=None, email=None) -> bytes:
+                   father_name=None, gender=None, dob=None, email=None,
+                   address=None, district=None) -> bytes:
     """Official-style Admit Card / Hall Ticket (A4) matched to the northendedu.com
     brand — bordered sections, candidate photo box and a mandatory QR code."""
     buf = io.BytesIO()
@@ -209,6 +210,8 @@ def admit_card_pdf(application_no, name, phone, school, standard, target_exam,
     email_str = str(email or "—")[:34]
     school_str = str(school or "")[:40] if school else "—"
     dob_str = _fmt_dob(dob)
+    address_str = str(address or "")[:60]
+    district_str = str(district or "—")
 
     clean_std = str(standard or "").strip()
     std_display = clean_std if clean_std.lower().startswith("class") else (f"Class {clean_std}" if clean_std else "—")
@@ -270,7 +273,7 @@ def admit_card_pdf(application_no, name, phone, school, standard, target_exam,
     # ================= CANDIDATE / PERSONAL DETAILS =================
     section_head(H - 45 * mm, "Candidate / Personal Details")
     box_top = H - 48 * mm
-    box_h = 74 * mm
+    box_h = 87 * mm
     box_y = box_top - box_h
     c.setFillColor(CARD_BG)
     c.setStrokeColor(CARD_LINE)
@@ -317,7 +320,7 @@ def admit_card_pdf(application_no, name, phone, school, standard, target_exam,
     # Left field grid (2 columns)
     col1 = LM + 5 * mm
     col2 = LM + 78 * mm
-    r1, r2, r3, r4 = box_top - 12 * mm, box_top - 25 * mm, box_top - 38 * mm, box_top - 51 * mm
+    r1, r2, r3, r4, r5 = box_top - 12 * mm, box_top - 25 * mm, box_top - 38 * mm, box_top - 51 * mm, box_top - 64 * mm
     kv(col1, r1, "Candidate Name", name_str, INK, 11)
     kv(col2, r1, "Gender", gender_str)
     kv(col1, r2, "Father's / Guardian's Name", father_str)
@@ -326,6 +329,8 @@ def admit_card_pdf(application_no, name, phone, school, standard, target_exam,
     kv(col2, r3, "Email", email_str, INK, 8.5, "Helvetica")
     kv(col1, r4, "School / Institute", school_str, INK, 9)
     kv(col2, r4, "Class / Standard", std_display)
+    kv(col1, r5, "District", district_str)
+    kv(col2, r5, "Address", address_str, INK, 8.5, "Helvetica")
 
     # ================= EXAMINATION DETAILS =================
     ex_head_y = box_y - 8 * mm

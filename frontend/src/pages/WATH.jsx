@@ -16,6 +16,12 @@ import {
 
 const EASE = [0.16, 1, 0.3, 1];
 
+const DISTRICTS = [
+  "Anantnag", "Bandipora", "Baramulla", "Budgam", "Ganderbal", "Kulgam", "Kupwara", "Pulwama", "Shopian", "Srinagar",
+  "Doda", "Jammu", "Kathua", "Kishtwar", "Poonch", "Rajouri", "Ramban", "Reasi", "Samba", "Udhampur",
+  "Kargil", "Leh", "Other"
+];
+
 const CLASSES = ["Class 7", "Class 8", "Class 9", "Class 10", "Class 11 (NEET)", "Class 11 (IIT-JEE)", "Class 12 (NEET)", "Class 12 (IIT-JEE)", "Dropper (NEET)", "Dropper (IIT-JEE)"];
 
 const SLABS = [
@@ -912,7 +918,7 @@ function HeroSection({ campaign, carnival, mode, loading, onRegistered }) {
     : campaign?.exam_date;
   const [form, setForm] = useState({
     name: "", email: "", phone: "", class_or_course: "", school_name: "", venue: "",
-    father_name: "", gender: "", dob: "",
+    father_name: "", gender: "", dob: "", address: "", district: "",
     chosen_date: "", chosen_slot_time: "",
   });
   const [submitted, setSubmitted] = useState(null);
@@ -951,6 +957,8 @@ function HeroSection({ campaign, carnival, mode, loading, onRegistered }) {
         dob: form.dob || undefined,
         city: form.venue || undefined,
         venue: form.venue || undefined,
+        address: form.address || undefined,
+        district: form.district || undefined,
       };
       const payload = isCarnival
         ? { ...basePayload, carnival_id: carnival.id, chosen_date: form.chosen_date, chosen_slot_time: form.chosen_slot_time }
@@ -1117,15 +1125,26 @@ function HeroSection({ campaign, carnival, mode, loading, onRegistered }) {
                         />
                       </div>
                       
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <CustomDatePicker 
-                          value={form.dob} 
-                          onChange={val => setForm({...form, dob: val})} 
-                          placeholder="dd / mm / yyyy" 
-                          testid="wath-dob" 
-                        />
-                        <input className={inputCls} placeholder="School / current institute" required value={form.school_name} onChange={e => setForm({...form, school_name: e.target.value})} data-testid="wath-school"/>
-                      </div>
+                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                         <CustomDatePicker 
+                           value={form.dob} 
+                           onChange={val => setForm({...form, dob: val})} 
+                           placeholder="dd / mm / yyyy" 
+                           testid="wath-dob" 
+                         />
+                         <input className={inputCls} placeholder="School / current institute" required value={form.school_name} onChange={e => setForm({...form, school_name: e.target.value})} data-testid="wath-school"/>
+                       </div>
+
+                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                         <CustomSelect
+                           value={form.district}
+                           onChange={val => setForm({...form, district: val})}
+                           options={DISTRICTS}
+                           placeholder="Select district"
+                           testid="wath-district"
+                         />
+                         <input className={inputCls} placeholder="Full address" required value={form.address} onChange={e => setForm({...form, address: e.target.value})} data-testid="wath-address"/>
+                       </div>
 
                       {isCarnival && (
                         <CarnivalSlotPicker

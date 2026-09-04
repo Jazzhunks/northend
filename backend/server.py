@@ -294,6 +294,8 @@ class ScholarshipApplicationIn(BaseModel):
     city: str
     scholarship_id: Optional[str] = None
     venue: Optional[str] = None
+    address: Optional[str] = None
+    district: Optional[str] = None
     # Extra candidate details (for official admit card)
     father_name: Optional[str] = None
     gender: Optional[str] = None
@@ -312,6 +314,8 @@ class ScholarshipApplicationUpdateIn(BaseModel):
     target_exam: Optional[str] = None
     city: Optional[str] = None
     venue: Optional[str] = None
+    address: Optional[str] = None
+    district: Optional[str] = None
     status: Optional[str] = None
 
 class ScholarshipResultIn(BaseModel):
@@ -741,6 +745,7 @@ async def apply_scholarship(payload: ScholarshipApplicationIn, background: Backg
             scholarship_title=title_for_email,
             father_name=payload.father_name, gender=payload.gender,
             dob=payload.dob, email=payload.email,
+            address=payload.address, district=payload.district,
         )
     except Exception as e:
         logging.error(f"Failed to generate Admit Card PDF: {e}")
@@ -1363,6 +1368,9 @@ async def _process_bulk_file_bg(job_id: str, sid: str, file_path: str):
                         exam_date=campaign.get("exam_date", "TBA"), venue=venue,
                         exam_time=campaign.get("exam_time", "10:00 AM"),
                         scholarship_title=campaign.get("title", "Scholarship Test"),
+                        father_name=doc.get("father_name"), gender=doc.get("gender"),
+                        dob=doc.get("dob"), email=doc.get("email"),
+                        address=doc.get("address"), district=doc.get("district"),
                     )
                 except Exception as e:
                     logging.error(f"PDF gen failed for {app_no}: {e}")
@@ -1526,6 +1534,9 @@ async def bulk_register_scholarship(
                 exam_date=campaign.get("exam_date", "TBA"), venue=venue,
                 exam_time=campaign.get("exam_time", "10:00 AM"),
                 scholarship_title=campaign.get("title", "Scholarship Test"),
+                father_name=doc.get("father_name"), gender=doc.get("gender"),
+                dob=doc.get("dob"), email=doc.get("email"),
+                address=doc.get("address"), district=doc.get("district"),
             )
         except Exception as e:
             logging.error(f"PDF gen failed for {app_no}: {e}")
@@ -2004,6 +2015,8 @@ async def admit_card(application_no: str, phone: Optional[str] = Query(None), re
         gender=app_doc.get("gender"),
         dob=app_doc.get("dob"),
         email=app_doc.get("email"),
+        address=app_doc.get("address"),
+        district=app_doc.get("district"),
     )
     return Response(content=pdf_bytes, media_type="application/pdf",
                     headers={"Content-Disposition": f'attachment; filename="admit-card-{application_no}.pdf"'})
