@@ -148,6 +148,7 @@ export default function NotificationCenter() {
         onClick={() => setIsOpen(true)}
         className="relative p-2 rounded-xl border border-border hover:bg-muted/50 transition-colors cursor-pointer"
         data-testid="notification-bell"
+        aria-label="Open notifications"
       >
         <Bell size={18} className="text-foreground" />
         {unreadCount > 0 && (

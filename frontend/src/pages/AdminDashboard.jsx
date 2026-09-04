@@ -640,7 +640,7 @@ export default function AdminDashboard() {
               <div className="text-[10px] uppercase tracking-[0.22em] text-accent font-bold">Northend Group</div>
               <div className="font-display text-lg sm:text-xl font-medium tracking-tight mt-0.5 text-foreground">Operations Engine</div>
             </div>
-             <button type="button" onClick={() => setSidebarOpen(false)} className="lg:hidden text-muted-foreground p-1 hover:text-foreground cursor-pointer">
+             <button type="button" onClick={() => setSidebarOpen(false)} className="lg:hidden text-muted-foreground p-1 hover:text-foreground cursor-pointer" aria-label="Close navigation menu">
                <X size={20} />
              </button>
           </div>
@@ -690,9 +690,10 @@ export default function AdminDashboard() {
           style={{ background: "rgba(255, 255, 255, 0.92)" }}
         >
           <div className="flex items-center gap-3 min-w-0">
-            <button 
+             <button 
               onClick={() => setSidebarOpen(true)}
               className="p-2 border border-border rounded-xl lg:hidden text-foreground hover:bg-muted/50 shrink-0"
+              aria-label="Toggle navigation menu"
             >
               <Menu size={18} />
             </button>
@@ -717,13 +718,13 @@ export default function AdminDashboard() {
                   className="w-full pl-9 pr-8 py-2 border border-border bg-background/50 rounded-xl text-sm focus:outline-none focus:border-accent/40 transition text-foreground placeholder:text-muted-foreground/60"
                 />
                 {innerSearch && (
-                  <button type="button" onClick={() => setInnerSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  <button type="button" onClick={() => setInnerSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" aria-label="Clear search">
                     <X size={14} />
                   </button>
                 )}
               </div>
               <NotificationCenter />
-              <Button size="icon" variant="outline" onClick={load} disabled={loadingData} className="rounded-xl border-border shrink-0 hover:bg-muted/50 cursor-pointer">
+              <Button size="icon" variant="outline" onClick={load} disabled={loadingData} className="rounded-xl border-border shrink-0 hover:bg-muted/50 cursor-pointer" aria-label="Refresh data">
                <RefreshCw size={14} className={loadingData ? "animate-spin" : ""} />
             </Button>
           </div>
@@ -767,7 +768,7 @@ export default function AdminDashboard() {
                               <td className="p-3 sm:p-4 font-mono text-xs text-muted-foreground">{e.phone}</td>
                               <td className="p-3 sm:p-4 text-muted-foreground truncate">{e.center}</td>
                               <td className="p-3 sm:p-4">
-                                <select value={e.status} onChange={ev => updateStatus("enr", e.id, ev.target.value)} className="text-xs font-bold uppercase border border-border rounded-lg px-2 py-1 bg-background text-foreground focus:outline-none cursor-pointer">
+                                <select value={e.status} onChange={ev => updateStatus("enr", e.id, ev.target.value)} className="text-xs font-bold uppercase border border-border rounded-lg px-2 py-1 bg-background text-foreground focus:outline-none cursor-pointer" aria-label="Update enrollment status">
                                   <option value="pending">pending</option><option value="approved">approved</option><option value="rejected">rejected</option>
                                 </select>
                               </td>
@@ -810,6 +811,7 @@ export default function AdminDashboard() {
                       onChange={e => setSchKind(e.target.value)}
                       className="text-xs font-bold uppercase tracking-wider border border-border rounded-xl px-3 py-2 bg-background text-foreground cursor-pointer focus:outline-none focus:border-accent"
                       data-testid="scholarship-kind-filter"
+                      aria-label="Filter scholarship programmes"
                     >
                       <option value="all">All programmes</option>
                       <option value="wath">WATH</option>
@@ -847,7 +849,7 @@ export default function AdminDashboard() {
                             </div>
                             <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
                               {a.result_published && <span className="text-[10px] uppercase tracking-wider bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 px-2.5 py-0.5 rounded-md font-bold">Published</span>}
-                              <select value={a.status} onChange={ev => updateStatus("sch", a.id, ev.target.value)} className="text-xs font-bold uppercase border border-border rounded-lg px-2.5 py-1 bg-background text-foreground cursor-pointer"><option>pending</option><option>approved</option><option>rejected</option></select>
+                              <select value={a.status} onChange={ev => updateStatus("sch", a.id, ev.target.value)} className="text-xs font-bold uppercase border border-border rounded-lg px-2.5 py-1 bg-background text-foreground cursor-pointer" aria-label="Update scholarship status"><option>pending</option><option>approved</option><option>rejected</option></select>
                               
                               <Button size="sm" variant="outline" onClick={() => { setApplicantDialogAppNo(a.application_no); setApplicantDialogOpen(true); }} className="rounded-xl text-xs uppercase tracking-wider font-bold cursor-pointer">
                                 Edit Info
@@ -922,7 +924,7 @@ export default function AdminDashboard() {
                               <td className="p-3 sm:p-4 text-muted-foreground truncate">{a.qualification}</td>
                               <td className="p-3 sm:p-4">{a.resume_url ? <a href={a.resume_url} target="_blank" rel="noreferrer" className="text-accent underline font-semibold text-xs uppercase tracking-wider">View Resume</a> : "—"}</td>
                               <td className="p-3 sm:p-4">
-                                <select value={a.status} onChange={ev => updateStatus("job", a.id, ev.target.value)} className="text-xs font-bold uppercase border border-border rounded-lg px-2 py-1 bg-background text-foreground focus:outline-none cursor-pointer">
+                                <select value={a.status} onChange={ev => updateStatus("job", a.id, ev.target.value)} className="text-xs font-bold uppercase border border-border rounded-lg px-2 py-1 bg-background text-foreground focus:outline-none cursor-pointer" aria-label="Update job application status">
                                   <option>received</option><option>shortlisted</option><option>rejected</option><option>hired</option>
                                 </select>
                               </td>
