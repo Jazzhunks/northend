@@ -23,8 +23,8 @@ export default function SchoolDashboard() {
   const [loadingVisits, setLoadingVisits] = useState(false);
   const [visitForm, setVisitForm] = useState({ preferred_date: "", preferred_slot_time: "", notes: "" });
   const [submittingVisit, setSubmittingVisit] = useState(false);
-  const [availableSlots, setAvailableSlots] = useState([]);
-  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [timeSlots, setTimeSlots] = useState([]);
+  const [campaignRange, setCampaignRange] = useState({ start: "", end: "" });
 
   const fileInputRef = useRef(null);
 
@@ -60,13 +60,17 @@ export default function SchoolDashboard() {
 
   useEffect(() => {
     if (!selectedCampaign) {
-      setAvailableSlots([]);
+      setTimeSlots([]);
+      setCampaignRange({ start: "", end: "" });
       return;
     }
     const camp = campaigns.find(c => c.id === selectedCampaign);
-    const slots = (camp && camp.school_visit_slots) ? camp.school_visit_slots.filter(s => s && s.date && s.time) : [];
-    setAvailableSlots(slots);
-    setLoadingSlots(false);
+    const slots = (camp && camp.time_slots) ? camp.time_slots.filter(s => s && s.from_time && s.to_time && s.enabled !== false) : [];
+    setTimeSlots(slots);
+    setCampaignRange({
+      start: camp && camp.start_date ? camp.start_date : "",
+      end: camp && camp.end_date ? camp.end_date : "",
+    });
   }, [selectedCampaign, campaigns]);
 
   const loadVisits = async () => {
@@ -234,7 +238,7 @@ export default function SchoolDashboard() {
                 <Calendar className="text-accent" size={20} />
                 <h2 className="font-display text-2xl font-bold">Request Exam Visit</h2>
               </div>
-              <p className="text-sm text-muted-foreground mb-4">Request our team to visit your school for the scholarship exam. Select a preferred date and time.</p>
+              <p className="text-sm text-muted-foreground mb-4">Request our team to visit your school for the scholarship exam. Choose a date within the campaign period and a time within the available windows.</p>
                <form onSubmit={handleVisitSubmit} className="space-y-3">
                  <div>
                    <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Select Campaign</label>
@@ -244,20 +248,25 @@ export default function SchoolDashboard() {
                    </select>
                  </div>
                  <div>
-                   <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Available Visit Slots</label>
-                   {loadingSlots ? (
-                     <div className="text-sm text-muted-foreground">Loading slots...</div>
-                   ) : availableSlots.length === 0 ? (
-                     <div className="text-sm text-rose-500">No visit slots configured for this campaign yet. Please contact admin.</div>
+                   <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Preferred Date</label>
+                   <input type="date" min={campaignRange.start} max={campaignRange.end} value={visitForm.preferred_date} onChange={e => setVisitForm({ ...visitForm, preferred_date: e.target.value })} className="w-full border border-border rounded-md px-3 py-2.5 bg-background text-sm" required />
+                   {campaignRange.start && campaignRange.end && (
+                     <div className="text-[10px] text-muted-foreground mt-1">Allowed: {campaignRange.start} to {campaignRange.end}</div>
+                   )}
+                 </div>
+                 <div>
+                   <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Available Time Windows</label>
+                   {timeSlots.length === 0 ? (
+                     <div className="text-sm text-rose-500">No time slots configured for this campaign. Please contact admin.</div>
                    ) : (
                      <div className="space-y-2">
-                       {availableSlots.map((slot, idx) => (
-                         <label key={idx} className={`flex items-center justify-between border rounded-md px-3 py-2.5 cursor-pointer transition ${visitForm.preferred_date === slot.date && visitForm.preferred_slot_time === slot.time ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}>
+                       {timeSlots.map((slot, idx) => (
+                         <label key={idx} className={`flex items-center justify-between border rounded-md px-3 py-2.5 cursor-pointer transition ${visitForm.preferred_slot_time === `${slot.from_time}-${slot.to_time}` ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}>
                            <div className="flex items-center gap-2">
-                             <input type="radio" name="visit-slot" className="accent-primary" checked={visitForm.preferred_date === slot.date && visitForm.preferred_slot_time === slot.time} onChange={() => setVisitForm({ ...visitForm, preferred_date: slot.date, preferred_slot_time: slot.time })} />
-                             <span className="text-sm font-medium">{slot.date}</span>
+                             <input type="radio" name="visit-time" className="accent-primary" checked={visitForm.preferred_slot_time === `${slot.from_time}-${slot.to_time}`} onChange={() => setVisitForm({ ...visitForm, preferred_slot_time: `${slot.from_time}-${slot.to_time}` })} />
+                             <span className="text-sm font-medium">{slot.from_time} – {slot.to_time}</span>
                            </div>
-                           <span className="text-xs text-muted-foreground">{slot.time}</span>
+                           {slot.enabled === false && <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-muted text-muted-foreground">Disabled</span>}
                          </label>
                        ))}
                      </div>

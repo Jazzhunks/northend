@@ -2227,22 +2227,6 @@ export default function AdminDashboard() {
                       <textarea className="sm:col-span-2 border border-border rounded-xl px-3 py-2 bg-background/50 text-sm focus:outline-none focus:border-accent text-foreground min-h-20 resize-none" placeholder="Description data string..." value={newCampaign.description} onChange={e=>setNewCampaign({...newCampaign, description:e.target.value})} required data-testid="ncm-desc"/>
                     </>
                   )}
-                  {newCampaign.type === "school" && (
-                    <div className="sm:col-span-2 border border-border rounded-xl p-4 bg-background/30">
-                      <div className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-2">School Visit Slots</div>
-                      <div className="space-y-2">
-                        {(newCampaign.school_visit_slots || []).map((slot, idx) => (
-                          <div key={idx} className="flex items-center gap-2">
-                            <input type="date" value={slot.date} onChange={e => { const slots = [...(newCampaign.school_visit_slots || [])]; slots[idx] = { ...slots[idx], date: e.target.value }; setNewCampaign({ ...newCampaign, school_visit_slots: slots }); }} className="border border-border rounded-md px-2 py-1.5 bg-background text-xs flex-1" />
-                            <input type="time" value={slot.time} onChange={e => { const slots = [...(newCampaign.school_visit_slots || [])]; slots[idx] = { ...slots[idx], time: e.target.value }; setNewCampaign({ ...newCampaign, school_visit_slots: slots }); }} className="border border-border rounded-md px-2 py-1.5 bg-background text-xs flex-1" />
-                            <input type="number" value={slot.max_schools || 2} onChange={e => { const slots = [...(newCampaign.school_visit_slots || [])]; slots[idx] = { ...slots[idx], max_schools: Number(e.target.value) }; setNewCampaign({ ...newCampaign, school_visit_slots: slots }); }} className="border border-border rounded-md px-2 py-1.5 bg-background text-xs w-20" min={1} max={10} />
-                            <button type="button" onClick={() => setNewCampaign({ ...newCampaign, school_visit_slots: (newCampaign.school_visit_slots || []).filter((_, i) => i !== idx) })} className="text-rose-500 hover:text-rose-600 text-xs px-2">Remove</button>
-                          </div>
-                        ))}
-                        <button type="button" onClick={() => setNewCampaign({ ...newCampaign, school_visit_slots: [...(newCampaign.school_visit_slots || []), { date: "", time: "10:00 AM", max_schools: 2 }] })} className="text-xs text-primary hover:text-primary/80 font-medium">+ Add Slot</button>
-                      </div>
-                    </div>
-                  )}
                   <label className="sm:col-span-2 text-sm flex items-center gap-2 text-muted-foreground select-none cursor-pointer font-medium"><input type="checkbox" checked={newCampaign.active} onChange={e=>setNewCampaign({...newCampaign, active:e.target.checked})} className="accent-primary"/>Flag project as active status</label>
                   <Button type="submit" className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2 cursor-pointer"><Plus size={14} className="mr-1.5"/>Launch Test Campaign</Button>
                 </form>

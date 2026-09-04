@@ -325,7 +325,6 @@ class ScholarshipIn(BaseModel):
     end_date: Optional[str] = None
     eligible_classes: List[str] = []
     time_slots: List[Dict[str, Any]] = []
-    school_visit_slots: List[Dict[str, Any]] = []
 
 class SchoolTimeSlot(BaseModel):
     from_time: str
@@ -1234,8 +1233,9 @@ async def school_upload_students(
 async def school_visit_request(payload: SchoolVisitIn, school: dict = Depends(require_school)):
     try:
         pref_date = datetime.strptime(payload.preferred_date, "%Y-%m-%d").date()
+        pref_time = datetime.strptime(payload.preferred_slot_time, "%H:%M").time()
     except ValueError:
-        raise HTTPException(400, "Invalid date format. Use YYYY-MM-DD")
+        raise HTTPException(400, "Invalid date or time format. Use YYYY-MM-DD and HH:MM")
     today = datetime.now(timezone.utc).date()
     if pref_date <= today:
         raise HTTPException(400, "Preferred date must be in the future")
@@ -1245,20 +1245,33 @@ async def school_visit_request(payload: SchoolVisitIn, school: dict = Depends(re
     existing = await db.school_visits.find_one({"school_id": school["id"], "scholarship_id": payload.scholarship_id})
     if existing:
         raise HTTPException(400, "You have already submitted a visit request for this campaign")
-    slots = campaign.get("school_visit_slots") or []
-    if slots:
-        slot_match = next((s for s in slots if s.get("date") == payload.preferred_date and s.get("time") == payload.preferred_slot_time), None)
-        if not slot_match:
-            raise HTTPException(400, "The selected date/time is not available. Please choose from the available slots.")
-        max_allowed = int(slot_match.get("max_schools") or 2)
-    else:
-        max_allowed = 2
+    if campaign.get("start_date") and campaign.get("end_date"):
+        start = datetime.strptime(campaign["start_date"], "%Y-%m-%d").date()
+        end = datetime.strptime(campaign["end_date"], "%Y-%m-%d").date()
+        if not (start <= pref_date <= end):
+            raise HTTPException(400, f"Preferred date must be between {campaign['start_date']} and {campaign['end_date']}")
+    time_slots = campaign.get("time_slots") or []
+    if time_slots:
+        matched = False
+        for slot in time_slots:
+            if not slot.get("enabled", True):
+                continue
+            try:
+                from_time = datetime.strptime(slot["from_time"], "%H:%M").time()
+                to_time = datetime.strptime(slot["to_time"], "%H:%M").time()
+                if from_time <= pref_time <= to_time:
+                    matched = True
+                    break
+            except (ValueError, TypeError):
+                continue
+        if not matched:
+            raise HTTPException(400, "Preferred time must fall within an enabled time slot window")
     count = await db.school_visits.count_documents({
         "preferred_date": payload.preferred_date,
         "status": {"$in": ["pending", "approved"]},
     })
-    if count >= max_allowed:
-        raise HTTPException(400, "This date already has the maximum number of schools scheduled. Please choose another date")
+    if count >= 2:
+        raise HTTPException(400, "This date already has 2 schools scheduled. Please choose another date")
     visit = {
         "id": new_id(),
         "school_id": school["id"],
