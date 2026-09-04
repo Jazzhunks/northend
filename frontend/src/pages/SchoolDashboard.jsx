@@ -28,10 +28,46 @@ export default function SchoolDashboard() {
 
   const fileInputRef = useRef(null);
 
+  const toMinutes = (timeStr) => {
+    if (!timeStr || typeof timeStr !== "string") return -1;
+    const [h, m] = timeStr.split(":").map(Number);
+    if (Number.isNaN(h) || Number.isNaN(m)) return -1;
+    return h * 60 + m;
+  };
+
+  const formatHourLabel = (hh24, mm = 0) => {
+    const period = hh24 >= 12 ? "PM" : "AM";
+    const h12 = hh24 % 12 || 12;
+    return `${h12}:${String(mm).padStart(2, "0")} ${period}`;
+  };
+
+  const generateHourlySlots = (slots = []) => {
+    const seen = new Set();
+    const entries = [];
+    for (const slot of slots) {
+      if (slot.enabled === false) continue;
+      const start = toMinutes(slot.from_time);
+      const end = toMinutes(slot.to_time);
+      if (start < 0 || end < 0 || start >= end) continue;
+      for (const mins of Array.from({ length: end - start }, (_, i) => start + i)) {
+        const hh = Math.floor(mins / 60);
+        const mm = mins % 60;
+        const key = `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          entries.push({ value: key, label: formatHourLabel(hh, mm) });
+        }
+      }
+    }
+    entries.sort((a, b) => toMinutes(a.value) - toMinutes(b.value));
+    return entries;
+  };
+
+  const availableTimeOptions = generateHourlySlots(timeSlots);
+
   const handleDownloadTemplate = async () => {
     try {
-      const response = await schoolsAPI.downloadTemplate();
-      const blob = new Blob([response], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const blob = await schoolsAPI.downloadTemplate();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -254,24 +290,21 @@ export default function SchoolDashboard() {
                      <div className="text-[10px] text-muted-foreground mt-1">Allowed: {campaignRange.start} to {campaignRange.end}</div>
                    )}
                  </div>
-                 <div>
-                   <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Available Time Windows</label>
-                   {timeSlots.length === 0 ? (
-                     <div className="text-sm text-rose-500">No time slots configured for this campaign. Please contact admin.</div>
-                   ) : (
-                     <div className="space-y-2">
-                       {timeSlots.map((slot, idx) => (
-                         <label key={idx} className={`flex items-center justify-between border rounded-md px-3 py-2.5 cursor-pointer transition ${visitForm.preferred_slot_time === `${slot.from_time}-${slot.to_time}` ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}>
-                           <div className="flex items-center gap-2">
-                             <input type="radio" name="visit-time" className="accent-primary" checked={visitForm.preferred_slot_time === `${slot.from_time}-${slot.to_time}`} onChange={() => setVisitForm({ ...visitForm, preferred_slot_time: `${slot.from_time}-${slot.to_time}` })} />
-                             <span className="text-sm font-medium">{slot.from_time} – {slot.to_time}</span>
-                           </div>
-                           {slot.enabled === false && <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-muted text-muted-foreground">Disabled</span>}
-                         </label>
-                       ))}
-                     </div>
-                   )}
-                 </div>
+                  <div>
+                    <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Available Time Windows</label>
+                    {timeSlots.length === 0 ? (
+                      <div className="text-sm text-rose-500">No time slots configured for this campaign. Please contact admin.</div>
+                    ) : availableTimeOptions.length === 0 ? (
+                      <div className="text-sm text-rose-500">No enabled time slots available. Please contact admin.</div>
+                    ) : (
+                      <select className="w-full border border-border rounded-md px-3 py-2.5 bg-background text-sm" value={visitForm.preferred_slot_time} onChange={e => setVisitForm({ ...visitForm, preferred_slot_time: e.target.value })} required>
+                        <option value="">Select a time</option>
+                        {availableTimeOptions.map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
                  <div>
                    <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Notes (optional)</label>
                    <textarea value={visitForm.notes} onChange={e => setVisitForm({...visitForm, notes: e.target.value})} className="w-full border border-border rounded-md px-3 py-2.5 bg-background text-sm" rows={3} placeholder="Any special requirements..."></textarea>
