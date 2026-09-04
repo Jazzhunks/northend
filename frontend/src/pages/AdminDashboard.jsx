@@ -1094,6 +1094,16 @@ export default function AdminDashboard() {
   const [newCenter, setNewCenter] = useState({ name:"", city:"", address:"", phone:"", timing:"8:00 AM – 8:00 PM", lat:34.0837, lng:74.7973 });
   const [newTestimonial, setNewTestimonial] = useState({ name:"", role:"", quote:"" });
   const [newResult, setNewResult] = useState({ student_name:"", exam:"", rank:"", year:new Date().getFullYear(), course:"NEET", photo_url:"", quote:"" });
+  const handleCampaignTypeChange = (value) => {
+    setNewCampaign(prev => ({
+      ...prev,
+      type: value,
+      ...(value === "school"
+        ? { description: "", exam_date: "", deadline: "", eligibility: "", available_venues: [], whatsapp_community_url: "", exam_time: "10:00 AM", total_marks: 100 }
+        : { start_date: "", end_date: "", eligible_classes: [], time_slots: [] }),
+    }));
+  };
+
   const [newCampaign, setNewCampaign] = useState({ title:"", description:"", exam_date:"", deadline:"", eligibility:"", venue:"", available_venues: [], whatsapp_community_url:"", exam_time:"10:00 AM", total_marks:100, active:true, is_featured:false, type:"general", start_date:"", end_date:"", eligible_classes:[], time_slots:[] });
   const [newGallery, setNewGallery] = useState({ title:"", description:"", media_type:"image", media_url:"", category:"", order:0 });
   const [selectedGalleryCategory, setSelectedGalleryCategory] = useState("");
@@ -2151,7 +2161,7 @@ export default function AdminDashboard() {
                 <div className="font-display font-bold text-xl text-foreground">Scholarship Campaigns Drivers</div>
                 <form onSubmit={(e)=>{e.preventDefault(); post("/scholarships", newCampaign, ()=>setNewCampaign({title:"",description:"",exam_date:"",deadline:"",eligibility:"",venue:"",available_venues:[],whatsapp_community_url:"",exam_time:"10:00 AM",total_marks:100,active:true,is_featured:false,type:"general",start_date:"",end_date:"",eligible_classes:[],time_slots:[]}), "Campaign");}} className="glass border border-border p-4 sm:p-5 rounded-2xl grid grid-cols-1 sm:grid-cols-2 gap-4 bg-background/20">
                   <Input placeholder="Campaign Name" value={newCampaign.title} onChange={e=>setNewCampaign({...newCampaign, title:e.target.value})} required data-testid="ncm-title" className="rounded-xl border-border bg-background/50 text-foreground"/>
-                  <select className="border border-border rounded-xl px-3 py-2 bg-background text-sm" value={newCampaign.type} onChange={e=>setNewCampaign({...newCampaign, type:e.target.value})} data-testid="ncm-type">
+                  <select className="border border-border rounded-xl px-3 py-2 bg-background text-sm" value={newCampaign.type} onChange={e => handleCampaignTypeChange(e.target.value)} data-testid="ncm-type">
                     <option value="general">General</option>
                     <option value="school">School</option>
                   </select>
