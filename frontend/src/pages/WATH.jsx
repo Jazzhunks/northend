@@ -351,6 +351,13 @@ function CustomDatePicker({ value, onChange, placeholder, testid }) {
     days.push({ day: i, current: false, date: new Date(year, month + 1, i) });
   }
 
+  // FIXED: Calculate startYear and generate the years array
+  const startYear = Math.floor(year / 20) * 20;
+  const years = [];
+  for (let i = 0; i < 20; i++) {
+    years.push(startYear + i);
+  }
+
   const displayValue = value ? value.split("-").reverse().join("/") : "";
 
   return (
