@@ -44,6 +44,14 @@ from email_client import (
 from pdf_client import admit_card_pdf, result_card_pdf
 from whatsapp_client import send_whatsapp_admit_card, send_whatsapp_wath_carnival
 from whatsapp_notifier import broadcast_scholarship_details
+from notifications import (
+    build_notifications_router,
+    emit_scholarship_application,
+    emit_enrollment,
+    emit_job_application,
+    emit_result_published,
+    emit_broadcast_complete,
+)
 
 
 # ---------- Constants & Helpers ----------
@@ -225,16 +233,17 @@ def create_access_token(uid: str, email: str, role: str) -> str:
         jwt_secret(), algorithm=JWT_ALGORITHM
     )
 
-def create_refresh_token(uid: str) -> str:
+def create_refresh_token(uid: str, role: str = "student") -> str:
+    ttl = timedelta(days=30) if role == "admin" else timedelta(days=7)
     return jwt.encode(
-        {"sub": uid, "exp": datetime.now(timezone.utc) + timedelta(days=7),
+        {"sub": uid, "exp": datetime.now(timezone.utc) + ttl,
          "type": "refresh"},
         jwt_secret(), algorithm=JWT_ALGORITHM
     )
 
-def set_auth_cookies(response: Response, access: str, refresh: str):
+def set_auth_cookies(response: Response, access: str, refresh: str, refresh_max_age: int = 604800):
     response.set_cookie("access_token", access, httponly=True, secure=True, samesite="lax", max_age=3600, path="/")
-    response.set_cookie("refresh_token", refresh, httponly=True, secure=True, samesite="lax", max_age=604800, path="/")
+    response.set_cookie("refresh_token", refresh, httponly=True, secure=True, samesite="lax", max_age=refresh_max_age, path="/")
 
 async def get_current_user(request: Request) -> dict:
     token = request.cookies.get("access_token")
@@ -540,8 +549,9 @@ async def register(payload: RegisterIn, response: Response):
         })
     await db.users.insert_one(doc)
     access = create_access_token(user_id, email, role)
-    refresh = create_refresh_token(user_id)
-    set_auth_cookies(response, access, refresh)
+    refresh = create_refresh_token(user_id, role)
+    refresh_ttl = 2592000 if role == "admin" else 604800
+    set_auth_cookies(response, access, refresh, refresh_max_age=refresh_ttl)
     doc.pop("password_hash")
     doc.pop("_id", None)
     return {"user": doc, "access_token": access}
@@ -568,8 +578,9 @@ async def login(payload: LoginIn, request: Request, response: Response):
         
     reset_login_failures(lockout_key)
     access = create_access_token(user["id"], email, user["role"])
-    refresh = create_refresh_token(user["id"])
-    set_auth_cookies(response, access, refresh)
+    refresh = create_refresh_token(user["id"], user["role"])
+    refresh_ttl = 2592000 if user["role"] == "admin" else 604800
+    set_auth_cookies(response, access, refresh, refresh_max_age=refresh_ttl)
     user.pop("password_hash")
     user.pop("_id", None)
     return {"user": user, "access_token": access}
@@ -583,6 +594,28 @@ async def logout(response: Response):
 @api.get("/auth/me")
 async def me(user: dict = Depends(get_current_user)):
     return user
+
+@api.post("/auth/refresh")
+async def refresh(request: Request, response: Response):
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(401, "Missing refresh token")
+    try:
+        payload = jwt.decode(refresh_token, jwt_secret(), algorithms=[JWT_ALGORITHM])
+        if payload.get("type") != "refresh":
+            raise HTTPException(401, "Invalid token type")
+        user = await db.users.find_one({"id": payload["sub"]}, {"_id": 0, "password_hash": 0})
+        if not user:
+            raise HTTPException(401, "User not found")
+        access = create_access_token(user["id"], user["email"], user["role"])
+        refresh = create_refresh_token(user["id"], user["role"])
+        refresh_ttl = 2592000 if user["role"] == "admin" else 604800
+        set_auth_cookies(response, access, refresh, refresh_max_age=refresh_ttl)
+        return {"access_token": access, "user": user}
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(401, "Refresh token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(401, "Invalid refresh token")
 
 # ---------- Public stats ----------
 @api.get("/stats")
@@ -826,6 +859,16 @@ async def apply_scholarship(payload: ScholarshipApplicationIn, background: Backg
     doc.pop("_id", None)
     doc["whatsapp_community_url"] = (campaign or carnival or {}).get("whatsapp_community_url")
 
+    asyncio.create_task(emit_scholarship_application({
+        "application_no": doc["application_no"],
+        "name": payload.name,
+        "email": clean_email,
+        "phone": clean_phone,
+        "campaign_kind": campaign_kind,
+        "scholarship_title": title_for_email,
+        "venue": selected_venue,
+    }))
+
     admit_pdf_bytes = None
     try:
         admit_pdf_bytes = admit_card_pdf(
@@ -931,6 +974,11 @@ async def notify_scholarship_applicants(
     })
 
     background.add_task(broadcast_scholarship_details, scholarship_id, job_id)
+    asyncio.create_task(emit_broadcast_complete({
+        "job_id": job_id,
+        "scholarship_id": scholarship_id,
+        "total_applicants": total_applicants,
+    }))
 
     return {
         "status": "accepted",
@@ -1088,6 +1136,12 @@ async def set_scholarship_result(aid: str, payload: ScholarshipResultIn, backgro
             pct, payload.marks_obtained, payload.total_marks, payload.rank,
             result_url,
         )
+        asyncio.create_task(emit_result_published({
+            "application_no": app_doc["application_no"],
+            "name": app_doc.get("name", ""),
+            "email": app_doc.get("email", ""),
+            "scholarship_percentage": pct,
+        }))
     return {"ok": True, **update}
 
 @api.post("/scholarship-applications/lookup")
@@ -1975,6 +2029,14 @@ async def create_enrollment(payload: EnrollmentIn, request: Request, background:
         doc["user_id"] = None
     await db.enrollments.insert_one(doc)
     doc.pop("_id", None)
+    asyncio.create_task(emit_enrollment({
+        "receipt_no": doc["receipt_no"],
+        "name": payload.name,
+        "email": payload.email,
+        "phone": payload.phone,
+        "course_title": course["title"],
+        "center": payload.center,
+    }))
     background.add_task(email_enrollment_received, payload.email, payload.name, doc["receipt_no"], course["title"], payload.center)
     background.add_task(email_admin_notification, f"New enrollment: {payload.name}",
                        f"<p><b>{payload.name}</b> ({payload.email}, {payload.phone}) enrolled for <b>{course['title']}</b> at <b>{payload.center}</b>.<br/>Receipt: {doc['receipt_no']}</p>")
@@ -2039,6 +2101,14 @@ async def apply_job(payload: JobApplicationIn, background: BackgroundTasks):
     doc["created_at"] = now_iso()
     await db.job_applications.insert_one(doc)
     doc.pop("_id", None)
+    asyncio.create_task(emit_job_application({
+        "job_id": payload.job_id,
+        "name": payload.name,
+        "email": payload.email,
+        "phone": payload.phone,
+        "job_title": job["title"],
+        "qualification": payload.qualification,
+    }))
     background.add_task(email_job_app_received, payload.email, payload.name, job["title"])
     background.add_task(email_admin_notification, f"New job application: {payload.name}",
                        f"<p><b>{payload.name}</b> ({payload.email}, {payload.phone}) applied for <b>{job['title']}</b>.<br/>Qualification: {payload.qualification}<br/>Experience: {payload.experience}<br/>Resume: {payload.resume_url or '—'}</p>")
@@ -2639,8 +2709,10 @@ erp_router = build_erp_router(db, get_current_user, hash_password, verify_passwo
 api.include_router(erp_router)
 
 from whatsapp_inbox import build_whatsapp_router
-api.include_router(build_whatsapp_router(db, require_super_admin))
+api.include_router(build_whatsapp_router(db, require_super_admin, on_inbound=emit_whatsapp_message))
 # WATH Carnival + page config
+notifications_router = build_notifications_router(require_admin)
+api.include_router(notifications_router)
 from wath_carnival import build_wath_router, try_reserve_slot, release_slot  # noqa: E402
 api.include_router(build_wath_router(db, require_admin))
 app.include_router(api)

@@ -20,6 +20,17 @@ export const api = axios.create({
 });
 
 let isRedirecting = false;
+let isRefreshing = false;
+let refreshSubscribers = [];
+
+const subscribeTokenRefresh = (cb) => {
+  refreshSubscribers.push(cb);
+};
+
+const onTokenRefreshed = (token) => {
+  refreshSubscribers.forEach((cb) => cb(token));
+  refreshSubscribers = [];
+};
 
 // ============================================================================
 // REQUEST INTERCEPTOR: DYNAMIC TOKEN ATTACHMENT
@@ -44,7 +55,7 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     // Ignore canceled/aborted requests
     if (
       error?.name === "CanceledError" ||
@@ -59,59 +70,54 @@ api.interceptors.response.use(
 
     // 401 — Expired Session / Unauthenticated
     if (status === 401) {
-      localStorage.removeItem("nw_token");
-      if (
-        typeof window !== "undefined" &&
-        !window.location.pathname.includes("/login") &&
-        !isRedirecting
-      ) {
-        isRedirecting = true;
-        window.location.href = "/login?session_expired=true";
-      }
-      return Promise.reject(error);
-    }
+      const originalRequest = error.config;
 
-    // 403 — Show a toast for read-list endpoints and return an empty fallback so
-    // pages don't crash on .map. For any other method/endpoint (writes, single-resource
-    // reads), reject so the caller surfaces the real permission error.
-    if (status === 403) {
-      const method = (error.config?.method || "get").toLowerCase();
-      const serverDetail = error.response?.data?.detail;
-      let displayWarning =
-        "Access Denied: Your account role does not possess clearance for this operation.";
-      if (typeof serverDetail === "string") {
-        displayWarning = serverDetail;
-      } else if (serverDetail && typeof serverDetail.msg === "string") {
-        displayWarning = serverDetail.msg;
+      if (!isRefreshing) {
+        isRefreshing = true;
+        try {
+          const { data } = await api.post("/auth/refresh");
+          const newToken = data?.access_token;
+          if (newToken) {
+            localStorage.setItem("nw_token", newToken);
+            onTokenRefreshed(newToken);
+          }
+        } catch (refreshError) {
+          localStorage.removeItem("nw_token");
+          if (
+            typeof window !== "undefined" &&
+            !window.location.pathname.includes("/login") &&
+            !isRedirecting
+          ) {
+            isRedirecting = true;
+            window.location.href = "/login?session_expired=true";
+          }
+          isRefreshing = false;
+          return Promise.reject(refreshError);
+        } finally {
+          isRefreshing = false;
+        }
       }
-      toast.error(`Clearance Restriction: ${displayWarning}`, {
-        id: "rbac-clearance-guard-toast",
-        duration: 5000,
+
+      return new Promise((resolve, reject) => {
+        subscribeTokenRefresh((token) => {
+          if (originalRequest) {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            resolve(api(originalRequest));
+          } else {
+            reject(error);
+          }
+        });
       });
-
-      const isListEndpoint =
-        method === "get" && (
-          url.includes("/students") ||
-          url.includes("/payments") ||
-          url.includes("/expenses") ||
-          url.includes("/leads") ||
-          url.includes("/staff") ||
-          url.includes("/erpattendance") ||
-          url.includes("/branches") ||
-          url.includes("/audit") ||
-          url.includes("/scholarships") ||
-          url.includes("/courses") ||
-          url.includes("/jobs") ||
-          url.includes("/enrollments") ||
-          url.includes("/notices")
-        );
-
-      if (isListEndpoint) {
-        return Promise.resolve({ data: [] });
-      }
-      return Promise.reject(error);
     }
 
+    if (
+      typeof window !== "undefined" &&
+      !window.location.pathname.includes("/login") &&
+      !isRedirecting
+    ) {
+      isRedirecting = true;
+      window.location.href = "/login?session_expired=true";
+    }
     return Promise.reject(error);
   }
 );

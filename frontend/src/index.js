@@ -4,6 +4,13 @@ import { HelmetProvider } from "react-helmet-async"; // Exposes thread-safe head
 import "@/index.css";
 import App from "@/App";
 
+if ("serviceWorker" in navigator) {
+  const swUrl = "/service-worker.js";
+  navigator.serviceWorker.register(swUrl).catch((err) => {
+    console.warn("Service worker registration failed:", err);
+  });
+}
+
 const rootElement = document.getElementById("root");
 
 if (rootElement.hasChildNodes()) {

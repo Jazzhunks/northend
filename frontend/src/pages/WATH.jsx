@@ -732,11 +732,11 @@ function CarnivalSlotPicker({ carnival, chosenDate, chosenSlot, onPick }) {
                       isDisabled = validSlotsRemaining === 0;
                       
                       if (isSelected) {
-                         btnClass += "bg-[#08BD80] text-white font-medium shadow-sm";
+                          btnClass += "bg-[#08BD80] text-white font-medium shadow-sm";
                       } else if (isDisabled) {
-                         btnClass += "bg-gray-50 text-gray-400 line-through cursor-not-allowed";
+                          btnClass += "bg-gray-50 text-gray-400 line-through cursor-not-allowed";
                       } else {
-                         btnClass += "bg-[#08BD80]/10 text-[#08BD80] font-bold hover:bg-[#08BD80]/20 cursor-pointer";
+                          btnClass += "bg-[#08BD80]/10 text-[#08BD80] font-bold hover:bg-[#08BD80]/20 cursor-pointer";
                       }
                     } else {
                       btnClass += d.current ? "text-gray-300 cursor-not-allowed" : "text-gray-200 opacity-50 cursor-not-allowed";
@@ -1125,26 +1125,26 @@ function HeroSection({ campaign, carnival, mode, loading, onRegistered }) {
                         />
                       </div>
                       
-                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                         <CustomDatePicker 
-                           value={form.dob} 
-                           onChange={val => setForm({...form, dob: val})} 
-                           placeholder="dd / mm / yyyy" 
-                           testid="wath-dob" 
-                         />
-                         <input className={inputCls} placeholder="School / current institute" required value={form.school_name} onChange={e => setForm({...form, school_name: e.target.value})} data-testid="wath-school"/>
-                       </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <CustomDatePicker 
+                          value={form.dob} 
+                          onChange={val => setForm({...form, dob: val})} 
+                          placeholder="dd / mm / yyyy" 
+                          testid="wath-dob" 
+                        />
+                        <input className={inputCls} placeholder="School / current institute" required value={form.school_name} onChange={e => setForm({...form, school_name: e.target.value})} data-testid="wath-school"/>
+                    </div>
 
-                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                         <CustomSelect
-                           value={form.district}
-                           onChange={val => setForm({...form, district: val})}
-                           options={DISTRICTS}
-                           placeholder="Select district"
-                           testid="wath-district"
-                         />
-                         <input className={inputCls} placeholder="Full address" required value={form.address} onChange={e => setForm({...form, address: e.target.value})} data-testid="wath-address"/>
-                       </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <CustomSelect
+                        value={form.district}
+                        onChange={val => setForm({...form, district: val})}
+                        options={DISTRICTS}
+                        placeholder="Select district"
+                        testid="wath-district"
+                                  />
+                      <input className={inputCls} placeholder="Full address" required value={form.address} onChange={e => setForm({...form, address: e.target.value})} data-testid="wath-address"/>
+                    </div>
 
                       {isCarnival && (
                         <CarnivalSlotPicker
@@ -1164,7 +1164,7 @@ function HeroSection({ campaign, carnival, mode, loading, onRegistered }) {
                           testid="wath-venue" 
                         />
                       ) : (
-                         <input className={inputCls} placeholder="Preferred venue" required value={form.venue} onChange={e => setForm({...form, venue: e.target.value})} data-testid="wath-venue-text"/>
+                        <input className={inputCls} placeholder="Preferred venue" required value={form.venue} onChange={e => setForm({...form, venue: e.target.value})} data-testid="wath-venue-text"/>
                       )}
 
                       <div className="pt-2">
@@ -1351,14 +1351,12 @@ function SlabsSection() {
                       <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Score {s.marks}</div>
                       <div className="font-display text-5xl font-medium text-accent mt-3 text-glow-accent">{s.pct}</div>
                       <div className="text-xs text-muted-foreground mt-1">off tuition</div>
-                       <div className="mt-3 pt-3 border-t border-border text-[10px] uppercase tracking-[0.18em] font-bold text-foreground/70">{s.tag}</div>
+                      <div className="mt-3 pt-3 border-t border-border text-[10px] uppercase tracking-[0.18em] font-bold text-foreground/70">{s.tag}</div>
                     </div>
                   </Reveal>
                 ))}
               </div>
-             
               <p className="text-center text-xs text-muted-foreground mt-8 max-w-2xl mx-auto">*Your scholarship percentage directly matches your exam score percentage. Applicable on tuition component of NEET, JEE and Foundation classroom programmes. Final award subject to admissions verification.</p>
-            
             </div>
           </GlassPanel>
         </Reveal>

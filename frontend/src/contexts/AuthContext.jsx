@@ -1,11 +1,14 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { api, formatError } from "../lib/api"; // Import the formatter here!
+import { api, formatError } from "../lib/api";
+import { useSessionKeepAlive } from "../hooks/useSessionKeepAlive";
 
 const AuthCtx = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  useSessionKeepAlive();
 
   // ============================================================================
   // REFRESH / SESSION VALIDATION CORE LOGIC

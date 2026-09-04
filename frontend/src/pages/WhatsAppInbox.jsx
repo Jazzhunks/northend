@@ -8,8 +8,6 @@ import {
   Megaphone, PlusCircle, Layers, Radio, Sparkles
 } from "lucide-react";
 
-const ONE_MIN = 60 * 1000;
-
 export default function WhatsAppInbox() {
   const [threads, setThreads] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
@@ -29,8 +27,31 @@ export default function WhatsAppInbox() {
 
   useEffect(() => {
     loadThreads();
-    const iv = setInterval(loadThreads, ONE_MIN);
-    return () => clearInterval(iv);
+
+    const token = localStorage.getItem("nw_token");
+    if (!token) return;
+
+    const url = `/api/admin/notifications/stream?token=${encodeURIComponent(token)}`;
+    const es = new EventSource(url);
+
+    es.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "whatsapp_message_received") {
+          loadThreads();
+        }
+      } catch (e) {
+        console.error("Failed to parse SSE event", e);
+      }
+    };
+
+    es.onerror = () => {
+      es.close();
+    };
+
+    return () => {
+      es.close();
+    };
   }, []);
 
   const filtered = useMemo(() => {

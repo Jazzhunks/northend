@@ -20,6 +20,22 @@ import { usePaged, Paginator } from "@/components/Paginator";
 import WhatsAppInbox from "@/pages/WhatsAppInbox";
 import WATHManagement from "@/pages/WATHManagement";
 import AdminSchoolVisits from "@/pages/AdminSchoolVisits";
+import CourseForm from "./admin/CourseForm";
+import NoticeForm from "./admin/NoticeForm";
+import JobForm from "./admin/JobForm";
+import CenterForm from "./admin/CenterForm";
+import TestimonialForm from "./admin/TestimonialForm";
+import ResultForm from "./admin/ResultForm";
+import GalleryForm from "./admin/GalleryForm";
+import BlogPostForm from "./admin/BlogPostForm";
+import CampaignForm from "./admin/CampaignForm";
+import EditApplicantDialog from "./admin/EditApplicantDialog";
+import EditResultDialog from "./admin/EditResultDialog";
+import BulkProgressModal from "./admin/BulkProgressModal";
+import WhatsAppBroadcastModal from "./admin/WhatsAppBroadcastModal";
+import AsyncBulkRegModal from "./admin/AsyncBulkRegModal";
+import CampaignOperationsModal from "./admin/CampaignOperationsModal";
+import NotificationCenter from "@/components/NotificationCenter.jsx";
 
 const CATEGORIES = ["NEET", "IIT-JEE", "Foundation", "CBSE", "JKBOSE"];
 
@@ -141,833 +157,7 @@ function ExportBtn({ kind }) {
   );
 }
 
-function BulkProgressModal({ isOpen, onClose, state }) {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-[2147483648] flex items-center justify-center p-4 bg-black/30 backdrop-blur-md animate-fadeIn">
-      <div className="w-full max-w-md glass-elevated border border-border bg-background p-6 rounded-3xl shadow-2xl space-y-5">
-        <div className="flex items-center justify-between border-b border-border pb-4">
-          <div className="flex items-center gap-2.5">
-            {state.status === "uploading" || state.status === "processing" ? (
-              <Loader2 className="animate-spin text-accent" size={20} />
-            ) : state.status === "completed" ? (
-              <CheckCircle2 className="text-emerald-600" size={20} />
-            ) : (
-              <AlertCircle className="text-rose-600" size={20} />
-            )}
-            <h3 className="font-display font-medium text-lg text-foreground">
-              {state.title || "Bulk Batch Processing"}
-            </h3>
-          </div>
-          {state.status !== "uploading" && state.status !== "processing" && (
-            <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
-              <X size={18} />
-            </button>
-          )}
-        </div>
-
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <div className="flex justify-between text-xs font-mono">
-              <span className="text-muted-foreground">{state.currentStep}</span>
-              <span className="text-accent font-bold">{state.progress}%</span>
-            </div>
-            <div className="w-full h-2 bg-muted/50 rounded-full overflow-hidden border border-border">
-              <div 
-                className="h-full bg-accent transition-all duration-300 ease-out" 
-                style={{ width: `${state.progress}%` }} 
-              />
-            </div>
-          </div>
-
-          <div className="glass p-4 rounded-xl border border-border bg-background/30 text-xs font-mono space-y-2 text-muted-foreground">
-            {state.details?.map((line, idx) => (
-              <div key={idx} className="flex items-center justify-between">
-                <span>{line.label}</span>
-                <span className="font-bold text-foreground">{line.value}</span>
-              </div>
-            ))}
-          </div>
-
-          {state.status === "completed" && (
-            <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-600 text-xs text-center font-medium animate-fadeIn">
-              ✓ Process completed successfully!
-            </div>
-          )}
-
-          {state.error && (
-            <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-600 text-xs text-center font-medium animate-fadeIn">
-              {state.error}
-            </div>
-          )}
-        </div>
-
-        {(state.status === "completed" || state.status === "error") && (
-          <Button 
-            onClick={onClose} 
-            className="w-full bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider py-2.5"
-          >
-            Acknowledge &amp; Close
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function WhatsAppBroadcastModal({ scholarshipId, onClose, allApps }) {
-  const [jobId, setJobId] = useState(null);
-  const [jobStatus, setJobStatus] = useState(null);
-  const [starting, setStarting] = useState(false);
-  const logContainerRef = useRef(null);
-
-  const campaignApps = useMemo(() => allApps.filter(a => a.scholarship_id === scholarshipId), [allApps, scholarshipId]);
-
-  useEffect(() => {
-    let interval;
-    if (jobId && jobStatus?.status !== "completed" && jobStatus?.status !== "failed") {
-      interval = setInterval(async () => {
-        try {
-          const res = await api.get(`/admin/bulk-jobs/${jobId}`);
-          setJobStatus(res.data);
-          if (logContainerRef.current) {
-            logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
-          }
-        } catch (err) {
-          console.error("Failed to fetch job status", err);
-        }
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [jobId, jobStatus?.status]);
-
-  const handleStart = async () => {
-    setStarting(true);
-    try {
-      const { data } = await api.post(`/admin/scholarships/${scholarshipId}/notify-applicants`);
-      setJobId(data.job_id);
-      toast.success("Broadcast engine started");
-    } catch (error) {
-      toast.error(formatError(error.response?.data?.detail) || "Failed to start broadcast");
-    } finally {
-      setStarting(false);
-    }
-  };
-
-  const getPercentage = () => {
-    if (!jobStatus || jobStatus.total_rows === 0) return 0;
-    return Math.round((jobStatus.processed / jobStatus.total_rows) * 100);
-  };
-
-  if (!scholarshipId) return null;
-
-  return (
-    <div className="fixed inset-0 z-[2147483648] flex items-center justify-center p-4 bg-black/30 backdrop-blur-md animate-fadeIn">
-      <div className="w-full max-w-4xl glass-elevated border border-border bg-background p-6 rounded-3xl shadow-2xl flex flex-col max-h-[90vh]">
-        <div className="flex items-center justify-between border-b border-border pb-4 mb-4 shrink-0">
-          <h3 className="font-display font-medium text-xl text-foreground flex items-center gap-2">
-            <MessageSquare className="text-[#25D366]" size={20} />
-            WhatsApp Broadcast Engine
-          </h3>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer p-1">
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-4">
-          {!jobId ? (
-            <>
-              <div className="bg-muted/50 border border-border rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
-                <div>
-                  <div className="font-bold text-foreground">Ready to Broadcast</div>
-                  <div className="text-sm text-muted-foreground mt-1 max-w-md">
-                    This will generate personalized PDF Admit Cards and send WhatsApp notifications to all <strong>{campaignApps.length}</strong> applicants.
-                  </div>
-                </div>
-                <Button 
-                  onClick={handleStart} 
-                  disabled={starting || campaignApps.length === 0}
-                  className="bg-[#25D366] text-black hover:brightness-110 font-bold rounded-xl px-6 py-3 cursor-pointer shrink-0"
-                >
-                  {starting ? <Loader2 className="animate-spin mr-2" size={18} /> : <Send size={18} className="mr-2"/>} 
-                  Start Broadcast
-                </Button>
-              </div>
-
-              <div className="border border-border rounded-2xl bg-background/20 overflow-hidden flex-1 flex flex-col min-h-[300px]">
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-muted text-muted-foreground text-xs uppercase tracking-wider sticky top-0 shadow-sm z-10">
-                    <tr>
-                      <th className="p-3 sm:p-4">App No</th>
-                      <th className="p-3 sm:p-4">Applicant Name</th>
-                      <th className="p-3 sm:p-4">Phone Number</th>
-                      <th className="p-3 sm:p-4">Venue</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {campaignApps.length === 0 ? (
-                      <tr><td colSpan="4" className="p-8 text-center text-muted-foreground italic">No applicants found.</td></tr>
-                    ) : (
-                      campaignApps.map(a => (
-                        <tr key={a.id} className="hover:bg-muted/50">
-                          <td className="p-3 sm:p-4 font-mono text-xs text-muted-foreground">{a.application_no}</td>
-                          <td className="p-3 sm:p-4 font-bold">{a.name}</td>
-                          <td className="p-3 sm:p-4 font-mono text-xs text-muted-foreground">{a.phone}</td>
-                          <td className="p-3 sm:p-4 text-emerald-600 font-medium">{a.venue || a.city}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          ) : (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center bg-muted/50 p-4 rounded-xl border border-border">
-                <h3 className="text-lg font-bold flex items-center gap-2">
-                  {jobStatus?.status === "completed" ? <CheckCircle2 className="text-emerald-600" /> : jobStatus?.status === "failed" ? <AlertCircle className="text-rose-600" /> : <Loader2 className="animate-spin text-accent" />}
-                  Live Broadcast Dashboard
-                </h3>
-                <span className="text-xs font-mono bg-muted/50 px-2 py-1 rounded border border-border">Job ID: {jobId.slice(0,8)}</span>
-              </div>
-
-              <div className="grid grid-cols-4 gap-3">
-                <div className="bg-muted/50 border border-border rounded-xl p-4 flex flex-col items-center">
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total</div>
-                  <div className="text-2xl font-bold">{jobStatus?.total_rows || 0}</div>
-                </div>
-                <div className="bg-muted/50 border border-border rounded-xl p-4 flex flex-col items-center">
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Processed</div>
-                  <div className="text-2xl font-bold">{jobStatus?.processed || 0}</div>
-                </div>
-                <div className="bg-muted/50 border border-border rounded-xl p-4 flex flex-col items-center">
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Success</div>
-                  <div className="text-2xl font-bold text-emerald-600">{jobStatus?.success || 0}</div>
-                </div>
-                <div className="bg-muted/50 border border-border rounded-xl p-4 flex flex-col items-center">
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Errors</div>
-                  <div className="text-2xl font-bold text-rose-600">{jobStatus?.errors || 0}</div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm font-medium">
-                  <span>Overall Progress</span>
-                  <span>{getPercentage()}%</span>
-                </div>
-                <div className="h-3 w-full bg-muted/50 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-[#25D366] transition-all duration-500 ease-out" 
-                    style={{ width: `${getPercentage()}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="bg-muted/60 border border-border rounded-xl overflow-hidden shadow-inner">
-                <div className="px-4 py-2 border-b border-border text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex justify-between bg-black/30">
-                  <span>System Activity Log</span>
-                  <span>Real-time Stream</span>
-                </div>
-                <div 
-                  ref={logContainerRef}
-                  className="p-4 h-64 overflow-y-auto font-mono text-[11px] leading-relaxed space-y-1.5 text-foreground/80 custom-scrollbar"
-                >
-                  {!jobStatus?.recent_logs?.length && <div className="text-muted-foreground italic">Waiting for logs...</div>}
-                  {jobStatus?.recent_logs?.map((log, idx) => (
-                    <div key={idx} className={`${log.includes("❌") || log.includes("⚠️") ? "text-rose-600" : log.includes("✅") ? "text-emerald-600" : ""}`}>
-                      <span className="text-foreground/30 mr-2 shrink-0">[{new Date().toLocaleTimeString()}]</span>
-                      <span className="break-words">{log}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-        
-        <div className="mt-5 pt-4 border-t border-border flex justify-end gap-3 shrink-0">
-           {(jobStatus?.status === "completed" || jobStatus?.status === "failed") && (
-            <Button 
-              variant="outline"
-              onClick={() => { setJobId(null); setJobStatus(null); }}
-              className="rounded-xl text-xs font-bold cursor-pointer"
-            >
-              Start New Broadcast
-            </Button>
-          )}
-          <Button 
-            onClick={onClose} 
-            className="bg-muted/50 hover:bg-muted/50 text-foreground rounded-xl text-xs font-bold px-6 cursor-pointer"
-          >
-            {jobStatus && jobStatus.status !== "completed" && jobStatus.status !== "failed" ? "Close (Runs in Background)" : "Close"}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AsyncBulkRegModal({ scholarshipId, onClose }) {
-  const [file, setFile] = useState(null);
-  const [jobId, setJobId] = useState(null);
-  const [jobStatus, setJobStatus] = useState(null);
-  const [uploading, setUploading] = useState(false);
-  const logContainerRef = useRef(null);
-
-  useEffect(() => {
-    let interval;
-    if (jobId && jobStatus?.status !== "completed" && jobStatus?.status !== "failed") {
-      interval = setInterval(async () => {
-        try {
-          const res = await api.get(`/admin/bulk-jobs/${jobId}`);
-          setJobStatus(res.data);
-          
-          if (logContainerRef.current) {
-            logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
-          }
-        } catch (err) {
-          console.error("Failed to fetch job status", err);
-        }
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [jobId, jobStatus?.status]);
-
-  const handleUpload = async () => {
-    if (!file) return toast.error("Please select a file first");
-    
-    setUploading(true);
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      const { data } = await api.post(`/admin/scholarships/${scholarshipId}/bulk-register`, formData, {
-        headers: {},
-      });
-      setJobId(data.job_id);
-      toast.success("Bulk job started successfully");
-    } catch (error) {
-      toast.error(formatError(error.response?.data?.detail) || "Upload failed");
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const getPercentage = () => {
-    if (!jobStatus || jobStatus.total_rows === 0) return 0;
-    return Math.round((jobStatus.processed / jobStatus.total_rows) * 100);
-  };
-
-  if (!scholarshipId) return null;
-
-  return (
-    <div className="fixed inset-0 z-[2147483648] flex items-center justify-center p-4 bg-black/30 backdrop-blur-md animate-fadeIn">
-      <div className="w-full max-w-2xl glass-elevated border border-border bg-background p-6 rounded-3xl shadow-2xl flex flex-col max-h-[90vh]">
-        <div className="flex items-center justify-between border-b border-border pb-4 mb-6 shrink-0">
-          <h3 className="font-display font-medium text-xl text-foreground flex items-center gap-2">
-            <UserPlus className="text-emerald-600" size={20} /> Bulk Registration Engine
-          </h3>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-          {!jobId ? (
-            <div className="flex flex-col items-center justify-center py-10 border-2 border-dashed border-border rounded-xl bg-muted/50 p-6">
-              <UploadCloud size={48} className="text-muted-foreground mb-4 opacity-50" />
-              <h3 className="text-lg font-medium mb-1">Upload Bulk Applicant List</h3>
-              <p className="text-sm text-muted-foreground mb-6 text-center">Handles 10,000+ rows asynchronously with real-time feedback</p>
-              
-              <input
-                type="file"
-                accept=".xlsx"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                className="mb-6 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent file:text-accent-foreground hover:file:bg-accent/90 cursor-pointer"
-              />
-              
-              <Button
-                onClick={handleUpload}
-                disabled={!file || uploading}
-                className="flex items-center gap-2 px-8 py-3 bg-[#25D366] text-black font-semibold rounded-xl hover:brightness-110 disabled:opacity-50 transition cursor-pointer"
-              >
-                {uploading ? <Loader2 className="animate-spin" size={18} /> : <PlaySquare size={18} />}
-                Start Processing Engine
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-bold flex items-center gap-2">
-                  {jobStatus?.status === "completed" ? <CheckCircle2 className="text-emerald-600" /> : jobStatus?.status === "failed" ? <AlertCircle className="text-rose-600" /> : <Loader2 className="animate-spin text-accent" />}
-                  Live Processing Dashboard
-                </h3>
-                <span className="text-xs font-mono bg-muted/50 px-2 py-1 rounded border border-border">Job ID: {jobId.slice(0,8)}</span>
-              </div>
-
-              <div className="grid grid-cols-4 gap-3">
-                <div className="bg-muted/50 border border-border rounded-xl p-3 flex flex-col items-center">
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total</div>
-                  <div className="text-xl font-bold">{jobStatus?.total_rows || 0}</div>
-                </div>
-                <div className="bg-muted/50 border border-border rounded-xl p-3 flex flex-col items-center">
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Processed</div>
-                  <div className="text-xl font-bold">{jobStatus?.processed || 0}</div>
-                </div>
-                <div className="bg-muted/50 border border-border rounded-xl p-3 flex flex-col items-center">
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Success</div>
-                  <div className="text-xl font-bold text-emerald-600">{jobStatus?.success || 0}</div>
-                </div>
-                <div className="bg-muted/50 border border-border rounded-xl p-3 flex flex-col items-center">
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Errors</div>
-                  <div className="text-xl font-bold text-rose-600">{jobStatus?.errors || 0}</div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm font-medium">
-                  <span>Overall Progress</span>
-                  <span>{getPercentage()}%</span>
-                </div>
-                <div className="h-3 w-full bg-muted/50 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-accent transition-all duration-500 ease-out" 
-                    style={{ width: `${getPercentage()}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="bg-muted/60 border border-border rounded-xl overflow-hidden shadow-inner">
-                <div className="px-4 py-2 border-b border-border text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex justify-between bg-black/30">
-                  <span>System Activity Log</span>
-                  <span>Real-time Stream</span>
-                </div>
-                <div 
-                  ref={logContainerRef}
-                  className="p-4 h-56 overflow-y-auto font-mono text-[11px] leading-relaxed space-y-1.5 text-foreground/80 custom-scrollbar"
-                >
-                  {!jobStatus?.recent_logs?.length && <div className="text-muted-foreground italic">Waiting for logs...</div>}
-                  {jobStatus?.recent_logs?.map((log, idx) => (
-                    <div key={idx} className={`${log.includes("❌") || log.includes("⚠️") ? "text-rose-600" : log.includes("✅") ? "text-emerald-600" : ""}`}>
-                      <span className="text-foreground/30 mr-2 shrink-0">[{new Date().toLocaleTimeString()}]</span>
-                      <span className="break-words">{log}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="mt-6 pt-4 border-t border-border flex justify-end gap-3 shrink-0">
-          {(jobStatus?.status === "completed" || jobStatus?.status === "failed") && (
-            <Button 
-              variant="outline"
-              onClick={() => { setJobId(null); setFile(null); setJobStatus(null); }}
-              className="rounded-xl text-xs font-bold"
-            >
-              Start Another Upload
-            </Button>
-          )}
-          <Button 
-            onClick={onClose} 
-            className="bg-muted/50 hover:bg-muted/50 text-foreground rounded-xl text-xs font-bold px-6"
-          >
-            {jobStatus && jobStatus.status !== "completed" && jobStatus.status !== "failed" ? "Background Execution" : "Close"}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CampaignOperationsModal({ 
-  scholarshipId, 
-  onClose, 
-  onDownloadResultsTemplate, 
-  onUploadResults, 
-  onDownloadRegTemplate,
-  onOpenBulkReg,
-  onDownloadAttendance,
-  allApps,
-  onRefresh
-}) {
-  const [downloading, setDownloading] = useState(null); 
-  const [viewTab, setViewTab] = useState("applicants"); 
-  const [isCleaning, setIsCleaning] = useState(false);
-
-  const campaignApps = useMemo(() => allApps.filter(a => a.scholarship_id === scholarshipId), [allApps, scholarshipId]);
-
-  // Generate logistics matrix based on current applications and force all CLASSES to exist
-  const logisticsData = useMemo(() => {
-    const matrix = {};
-    const classesSet = new Set(CLASSES);
-
-    campaignApps.forEach(a => {
-      // Use the visual normalizer here so the Matrix is always perfectly formatted!
-      const venue = normalizeVenue(a.venue || a.city || "Unassigned");
-      const std = normalizeClass(a.standard || "Unknown", a.target_exam);
-      
-      classesSet.add(std);
-      
-      if (!matrix[venue]) matrix[venue] = {};
-      if (!matrix[venue][std]) matrix[venue][std] = 0;
-      matrix[venue][std]++;
-    });
-
-    return {
-      matrix,
-      classes: Array.from(classesSet).sort((a, b) => {
-        const idxA = CLASSES.indexOf(a);
-        const idxB = CLASSES.indexOf(b);
-        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-        if (idxA !== -1) return -1;
-        if (idxB !== -1) return 1;
-        return a.localeCompare(b);
-      }),
-      venues: Object.keys(matrix).sort()
-    };
-  }, [campaignApps]);
-
-  const handleDownload = async (actionName, actionFn, ...args) => {
-    setDownloading(actionName);
-    try {
-      await actionFn(...args);
-    } finally {
-      setDownloading(null);
-    }
-  };
-
-  // AUTO-CLEAN CLASS & VENUE DATA
-  const handleCleanData = async () => {
-    setIsCleaning(true);
-    let updatedCount = 0;
-    try {
-      for (const app of campaignApps) {
-        const currentStd = app.standard || "";
-        const normalizedStd = normalizeClass(currentStd, app.target_exam);
-        
-        const currentVenue = app.venue || app.city || "Unassigned";
-        const normalizedVenue = normalizeVenue(currentVenue);
-
-        const updates = {};
-        
-        // If class needs updating
-        if (normalizedStd !== currentStd && CLASSES.includes(normalizedStd)) {
-          updates.standard = normalizedStd;
-        }
-        
-        // If venue needs updating
-        if (normalizedVenue !== currentVenue && normalizedVenue !== "Unassigned") {
-          updates.venue = normalizedVenue;
-          updates.city = normalizedVenue; // Keep city in sync with venue to keep DB clean
-        }
-
-        if (Object.keys(updates).length > 0) {
-          await api.put(`/scholarship-applications/${app.application_no}`, updates);
-          updatedCount++;
-        }
-      }
-      if (updatedCount > 0) {
-        toast.success(`Successfully auto-formatted ${updatedCount} applicant records.`);
-        if (onRefresh) onRefresh();
-      } else {
-        toast.info("All classes and venues are already uniformly formatted.");
-      }
-    } catch (error) {
-      toast.error(formatError(error.response?.data?.detail) || "Error formatting data");
-    } finally {
-      setIsCleaning(false);
-    }
-  };
-
-  // Safe early return placed AFTER all hooks
-  if (!scholarshipId) return null;
-
-  return (
-    <div className="fixed inset-0 z-[2147483648] flex items-center justify-center p-4 bg-black/30 backdrop-blur-md animate-fadeIn">
-      <div className="w-full max-w-5xl glass-elevated border border-border bg-background p-6 rounded-3xl shadow-2xl flex flex-col max-h-[90vh]">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-border pb-4 mb-5 shrink-0">
-          <h3 className="font-display font-medium text-xl text-foreground flex items-center gap-2">
-            <Terminal className="text-accent" size={20} />
-            Manage Campaign Operations
-          </h3>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer p-1">
-            <X size={20} />
-          </button>
-        </div>
-
-        {/* Top Action Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 shrink-0">
-          {/* Pre-Exam Panel */}
-          <div className="glass p-5 rounded-2xl border border-border bg-background/30 flex flex-col items-center text-center gap-2 relative overflow-hidden">
-            <div className="absolute top-0 inset-x-0 h-1 bg-emerald-500/50"></div>
-            <UserPlus size={26} className="text-emerald-600 mb-1" />
-            <div className="font-bold text-foreground text-sm">1. Bulk Registration</div>
-            <div className="text-xs text-muted-foreground flex-1 mb-2">Register students and dispatch WhatsApp admit cards.</div>
-            
-            <Button 
-              variant="outline" size="sm" 
-              onClick={() => handleDownload("reg-temp", onDownloadRegTemplate, scholarshipId)} 
-              disabled={downloading === "reg-temp"} 
-              className="w-full text-xs rounded-xl border-border hover:bg-muted/50 cursor-pointer"
-            >
-              {downloading === "reg-temp" ? <Loader2 size={13} className="animate-spin mr-1.5"/> : <Download size={13} className="mr-1.5"/>} 
-              Registration Template
-            </Button>
-            <Button 
-              size="sm" 
-              onClick={() => { onOpenBulkReg(scholarshipId); onClose(); }} 
-              className="w-full text-xs font-bold rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 hover:bg-emerald-500/20 cursor-pointer"
-            >
-              <Send size={13} className="mr-1.5"/> Upload & Dispatch
-            </Button>
-          </div>
-
-          {/* Post-Exam Panel */}
-          <div className="glass p-5 rounded-2xl border border-border bg-background/30 flex flex-col items-center text-center gap-2 relative overflow-hidden">
-            <div className="absolute top-0 inset-x-0 h-1 bg-accent/50"></div>
-            <FileSpreadsheet size={26} className="text-accent mb-1" />
-            <div className="font-bold text-foreground text-sm">2. Grade & Publish</div>
-            <div className="text-xs text-muted-foreground flex-1 mb-2">Input offline exam scores to update student results.</div>
-            
-            <Button 
-              variant="outline" size="sm" 
-              onClick={() => handleDownload("res-temp", onDownloadResultsTemplate, scholarshipId)} 
-              disabled={downloading === "res-temp"} 
-              className="w-full text-xs rounded-xl border-border hover:bg-muted/50 cursor-pointer"
-            >
-              {downloading === "res-temp" ? <Loader2 size={13} className="animate-spin mr-1.5"/> : <Download size={13} className="mr-1.5"/>} 
-              Scores Template
-            </Button>
-            
-            <input
-              type="file"
-              accept=".xlsx"
-              id="bulk-result-upload"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) {
-                  onUploadResults(scholarshipId, f);
-                  e.target.value = ""; 
-                  onClose(); 
-                }
-              }}
-            />
-            <Button 
-              size="sm" 
-              onClick={() => document.getElementById("bulk-result-upload")?.click()} 
-              className="w-full text-xs font-bold rounded-xl bg-accent text-accent-foreground hover:bg-accent/90 cursor-pointer"
-            >
-              <UploadCloud size={13} className="mr-1.5" /> Upload Scores
-            </Button>
-          </div>
-
-          {/* Reports Panel */}
-          <div className="glass p-5 rounded-2xl border border-border bg-background/30 flex flex-col items-center text-center gap-2 relative overflow-hidden">
-            <div className="absolute top-0 inset-x-0 h-1 bg-blue-400/50"></div>
-            <Printer size={26} className="text-blue-400 mb-1" />
-            <div className="font-bold text-foreground text-sm">3. Logistics & Reports</div>
-            <div className="text-xs text-muted-foreground flex-1 mb-2">Export attendance logs and check print requirements.</div>
-            
-            <Button 
-              variant="outline" size="sm" 
-              onClick={() => handleDownload("att-rep", onDownloadAttendance, scholarshipId)} 
-              disabled={downloading === "att-rep"} 
-              className="w-full text-xs font-bold rounded-xl border-border hover:bg-muted/50 cursor-pointer"
-            >
-              {downloading === "att-rep" ? <Loader2 size={13} className="animate-spin mr-1.5"/> : <Download size={13} className="mr-1.5"/>} 
-              Attendance Log
-            </Button>
-            <Button 
-              size="sm" 
-              onClick={() => setViewTab("logistics")} 
-              className="w-full text-xs font-bold rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 cursor-pointer"
-            >
-              <ClipboardList size={13} className="mr-1.5"/> Print Requirements
-            </Button>
-          </div>
-        </div>
-
-        {/* Data / Matrix Viewer */}
-        <div className="flex-1 min-h-[250px] flex flex-col border border-border rounded-2xl bg-background/20 relative overflow-hidden">
-          <div className="flex items-center justify-between gap-2 px-4 py-3 bg-muted border-b border-border shrink-0 z-20">
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={() => setViewTab("applicants")} 
-                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors cursor-pointer ${viewTab === "applicants" ? "bg-accent text-accent-foreground" : "bg-muted/50 text-muted-foreground hover:text-foreground"}`}
-              >
-                Applicants ({campaignApps.length})
-              </button>
-              <button 
-                onClick={() => setViewTab("logistics")} 
-                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors cursor-pointer ${viewTab === "logistics" ? "bg-accent text-accent-foreground" : "bg-muted/50 text-muted-foreground hover:text-foreground"}`}
-              >
-                Print & Logistics Matrix
-              </button>
-            </div>
-            
-            {/* CLEAN DATA BUTTON (Now handles venues AND classes) */}
-            <Button 
-              size="sm" 
-              variant="outline" 
-              onClick={handleCleanData}
-              disabled={isCleaning || campaignApps.length === 0}
-              className="h-8 text-xs font-bold bg-muted/50 hover:bg-muted/50 border-border cursor-pointer text-muted-foreground hover:text-foreground"
-            >
-              {isCleaning ? <Loader2 size={13} className="animate-spin mr-1.5"/> : <Wand2 size={13} className="mr-1.5"/>}
-              Auto-Format Data
-            </Button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto custom-scrollbar">
-            {viewTab === "applicants" && (
-              <table className="w-full text-sm text-left relative">
-                <thead className="bg-muted text-muted-foreground text-xs uppercase tracking-wider sticky top-0 z-10 shadow-[0_4px_20px_rgba(60,73,82,0.08)] border-b border-border">
-                  <tr>
-                    <th className="p-3 sm:p-4 whitespace-nowrap">App No</th>
-                    <th className="p-3 sm:p-4 whitespace-nowrap">Applicant Name</th>
-                    <th className="p-3 sm:p-4 whitespace-nowrap">School / Institute</th>
-                    <th className="p-3 sm:p-4 whitespace-nowrap">Standard</th>
-                    <th className="p-3 sm:p-4 text-center whitespace-nowrap">Score Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border text-foreground">
-                  {campaignApps.length === 0 ? (
-                    <tr>
-                      <td colSpan="5" className="p-8 text-center text-muted-foreground italic bg-background/10">
-                        No approved applicants found for this campaign yet.
-                      </td>
-                    </tr>
-                  ) : (
-                    campaignApps.map(a => (
-                      <tr key={a.id} className="hover:bg-muted/50 transition-colors">
-                        <td className="p-3 sm:p-4 font-mono text-xs text-muted-foreground whitespace-nowrap">{a.application_no}</td>
-                        <td className="p-3 sm:p-4 font-bold whitespace-nowrap">{a.name}</td>
-                        <td className="p-3 sm:p-4 text-muted-foreground truncate max-w-[200px]" title={a.school || ""}>{a.school || "—"}</td>
-                        <td className="p-3 sm:p-4 text-muted-foreground whitespace-nowrap">{a.standard || "—"}</td>
-                        <td className="p-3 sm:p-4 text-center">
-                          {a.result_published ? (
-                            <span className="text-[10px] uppercase tracking-wider bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 px-2.5 py-1 rounded-md font-bold whitespace-nowrap">
-                              Published ({a.result_marks_obtained || 0})
-                            </span>
-                          ) : (
-                            <span className="text-[10px] uppercase tracking-wider bg-muted/50 border border-border text-muted-foreground px-2.5 py-1 rounded-md font-bold whitespace-nowrap">
-                              Pending
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            )}
-
-            {viewTab === "logistics" && (
-              <div className="p-4 sm:p-6 animate-fadeIn">
-                <div className="mb-4">
-                  <h4 className="font-display font-medium text-lg text-foreground">Printing Requirements Matrix</h4>
-                  <p className="text-xs text-muted-foreground mt-0.5">Use this breakdown to determine exact exam paper counts needed per class, per center.</p>
-                </div>
-                
-                {campaignApps.length === 0 ? (
-                  <EmptyState title="No Data Available" description="Register applicants to generate the logistics matrix." />
-                ) : (
-                  <div className="overflow-x-auto glass border border-border rounded-2xl">
-                    <table className="w-full text-sm text-left">
-                      <thead className="bg-muted text-muted-foreground text-xs uppercase tracking-wider border-b border-border">
-                        <tr>
-                          <th className="p-3 sm:p-4 whitespace-nowrap">Standard / Class</th>
-                          {logisticsData.venues.map(v => (
-                            <th key={v} className="p-3 sm:p-4 text-center whitespace-nowrap">{v}</th>
-                          ))}
-                          <th className="p-3 sm:p-4 text-center text-accent whitespace-nowrap">Total Print</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border">
-                        {logisticsData.classes.map(c => {
-                          let rowTotal = 0;
-                          return (
-                            <tr key={c} className="hover:bg-muted/50">
-                              <td className="p-3 sm:p-4 font-bold text-foreground whitespace-nowrap">{c}</td>
-                              {logisticsData.venues.map(v => {
-                                const count = logisticsData.matrix[v]?.[c] || 0;
-                                rowTotal += count;
-                                return (
-                                  <td key={v} className="p-3 sm:p-4 text-center font-mono text-muted-foreground">
-                                    {count > 0 ? count : "-"}
-                                  </td>
-                                );
-                              })}
-                              <td className="p-3 sm:p-4 text-center font-bold text-accent font-mono">{rowTotal}</td>
-                            </tr>
-                          );
-                        })}
-                        {/* Grand Totals Row */}
-                        <tr className="bg-muted border-t border-border">
-                          <td className="p-3 sm:p-4 font-bold text-foreground whitespace-nowrap">VENUE TOTAL</td>
-                          {logisticsData.venues.map(v => {
-                            const vTotal = logisticsData.classes.reduce((sum, c) => sum + (logisticsData.matrix[v]?.[c] || 0), 0);
-                            return <td key={v} className="p-3 sm:p-4 text-center font-bold text-emerald-600 font-mono">{vTotal}</td>;
-                          })}
-                          <td className="p-3 sm:p-4 text-center font-bold text-accent font-mono">{campaignApps.length}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 const emptyCourse = { title:"", category:"NEET", duration:"", fee:0, description:"", syllabus:[], faculty:[], features:[], scholarship_available:true, featured:false, image_url:"" };
-
-function CourseForm({ initial, onCancel, onSave, busy }) {
-  const [c, setC] = useState(initial || emptyCourse);
-  const submit = (e) => { e.preventDefault(); onSave({ ...c, fee: Number(c.fee) }); };
-  return (
-    <form onSubmit={submit} className="glass-elevated p-4 sm:p-6 rounded-2xl bg-background border border-border grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fadeIn" data-testid="course-form">
-      <Input placeholder="Course Title" value={c.title} onChange={e=>setC({...c, title:e.target.value})} required data-testid="cf-title" className="rounded-xl border-border bg-background/50 text-foreground"/>
-      <select className="border border-border rounded-xl px-3 py-2 bg-background text-sm focus:outline-none focus:border-accent text-foreground font-medium" value={c.category} onChange={e=>setC({...c, category:e.target.value})} data-testid="cf-cat">
-        {CATEGORIES.map(x=><option key={x} className="bg-background text-foreground">{x}</option>)}
-      </select>
-      <Input placeholder="Duration (e.g. 12 months)" value={c.duration} onChange={e=>setC({...c, duration:e.target.value})} required data-testid="cf-dur" className="rounded-xl border-border bg-background/50 text-foreground"/>
-      <Input placeholder="Fee in ₹" type="number" value={c.fee} onChange={e=>setC({...c, fee:e.target.value})} required data-testid="cf-fee" className="rounded-xl border-border bg-background/50 text-foreground"/>
-      <Input placeholder="Banner Image URL" value={c.image_url || ""} onChange={e=>setC({...c, image_url:e.target.value})} className="sm:col-span-2 rounded-xl border-border bg-background/50 text-foreground" data-testid="cf-img"/>
-      <textarea className="sm:col-span-2 glass border border-border rounded-xl px-3 py-2 bg-background/50 text-sm focus:outline-none focus:border-accent text-foreground min-h-20 resize-none" placeholder="Description details..." value={c.description} onChange={e=>setC({...c, description:e.target.value})} required data-testid="cf-desc"/>
-      <div className="sm:col-span-2">
-        <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Syllabus Highlights</label>
-        <ChipInput testId="cf-syllabus" value={c.syllabus || []} onChange={(v) => setC({...c, syllabus: v})} placeholder="e.g. Physics, Chemistry, NCERT Mastery"/>
-      </div>
-      <div className="sm:col-span-2">
-        <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Faculty Members</label>
-        <ChipInput testId="cf-faculty" value={c.faculty || []} onChange={(v) => setC({...c, faculty: v})} placeholder="e.g. Dr. A. Wani (Physics)"/>
-      </div>
-      <div className="sm:col-span-2">
-        <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Key Features</label>
-        <ChipInput testId="cf-features" value={c.features || []} onChange={(v) => setC({...c, features: v})} placeholder="e.g. Daily doubt sessions, Weekly mock tests"/>
-      </div>
-      <label className="text-sm flex items-center gap-2 text-muted-foreground select-none cursor-pointer"><input type="checkbox" checked={c.scholarship_available} onChange={e=>setC({...c, scholarship_available: e.target.checked})} className="accent-primary" data-testid="cf-sch"/>Scholarship Available</label>
-      <label className="text-sm flex items-center gap-2 text-muted-foreground select-none cursor-pointer"><input type="checkbox" checked={c.featured} onChange={e=>setC({...c, featured: e.target.checked})} className="accent-primary" data-testid="cf-feat"/>Featured on Home</label>
-      <div className="sm:col-span-2 flex flex-wrap gap-2 pt-2">
-        <Button type="submit" disabled={busy} className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2" data-testid="cf-save">
-          {busy ? <Loader2 className="animate-spin mr-1.5" size={14} /> : <Save size={14} className="mr-1.5"/>}
-          {initial?.id ? "Save Changes" : "Create Course"}
-        </Button>
-        {onCancel && <Button type="button" variant="outline" onClick={onCancel} data-testid="cf-cancel" className="rounded-xl text-xs font-bold uppercase tracking-wider">Cancel</Button>}
-      </div>
-    </form>
-  );
-}
 
 function SchoolStudentsTab() {
   const [rows, setRows] = useState([]);
@@ -1135,6 +325,11 @@ export default function AdminDashboard() {
   });
 
   const [asyncBulkRegId, setAsyncBulkRegId] = useState(null);
+
+  const [applicantDialogOpen, setApplicantDialogOpen] = useState(false);
+  const [applicantDialogAppNo, setApplicantDialogAppNo] = useState(null);
+  const [resultDialogOpen, setResultDialogOpen] = useState(false);
+  const [resultDialogId, setResultDialogId] = useState(null);
 
   useEffect(() => {
     if (typeof document === "undefined") return undefined;
@@ -1511,23 +706,24 @@ export default function AdminDashboard() {
             </div>
           </div>
           
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="relative w-full sm:w-80 shrink-0">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"/>
-              <input 
-                type="text"
-                value={innerSearch}
-                onChange={e => setInnerSearch(e.target.value)}
-                placeholder="Search active tab records..."
-                className="w-full pl-9 pr-8 py-2 border border-border bg-background/50 rounded-xl text-sm focus:outline-none focus:border-accent/40 transition text-foreground placeholder:text-muted-foreground/60"
-              />
-              {innerSearch && (
-                <button onClick={() => setInnerSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-            <Button size="icon" variant="outline" onClick={load} disabled={loadingData} className="rounded-xl border-border shrink-0 hover:bg-muted/50 cursor-pointer">
+           <div className="flex items-center gap-2 w-full sm:w-auto">
+             <div className="relative w-full sm:w-80 shrink-0">
+               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"/>
+               <input 
+                 type="text"
+                 value={innerSearch}
+                 onChange={e => setInnerSearch(e.target.value)}
+                 placeholder="Search active tab records..."
+                 className="w-full pl-9 pr-8 py-2 border border-border bg-background/50 rounded-xl text-sm focus:outline-none focus:border-accent/40 transition text-foreground placeholder:text-muted-foreground/60"
+               />
+               {innerSearch && (
+                 <button onClick={() => setInnerSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                   <X size={14} />
+                 </button>
+               )}
+             </div>
+             <NotificationCenter />
+             <Button size="icon" variant="outline" onClick={load} disabled={loadingData} className="rounded-xl border-border shrink-0 hover:bg-muted/50 cursor-pointer">
               <RefreshCw size={14} className={loadingData ? "animate-spin" : ""} />
             </Button>
           </div>
@@ -1653,94 +849,44 @@ export default function AdminDashboard() {
                               {a.result_published && <span className="text-[10px] uppercase tracking-wider bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 px-2.5 py-0.5 rounded-md font-bold">Published</span>}
                               <select value={a.status} onChange={ev => updateStatus("sch", a.id, ev.target.value)} className="text-xs font-bold uppercase border border-border rounded-lg px-2.5 py-1 bg-background text-foreground cursor-pointer"><option>pending</option><option>approved</option><option>rejected</option></select>
                               
-                              <Button size="sm" variant={editingApp ? "default" : "outline"} onClick={() => setAppEditor(prev => ({ ...prev, [a.application_no]: editingApp ? undefined : appData }))} className="rounded-xl text-xs uppercase tracking-wider font-bold cursor-pointer">
-                                {editingApp ? "Close Info" : "Edit Info"}
+                              <Button size="sm" variant="outline" onClick={() => { setApplicantDialogAppNo(a.application_no); setApplicantDialogOpen(true); }} className="rounded-xl text-xs uppercase tracking-wider font-bold cursor-pointer">
+                                Edit Info
                               </Button>
 
-                              <Button size="sm" variant={editing ? "default" : "outline"} onClick={() => setResultEditor(prev => ({ ...prev, [a.id]: editing ? undefined : r }))} data-testid={`toggle-result-${a.id}`} className="rounded-xl text-xs uppercase tracking-wider font-bold cursor-pointer">
+                              <Button size="sm" variant="outline" onClick={() => { setResultDialogId(a.id); setResultDialogOpen(true); }} data-testid={`toggle-result-${a.id}`} className="rounded-xl text-xs uppercase tracking-wider font-bold cursor-pointer">
                                 {editing ? "Close Score" : (a.result_published ? "Edit Score" : "Log Result")}
                               </Button>
                             </div>
                           </div>
-
-                          {editingApp && (
-                            <div className="mt-4 pt-4 border-t border-border grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 animate-fadeIn">
-                              <div className="col-span-full text-[11px] uppercase tracking-wider font-bold text-accent mb-1 flex items-center">
-                                <User size={14} className="mr-1.5"/> Edit Applicant Identity & Venue
-                              </div>
-                              
-                              <div>
-                                <label className="text-[10px] uppercase tracking-wider text-muted-foreground ml-1">Full Name</label>
-                                <Input value={appData.name} onChange={e=>setAppEditor(prev=>({...prev, [a.application_no]: {...appData, name: e.target.value}}))} className="rounded-xl border-border bg-background text-foreground"/>
-                              </div>
-                              
-                              <div>
-                                <label className="text-[10px] uppercase tracking-wider text-muted-foreground ml-1">Email</label>
-                                <Input value={appData.email} onChange={e=>setAppEditor(prev=>({...prev, [a.application_no]: {...appData, email: e.target.value}}))} className="rounded-xl border-border bg-background text-foreground"/>
-                              </div>
-                              
-                              <div>
-                                <label className="text-[10px] uppercase tracking-wider text-muted-foreground ml-1">Phone Number</label>
-                                <Input value={appData.phone} onChange={e=>setAppEditor(prev=>({...prev, [a.application_no]: {...appData, phone: e.target.value}}))} className="rounded-xl border-border bg-background text-foreground"/>
-                              </div>
-                              
-                              <div>
-                                <label className="text-[10px] uppercase tracking-wider text-muted-foreground ml-1">School / Institute</label>
-                                <Input value={appData.school} onChange={e=>setAppEditor(prev=>({...prev, [a.application_no]: {...appData, school: e.target.value}}))} className="rounded-xl border-border bg-background text-foreground"/>
-                              </div>
-                              
-                              <div>
-                                <label className="text-[10px] uppercase tracking-wider text-muted-foreground ml-1">Standard / Class</label>
-                                <Input value={appData.standard} onChange={e=>setAppEditor(prev=>({...prev, [a.application_no]: {...appData, standard: e.target.value}}))} className="rounded-xl border-border bg-background text-foreground"/>
-                              </div>
-                              
-                              <div>
-                                <label className="text-[10px] uppercase tracking-wider text-muted-foreground ml-1">Target Exam</label>
-                                <Input value={appData.target_exam} onChange={e=>setAppEditor(prev=>({...prev, [a.application_no]: {...appData, target_exam: e.target.value}}))} className="rounded-xl border-border bg-background text-foreground"/>
-                              </div>
-                              
-                              <div>
-                                <label className="text-[10px] uppercase tracking-wider text-muted-foreground ml-1">City / Region</label>
-                                <Input value={appData.city} onChange={e=>setAppEditor(prev=>({...prev, [a.application_no]: {...appData, city: e.target.value}}))} className="rounded-xl border-border bg-background text-foreground"/>
-                              </div>
-                              
-                              <div>
-                                <label className="text-[10px] uppercase tracking-wider text-muted-foreground ml-1 flex items-center justify-between">Venue <span className="text-emerald-600 font-bold ml-1">(Can be custom)</span></label>
-                                <Input value={appData.venue} onChange={e=>setAppEditor(prev=>({...prev, [a.application_no]: {...appData, venue: e.target.value}}))} className="rounded-xl border-emerald-500/30 bg-emerald-500/5 text-foreground"/>
-                              </div>
-                              
-                              <div className="col-span-full flex flex-wrap gap-2 pt-2">
-                                <Button onClick={() => saveAppDetails(a.application_no, appData)} className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2 cursor-pointer">
-                                  <Save size={14} className="mr-1.5"/> Save Applicant Details
-                                </Button>
-                                <Button variant="outline" onClick={() => setAppEditor(prev => ({ ...prev, [a.application_no]: undefined }))} className="rounded-xl text-xs font-bold uppercase tracking-wider cursor-pointer">
-                                  Cancel
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-
-                          {editing && (
-                            <div className="mt-4 pt-4 border-t border-border grid grid-cols-1 sm:grid-cols-3 gap-3 animate-fadeIn" data-testid={`result-form-${a.id}`}>
-                              <div className="col-span-full text-[11px] uppercase tracking-wider font-bold text-accent mb-1 flex items-center">
-                                <Trophy size={14} className="mr-1.5"/> Edit Examination Scores
-                              </div>
-                              <Input placeholder="Marks obtained" type="number" value={r.marks_obtained} onChange={e=>setResultEditor(prev=>({...prev, [a.id]: {...r, marks_obtained: e.target.value}}))} data-testid={`r-marks-${a.id}`} className="rounded-xl border-border bg-background text-foreground font-mono"/>
-                              <Input placeholder="Total marks" type="number" value={r.total_marks} onChange={e=>setResultEditor(prev=>({...prev, [a.id]: {...r, total_marks: e.target.value}}))} data-testid={`r-total-${a.id}`} className="rounded-xl border-border bg-background text-foreground font-mono"/>
-                              <Input placeholder="Scholarship %" type="number" min={0} max={100} value={r.scholarship_percentage} onChange={e=>setResultEditor(prev=>({...prev, [a.id]: {...r, scholarship_percentage: e.target.value}}))} data-testid={`r-pct-${a.id}`} className="rounded-xl border-border bg-background text-foreground font-mono"/>
-                              <Input placeholder="Rank (optional)" type="number" value={r.rank} onChange={e=>setResultEditor(prev=>({...prev, [a.id]: {...r, rank: e.target.value}}))} data-testid={`r-rank-${a.id}`} className="rounded-xl border-border bg-background text-foreground font-mono"/>
-                              <Input placeholder="Percentile (optional)" type="number" step="0.01" value={r.percentile} onChange={e=>setResultEditor(prev=>({...prev, [a.id]: {...r, percentile: e.target.value}}))} data-testid={`r-perc-${a.id}`} className="rounded-xl border-border bg-background text-foreground font-mono"/>
-                              <label className="text-xs uppercase font-bold tracking-wider text-muted-foreground flex items-center gap-2 select-none cursor-pointer"><input type="checkbox" checked={!!r.publish} onChange={e=>setResultEditor(prev=>({...prev, [a.id]: {...r, publish: e.target.checked}}))} className="accent-primary"/>Publish output</label>
-                              <textarea className="sm:col-span-3 border border-border rounded-xl px-3 py-2 bg-background text-sm text-foreground focus:outline-none focus:border-accent min-h-16 resize-none" placeholder="Remarks / Guidance (optional)" value={r.remarks} onChange={e=>setResultEditor(prev=>({...prev, [a.id]: {...r, remarks: e.target.value}}))} />
-                              <div className="sm:col-span-3 flex flex-wrap gap-2 pt-1">
-                                <Button onClick={() => saveResult(a.id, r)} className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2 cursor-pointer" data-testid={`r-save-${a.id}`}><Save size={14} className="mr-1.5"/>{r.publish ? "Commit & Publish" : "Save Draft"}</Button>
-                                <Button variant="outline" onClick={() => setResultEditor(prev => ({ ...prev, [a.id]: undefined }))} className="rounded-xl text-xs font-bold uppercase tracking-wider cursor-pointer">Cancel</Button>
-                              </div>
-                            </div>
-                          )}
                         </div>
-                      );
-                    })}
+                       );
+                      })}
+                      <EditApplicantDialog
+                       open={applicantDialogOpen}
+                       appNo={applicantDialogAppNo}
+                       appData={(() => {
+                         if (!applicantDialogAppNo) return null;
+                         const app = filteredScholarships.find(s => s.application_no === applicantDialogAppNo);
+                         if (!app) return null;
+                         const editingApp2 = appEditor[app.application_no];
+                         return editingApp2 || { name: app.name || "", email: app.email || "", phone: app.phone || "", school: app.school || "", standard: app.standard || "", target_exam: app.target_exam || "", city: app.city || "", venue: app.venue || "" };
+                       })()}
+                       onClose={() => { setApplicantDialogOpen(false); setApplicantDialogAppNo(null); }}
+                       onSave={saveAppDetails}
+                     />
+                     <EditResultDialog
+                       open={resultDialogOpen}
+                       resultId={resultDialogId}
+                       resultData={(() => {
+                         if (!resultDialogId) return null;
+                         const res = filteredScholarships.find(s => s.id === resultDialogId);
+                         if (!res) return null;
+                         const editing2 = resultEditor[res.id];
+                         return editing2 || { marks_obtained: res.result_marks_obtained ?? "", total_marks: res.result_total_marks ?? 100, rank: res.result_rank ?? "", percentile: res.result_percentile ?? "", scholarship_percentage: res.result_scholarship_percentage ?? 0, remarks: res.result_remarks ?? "", publish: res.result_published ?? false };
+                       })()}
+                       onClose={() => { setResultDialogOpen(false); setResultDialogId(null); setResultEditor(prev => ({ ...prev, [resultDialogId]: undefined })); }}
+                       onSave={saveResult}
+                     />
                     <Paginator {...schPage} testid="scholarships-paginator"/>
                   </div>
                 )}
@@ -1831,13 +977,7 @@ export default function AdminDashboard() {
             {activeTab === "notices" && (
               <div className="space-y-4 animate-fadeIn">
                 <div className="font-display font-bold text-xl text-foreground">Board Notices</div>
-                <form onSubmit={(e)=>{e.preventDefault(); post("/notices", newNotice, ()=>setNewNotice({title:"",content:"",category:"General",pinned:false}), "Notice");}} className="glass border border-border p-4 sm:p-5 rounded-2xl grid grid-cols-1 sm:grid-cols-2 gap-4 bg-background/20">
-                  <Input placeholder="Notice Title" value={newNotice.title} onChange={e=>setNewNotice({...newNotice, title:e.target.value})} required data-testid="nn-title" className="rounded-xl border-border bg-background/50 text-foreground"/>
-                  <Input placeholder="Category Tag" value={newNotice.category} onChange={e=>setNewNotice({...newNotice, category:e.target.value})} required data-testid="nn-cat" className="rounded-xl border-border bg-background/50 text-foreground"/>
-                  <textarea className="sm:col-span-2 border border-border rounded-xl px-3 py-2 bg-background/50 text-sm focus:outline-none focus:border-accent text-foreground min-h-20 resize-none" placeholder="Notice body content..." value={newNotice.content} onChange={e=>setNewNotice({...newNotice, content:e.target.value})} required />
-                  <label className="text-sm flex items-center gap-2 text-muted-foreground cursor-pointer select-none"><input type="checkbox" checked={newNotice.pinned} onChange={e=>setNewNotice({...newNotice, pinned: e.target.checked})} className="accent-primary" />Pin dispatch to priority index window</label>
-                  <Button type="submit" className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2 cursor-pointer"><Plus size={14} className="mr-1.5"/>Post Notice</Button>
-                </form>
+                <NoticeForm onSubmit={(data) => post("/notices", data, () => setNewNotice({title:"",content:"",category:"General",pinned:false}), "Notice")} />
                 {filteredNotices.length === 0 ? (
                   <EmptyState />
                 ) : (
@@ -1865,14 +1005,7 @@ export default function AdminDashboard() {
             {activeTab === "jobs" && (
               <div className="space-y-4 animate-fadeIn">
                 <div className="font-display font-bold text-xl text-foreground">Job Openings Matrix</div>
-                <form onSubmit={(e)=>{e.preventDefault(); post("/jobs", { ...newJob, requirements: newJob.requirements.length ? newJob.requirements : ["Graduate"] }, ()=>setNewJob({title:"",department:"",location:"",type:"Full-time",description:"",requirements:[],active:true}), "Job");}} className="glass border border-border p-4 sm:p-5 rounded-2xl grid grid-cols-1 sm:grid-cols-3 gap-4 bg-background/20">
-                  <Input placeholder="Job Title" value={newJob.title} onChange={e=>setNewJob({...newJob, title:e.target.value})} required data-testid="nj-title" className="rounded-xl border-border bg-background/50 text-foreground"/>
-                  <Input placeholder="Department" value={newJob.department} onChange={e=>setNewJob({...newJob, department:e.target.value})} required data-testid="nj-dept" className="rounded-xl border-border bg-background/50 text-foreground"/>
-                  <Input placeholder="Location" value={newJob.location} onChange={e=>setNewJob({...newJob, location:e.target.value})} required data-testid="nj-loc" className="rounded-xl border-border bg-background/50 text-foreground"/>
-                  <Input placeholder="Short Description Summary" value={newJob.description} onChange={e=>setNewJob({...newJob, description:e.target.value})} required data-testid="nj-desc" className="sm:col-span-3 rounded-xl border-border bg-background/50 text-foreground"/>
-                  <div className="sm:col-span-3"><label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Prerequisite Qualifications Requirements</label><ChipInput testId="nj-req" value={newJob.requirements} onChange={(v)=>setNewJob({...newJob, requirements:v})}/></div>
-                  <Button type="submit" className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2 cursor-pointer"><Plus size={14} className="mr-1.5"/>Deploy Career Index</Button>
-                </form>
+                <JobForm onSubmit={(data) => post("/jobs", { ...data, requirements: data.requirements.length ? data.requirements : ["Graduate"] }, () => setNewJob({title:"",department:"",location:"",type:"Full-time",description:"",requirements:[],active:true}), "Job")} />
                 {filteredJobs.length === 0 ? (
                   <EmptyState />
                 ) : (
@@ -1900,16 +1033,7 @@ export default function AdminDashboard() {
             {activeTab === "centers" && (
               <div className="space-y-4 animate-fadeIn">
                 <div className="font-display font-bold text-xl text-foreground">Regional Center Desks</div>
-                <form onSubmit={(e)=>{e.preventDefault(); post("/centers", newCenter, ()=>setNewCenter({name:"",city:"",address:"",phone:"",timing:"8:00 AM – 8:00 PM",lat:34.0837,lng:74.7973}), "Center");}} className="glass border border-border p-4 sm:p-5 rounded-2xl grid grid-cols-1 sm:grid-cols-3 gap-4 bg-background/20">
-                  <Input placeholder="Center Hub Name" value={newCenter.name} onChange={e=>setNewCenter({...newCenter, name:e.target.value})} required data-testid="nc2-name" className="rounded-xl border-border bg-background/50 text-foreground"/>
-                  <Input placeholder="City Scope" value={newCenter.city} onChange={e=>setNewCenter({...newCenter, city:e.target.value})} required data-testid="nc2-city" className="rounded-xl border-border bg-background/50 text-foreground"/>
-                  <Input placeholder="Contact Support Line" value={newCenter.phone} onChange={e=>setNewCenter({...newCenter, phone:e.target.value})} required data-testid="nc2-phone" className="rounded-xl border-border bg-background/50 text-foreground font-mono text-xs"/>
-                  <Input placeholder="Complete Physical Address" value={newCenter.address} onChange={e=>setNewCenter({...newCenter, address:e.target.value})} required data-testid="nc2-addr" className="sm:col-span-2 rounded-xl border-border bg-background/50 text-foreground"/>
-                  <Input placeholder="Timing Boundaries" value={newCenter.timing} onChange={e=>setNewCenter({...newCenter, timing:e.target.value})} data-testid="nc2-timing" className="rounded-xl border-border bg-background/50 text-foreground"/>
-                  <Input placeholder="Latitude" type="number" step="any" value={newCenter.lat} onChange={e=>setNewCenter({...newCenter, lat: Number(e.target.value)})} data-testid="nc2-lat" className="rounded-xl border-border bg-background/50 text-foreground font-mono"/>
-                  <Input placeholder="Longitude" type="number" step="any" value={newCenter.lng} onChange={e=>setNewCenter({...newCenter, lng: Number(e.target.value)})} data-testid="nc2-lng" className="rounded-xl border-border bg-background/50 text-foreground font-mono"/>
-                  <Button type="submit" className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2 cursor-pointer"><Plus size={14} className="mr-1.5"/>Add Station Hub</Button>
-                </form>
+                <CenterForm onSubmit={(data) => post("/centers", data, () => setNewCenter({name:"",city:"",address:"",phone:"",timing:"8:00 AM – 8:00 PM",lat:34.0837,lng:74.7973}), "Center")} />
                 {filteredCenters.length === 0 ? (
                   <EmptyState />
                 ) : (
@@ -1932,12 +1056,7 @@ export default function AdminDashboard() {
             {activeTab === "testimonials" && (
               <div className="space-y-4 animate-fadeIn">
                 <div className="font-display font-bold text-xl text-foreground">Feedback Reviews Board</div>
-                <form onSubmit={(e)=>{e.preventDefault(); post("/testimonials", newTestimonial, ()=>setNewTestimonial({name:"",role:"",quote:""}), "Testimonial");}} className="glass border border-border p-4 sm:p-5 rounded-2xl grid grid-cols-1 sm:grid-cols-2 gap-4 bg-background/20">
-                  <Input placeholder="Endorsee Full Name" value={newTestimonial.name} onChange={e=>setNewTestimonial({...newTestimonial, name:e.target.value})} required data-testid="nt-name" className="rounded-xl border-border bg-background/50 text-foreground"/>
-                  <Input placeholder="Role / Standing Identity" value={newTestimonial.role} onChange={e=>setNewTestimonial({...newTestimonial, role:e.target.value})} required data-testid="nt-role" className="rounded-xl border-border bg-background/50 text-foreground"/>
-                  <textarea className="sm:col-span-2 border border-border rounded-xl px-3 py-2 bg-background/50 text-sm focus:outline-none focus:border-accent text-foreground min-h-20 resize-none" placeholder="Verbatim review quotation string..." value={newTestimonial.quote} onChange={e=>setNewTestimonial({...newTestimonial, quote:e.target.value})} required />
-                  <Button type="submit" className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2 cursor-pointer"><Plus size={14} className="mr-1.5"/>Commit Review</Button>
-                </form>
+                <TestimonialForm onSubmit={(data) => post("/testimonials", data, () => setNewTestimonial({name:"",role:"",quote:""}), "Testimonial")} />
                 {filteredTestimonials.length === 0 ? (
                   <EmptyState />
                 ) : (
@@ -1962,18 +1081,7 @@ export default function AdminDashboard() {
             {activeTab === "results" && (
               <div className="space-y-4 animate-fadeIn">
                 <div className="font-display font-bold text-xl text-foreground">Honors Board Toppers Matrix</div>
-                <form onSubmit={(e)=>{e.preventDefault(); post("/results", { ...newResult, year: Number(newResult.year) }, ()=>setNewResult({student_name:"",exam:"",rank:"",year:new Date().getFullYear(),course:"NEET",photo_url:"",quote:""}), "Result");}} className="glass border border-border p-4 sm:p-5 rounded-2xl grid grid-cols-1 sm:grid-cols-3 gap-4 bg-background/20">
-                  <Input placeholder="Student Name" value={newResult.student_name} onChange={e=>setNewResult({...newResult, student_name:e.target.value})} required data-testid="nr-name" className="rounded-xl border-border bg-background/50 text-foreground"/>
-                  <Input placeholder="Examination Scale" value={newResult.exam} onChange={e=>setNewResult({...newResult, exam:e.target.value})} required data-testid="nr-exam" className="rounded-xl border-border bg-background/50 text-foreground"/>
-                  <Input placeholder="Score Rank Metric (AIR/State)" value={newResult.rank} onChange={e=>setNewResult({...newResult, rank:e.target.value})} required data-testid="nr-rank" className="rounded-xl border-border bg-background/50 text-foreground text-accent font-bold"/>
-                  <Input placeholder="Year" type="number" value={newResult.year} onChange={e=>setNewResult({...newResult, year:Number(e.target.value)})} required data-testid="nr-year" className="rounded-xl border-border bg-background/50 text-foreground font-mono"/>
-                  <select className="border border-border rounded-xl px-3 py-2 bg-background text-sm text-foreground focus:outline-none focus:border-accent cursor-pointer" value={newResult.course} onChange={e=>setNewResult({...newResult, course:e.target.value})} data-testid="nr-course">
-                    {CATEGORIES.map(x=><option key={x} className="bg-background text-foreground">{x}</option>)}
-                  </select>
-                  <Input placeholder="Portrait asset URL endpoint" value={newResult.photo_url} onChange={e=>setNewResult({...newResult, photo_url:e.target.value})} data-testid="nr-photo" className="rounded-xl border-border bg-background/50 text-foreground"/>
-                  <textarea className="sm:col-span-3 border border-border rounded-xl px-3 py-2 bg-background/50 text-sm focus:outline-none focus:border-accent text-foreground min-h-20 resize-none" placeholder="Learner reflection quote validation string..." value={newResult.quote} onChange={e=>setNewResult({...newResult, quote:e.target.value})} />
-                  <Button type="submit" className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2 cursor-pointer"><Plus size={14} className="mr-1.5"/>Publish Honors Record</Button>
-                </form>
+                <ResultForm onSubmit={(data) => post("/results", { ...data, year: Number(data.year) }, () => setNewResult({student_name:"",exam:"",rank:"",year:new Date().getFullYear(),course:"NEET",photo_url:"",quote:""}), "Result")} />
                 {filteredResults.length === 0 ? (
                   <EmptyState />
                 ) : (
@@ -2007,43 +1115,16 @@ export default function AdminDashboard() {
             {activeTab === "gallery" && (
               <div className="space-y-4 animate-fadeIn">
                 <div className="font-display font-bold text-xl text-foreground">Gallery Studio</div>
-                <form onSubmit={(e)=>{e.preventDefault(); const payload = { ...newGallery, category: newGallery.category || "Uncategorised" }; if (!payload.media_url && payload.media_type !== "text") delete payload.media_url; if (editingGalleryId) { api.put(`/admin/gallery/${editingGalleryId}`, payload).then(() => { toast.success("Gallery item updated"); setEditingGalleryId(null); setNewGallery({ title:"", description:"", media_type:"image", media_url:"", category:"", order:0 }); load(); }).catch(err => toast.error(formatError(err.response?.data?.detail))); } else { post("/admin/gallery", payload, ()=>setNewGallery({ title:"", description:"", media_type:"image", media_url:"", category:"", order:0 }), "Gallery item"); }}} className="glass border border-border p-4 sm:p-5 rounded-2xl grid grid-cols-1 sm:grid-cols-2 gap-4 bg-background/20">
-                  <Input placeholder="Title" value={newGallery.title} onChange={e=>setNewGallery({...newGallery, title:e.target.value})} required data-testid="ng-title" className="rounded-xl border-border bg-background/50 text-foreground"/>
-                  <Input placeholder="Category (e.g. Campus, Events)" value={newGallery.category} onChange={e=>setNewGallery({...newGallery, category:e.target.value})} list="gallery-categories" data-testid="ng-category" className="rounded-xl border-border bg-background/50 text-foreground"/>
-                  <datalist id="gallery-categories">
-                    {galleryCategories.map(c => <option key={c} value={c} />)}
-                  </datalist>
-                  <select className="border border-border rounded-xl px-3 py-2 bg-background text-sm text-foreground focus:outline-none focus:border-accent cursor-pointer" value={newGallery.media_type} onChange={e=>setNewGallery({...newGallery, media_type:e.target.value})}>
-                    <option value="image">Image</option>
-                    <option value="video">Video</option>
-                    <option value="text">Text / Paragraph</option>
-                  </select>
-                  <div className="sm:col-span-2">
-                    <FileUpload
-                      label={newGallery.media_type === "video" ? "Upload video" : newGallery.media_type === "text" ? "Optional image for text post" : "Upload image"}
-                      accept={newGallery.media_type === "video" ? "video/mp4,video/webm,video/quicktime" : "image/jpeg,image/png,image/webp"}
-                      onUploaded={(file) => file && setNewGallery(prev => ({ ...prev, media_url: file.url }))}
-                      testId="gallery-upload"
-                    />
-                  </div>
-                  {newGallery.media_url && (
-                    <div className="sm:col-span-2">
-                      <div className="relative inline-block">
-                        {newGallery.media_type === "video" ? (
-                          <video src={newGallery.media_url} controls className="max-h-40 rounded-xl" />
-                        ) : (
-                          <img src={newGallery.media_url} alt="Preview" className="max-h-40 rounded-xl object-cover" />
-                        )}
-                        <button type="button" onClick={()=>setNewGallery(prev => ({...prev, media_url:""}))} className="absolute -top-2 -right-2 p-1 bg-rose-500 text-white rounded-full shadow-lg"><X size={14}/></button>
-                      </div>
-                    </div>
-                  )}
-                  <textarea className="sm:col-span-2 border border-border rounded-xl px-3 py-2 bg-background/50 text-sm focus:outline-none focus:border-accent text-foreground min-h-24 resize-none" placeholder="Caption or paragraph text..." value={newGallery.description} onChange={e=>setNewGallery({...newGallery, description:e.target.value})} />
-                  <div className="sm:col-span-2 flex gap-3">
-                    <Button type="submit" className="flex-1 bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2 cursor-pointer"><Plus size={14} className="mr-1.5"/>{editingGalleryId ? "Update Item" : "Add to gallery"}</Button>
-                    {editingGalleryId && <Button type="button" onClick={()=>{setEditingGalleryId(null); setNewGallery({ title:"", description:"", media_type:"image", media_url:"", category:"", order:0 });}} className="px-4 py-2 border border-border rounded-xl text-xs font-bold uppercase tracking-wider cursor-pointer">Cancel</Button>}
-                  </div>
-                </form>
+                <GalleryForm
+                  onSubmit={(payload) => post("/admin/gallery", payload, () => setNewGallery({ title:"", description:"", media_type:"image", media_url:"", category:"", order:0 }), "Gallery item")}
+                  onUpdate={(id, payload) => api.put(`/admin/gallery/${id}`, payload).then(() => { toast.success("Gallery item updated"); setEditingGalleryId(null); setNewGallery({ title:"", description:"", media_type:"image", media_url:"", category:"", order:0 }); load(); }).catch(err => toast.error(formatError(err.response?.data?.detail)))}
+                  editingId={editingGalleryId}
+                  galleryCategories={galleryCategories}
+                  previewMediaUrl={newGallery.media_url}
+                  mediaType={newGallery.media_type}
+                  onMediaTypeChange={(val) => setNewGallery({...newGallery, media_type: val})}
+                  onMediaUrlClear={() => setNewGallery({...newGallery, media_url: ""})}
+                />
                 {filteredGallery.length === 0 ? (
                   <EmptyState title="No gallery items" description="Add your first image, video, or paragraph to get started." />
                 ) : (
@@ -2095,33 +1176,7 @@ export default function AdminDashboard() {
             {activeTab === "blog" && (
               <div className="space-y-4 animate-fadeIn">
                 <div className="font-display font-bold text-xl text-foreground">Blog Studio</div>
-                <form onSubmit={(e)=>{e.preventDefault(); const payload = { ...newPost, tags: (newPost.tags || []).filter(Boolean) }; if (!payload.slug) payload.slug = slugify(payload.title); if (!payload.meta_title) payload.meta_title = payload.title.slice(0, 60); if (!payload.meta_description) payload.meta_description = payload.excerpt || payload.title.slice(0, 160); post("/admin/posts", payload, ()=>setNewPost({ title:"", slug:"", excerpt:"", content:"", category:"", tags:[], author:"Admin", featured_image_url:"", image_alt:"", og_image_url:"", meta_title:"", meta_description:"", status:"draft", visibility:"public", published_at:"" }), "Post");}} className="glass border border-border p-4 sm:p-5 rounded-2xl grid grid-cols-1 sm:grid-cols-2 gap-4 bg-background/20">
-                  <Input placeholder="Post title" value={newPost.title} onChange={e=>setNewPost({...newPost, title:e.target.value})} required data-testid="np-title" className="rounded-xl border-border bg-background/50 text-foreground"/>
-                  <Input placeholder="Slug / permalink" value={newPost.slug} onChange={e=>setNewPost({...newPost, slug:e.target.value})} required data-testid="np-slug" className="rounded-xl border-border bg-background/50 text-foreground font-mono"/>
-                  <Input placeholder="Category (e.g. Exam Tips)" value={newPost.category} onChange={e=>setNewPost({...newPost, category:e.target.value})} data-testid="np-category" className="rounded-xl border-border bg-background/50 text-foreground"/>
-                  <Input placeholder="Author" value={newPost.author} onChange={e=>setNewPost({...newPost, author:e.target.value})} data-testid="np-author" className="rounded-xl border-border bg-background/50 text-foreground"/>
-                  <div className="sm:col-span-2">
-                    <label className="text-xs uppercase tracking-widest text-muted-foreground font-bold mb-1.5 block">Content</label>
-                    <textarea className="w-full border border-border rounded-xl px-3 py-2 bg-background/50 text-sm focus:outline-none focus:border-accent text-foreground min-h-48 resize-y font-mono" placeholder="HTML or plain text content..." value={newPost.content} onChange={e=>setNewPost({...newPost, content:e.target.value})} required data-testid="np-content" />
-                  </div>
-                  <textarea className="sm:col-span-2 border border-border rounded-xl px-3 py-2 bg-background/50 text-sm focus:outline-none focus:border-accent text-foreground min-h-20 resize-none" placeholder="Short excerpt / summary..." value={newPost.excerpt} onChange={e=>setNewPost({...newPost, excerpt:e.target.value})} data-testid="np-excerpt" />
-                  <div className="sm:col-span-2">
-                    <FileUpload label="Featured image" accept="image/jpeg,image/png,image/webp" onUploaded={(file) => file && setNewPost(prev => ({ ...prev, featured_image_url: file.url }))} testId="post-featured-image" />
-                  </div>
-                  <Input placeholder="Image alt text" value={newPost.image_alt} onChange={e=>setNewPost({...newPost, image_alt:e.target.value})} data-testid="np-image-alt" className="rounded-xl border-border bg-background/50 text-foreground"/>
-                  <Input placeholder="OG image URL (optional)" value={newPost.og_image_url} onChange={e=>setNewPost({...newPost, og_image_url:e.target.value})} data-testid="np-og-image" className="rounded-xl border-border bg-background/50 text-foreground"/>
-                  <Input placeholder="Meta title" value={newPost.meta_title} onChange={e=>setNewPost({...newPost, meta_title:e.target.value})} data-testid="np-meta-title" className="rounded-xl border-border bg-background/50 text-foreground"/>
-                  <Input placeholder="Meta description" value={newPost.meta_description} onChange={e=>setNewPost({...newPost, meta_description:e.target.value})} data-testid="np-meta-desc" className="rounded-xl border-border bg-background/50 text-foreground"/>
-                  <select className="border border-border rounded-xl px-3 py-2 bg-background text-sm text-foreground focus:outline-none focus:border-accent cursor-pointer" value={newPost.status} onChange={e=>setNewPost({...newPost, status:e.target.value})} data-testid="np-status">
-                    <option value="draft">Draft</option>
-                    <option value="published">Published</option>
-                  </select>
-                  <select className="border border-border rounded-xl px-3 py-2 bg-background text-sm text-foreground focus:outline-none focus:border-accent cursor-pointer" value={newPost.visibility} onChange={e=>setNewPost({...newPost, visibility:e.target.value})} data-testid="np-visibility">
-                    <option value="public">Public</option>
-                    <option value="private">Private</option>
-                  </select>
-                  <Button type="submit" className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2 cursor-pointer"><Plus size={14} className="mr-1.5"/>Save Post</Button>
-                </form>
+                <BlogPostForm onSubmit={(payload) => post("/admin/posts", payload, () => setNewPost({ title:"", slug:"", excerpt:"", content:"", category:"", tags:[], author:"Admin", featured_image_url:"", image_alt:"", og_image_url:"", meta_title:"", meta_description:"", status:"draft", visibility:"public", published_at:"" }), "Post")} />
                 {filteredPosts.length === 0 ? (
                   <EmptyState title="No posts" description="Create your first blog post to get started." />
                 ) : (
@@ -2159,87 +1214,7 @@ export default function AdminDashboard() {
             {activeTab === "campaigns" && (
               <div className="space-y-4 animate-fadeIn">
                 <div className="font-display font-bold text-xl text-foreground">Scholarship Campaigns Drivers</div>
-                <form onSubmit={(e)=>{e.preventDefault(); post("/scholarships", newCampaign, ()=>setNewCampaign({title:"",description:"",exam_date:"",deadline:"",eligibility:"",venue:"",available_venues:[],whatsapp_community_url:"",exam_time:"10:00 AM",total_marks:100,active:true,is_featured:false,type:"general",start_date:"",end_date:"",eligible_classes:[],time_slots:[]}), "Campaign");}} className="glass border border-border p-4 sm:p-5 rounded-2xl grid grid-cols-1 sm:grid-cols-2 gap-4 bg-background/20">
-                  <Input placeholder="Campaign Name" value={newCampaign.title} onChange={e=>setNewCampaign({...newCampaign, title:e.target.value})} required data-testid="ncm-title" className="rounded-xl border-border bg-background/50 text-foreground"/>
-                  <select className="border border-border rounded-xl px-3 py-2 bg-background text-sm" value={newCampaign.type} onChange={e => handleCampaignTypeChange(e.target.value)} data-testid="ncm-type">
-                    <option value="general">General</option>
-                    <option value="school">School</option>
-                  </select>
-                  {newCampaign.type === "school" ? (
-                    <>
-                      <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Campaign Start Date</label>
-                          <input type="date" value={newCampaign.start_date} onChange={e=>setNewCampaign({...newCampaign, start_date:e.target.value})} className="w-full border border-border rounded-xl px-3 py-2 bg-background text-sm" data-testid="ncm-start-date" />
-                        </div>
-                        <div>
-                          <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Campaign End Date</label>
-                          <input type="date" value={newCampaign.end_date} onChange={e=>setNewCampaign({...newCampaign, end_date:e.target.value})} className="w-full border border-border rounded-xl px-3 py-2 bg-background text-sm" data-testid="ncm-end-date" />
-                        </div>
-                      </div>
-                      <div className="sm:col-span-2 border border-border rounded-xl p-4 bg-background/30">
-                        <div className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-2">Eligible Classes</div>
-                        <div className="flex flex-wrap gap-2">
-                          {["ALL","7th Class","8th Class","9th Class","10th Class","11th Class","12th Class"].map(cls => {
-                            const checked = newCampaign.eligible_classes?.includes(cls);
-                            return (
-                              <label key={cls} className={`text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg border cursor-pointer select-none transition ${checked ? "bg-primary text-primary-foreground border-primary shadow-md" : "border-border text-muted-foreground hover:bg-muted/50"}`}>
-                                <input type="checkbox" className="hidden" checked={checked} onChange={() => setNewCampaign(prev => ({ ...prev, eligible_classes: checked ? (prev.eligible_classes || []).filter(c => c !== cls) : [...(prev.eligible_classes || []), cls] }))} />
-                                {cls}
-                              </label>
-                            );
-                          })}
-                        </div>
-                      </div>
-                      <div className="sm:col-span-2 border border-border rounded-xl p-4 bg-background/30">
-                        <div className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-2">Time Slots</div>
-                        <div className="space-y-2">
-                          {(newCampaign.time_slots || []).map((slot, idx) => (
-                            <div key={idx} className="flex items-center gap-2">
-                              <input type="time" value={slot.from_time || ""} onChange={e => { const slots = [...(newCampaign.time_slots || [])]; slots[idx] = { ...slots[idx], from_time: e.target.value }; setNewCampaign({ ...newCampaign, time_slots: slots }); }} className="border border-border rounded-md px-2 py-1.5 bg-background text-xs flex-1" />
-                              <span className="text-xs text-muted-foreground">to</span>
-                              <input type="time" value={slot.to_time || ""} onChange={e => { const slots = [...(newCampaign.time_slots || [])]; slots[idx] = { ...slots[idx], to_time: e.target.value }; setNewCampaign({ ...newCampaign, time_slots: slots }); }} className="border border-border rounded-md px-2 py-1.5 bg-background text-xs flex-1" />
-                              <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer">
-                                <input type="checkbox" checked={slot.enabled !== false} onChange={e => { const slots = [...(newCampaign.time_slots || [])]; slots[idx] = { ...slots[idx], enabled: e.target.checked }; setNewCampaign({ ...newCampaign, time_slots: slots }); }} />
-                                Enabled
-                              </label>
-                              <button type="button" onClick={() => setNewCampaign({ ...newCampaign, time_slots: (newCampaign.time_slots || []).filter((_, i) => i !== idx) })} className="text-rose-500 hover:text-rose-600 text-xs px-2">Remove</button>
-                            </div>
-                          ))}
-                          <button type="button" onClick={() => setNewCampaign({ ...newCampaign, time_slots: [...(newCampaign.time_slots || []), { from_time: "09:00", to_time: "10:00", enabled: true }] })} className="text-xs text-primary hover:text-primary/80 font-medium">+ Add Time Slot</button>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <Input placeholder="Eligibility Criteria Parameters" value={newCampaign.eligibility} onChange={e=>setNewCampaign({...newCampaign, eligibility:e.target.value})} required data-testid="ncm-elig" className="rounded-xl border-border bg-background/50 text-foreground"/>
-                      <Input placeholder="Examination Date" value={newCampaign.exam_date} onChange={e=>setNewCampaign({...newCampaign, exam_date:e.target.value})} required data-testid="ncm-exam" className="rounded-xl border-border bg-background/50 text-foreground font-mono"/>
-                      <Input placeholder="Lock Expiration Deadline" value={newCampaign.deadline} onChange={e=>setNewCampaign({...newCampaign, deadline:e.target.value})} required data-testid="ncm-dead" className="rounded-xl border-border bg-background/50 text-foreground font-mono"/>
-                      <Input placeholder="Execution Time Grid" value={newCampaign.exam_time} onChange={e=>setNewCampaign({...newCampaign, exam_time:e.target.value})} data-testid="ncm-time" className="rounded-xl border-border bg-background/50 text-foreground font-mono"/>
-                      <Input placeholder="Total marks value" type="number" value={newCampaign.total_marks} onChange={e=>setNewCampaign({...newCampaign, total_marks:Number(e.target.value)})} data-testid="ncm-marks" className="rounded-xl border-border bg-background/50 text-foreground font-mono"/>
-                      <Input placeholder="WhatsApp Community Endpoint URL" value={newCampaign.whatsapp_community_url} onChange={e=>setNewCampaign({...newCampaign, whatsapp_community_url:e.target.value})} className="sm:col-span-2 rounded-xl border-border bg-background/50 text-foreground" data-testid="ncm-wa"/>
-                      <div className="sm:col-span-2">
-                        <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Authorized Running Venues</label>
-                        <div className="flex flex-wrap gap-2 glass rounded-xl p-2.5 bg-background/50 border border-border">
-                          {centers.map((c) => {
-                            const checked = newCampaign.available_venues.includes(c.name);
-                            return (
-                              <label key={c.id} className={`text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg border cursor-pointer select-none transition ${checked ? "bg-primary text-primary-foreground border-primary shadow-md" : "border-border text-muted-foreground hover:bg-muted/50"}`} data-testid={`ncm-venue-${c.id}`}>
-                                <input type="checkbox" className="hidden" checked={checked} onChange={() => {
-                                  setNewCampaign(prev => ({...prev, available_venues: checked ? prev.available_venues.filter(v=>v!==c.name) : [...prev.available_venues, c.name]}));
-                                }}/>
-                                {c.name}
-                              </label>
-                            );
-                          })}
-                        </div>
-                      </div>
-                      <textarea className="sm:col-span-2 border border-border rounded-xl px-3 py-2 bg-background/50 text-sm focus:outline-none focus:border-accent text-foreground min-h-20 resize-none" placeholder="Description data string..." value={newCampaign.description} onChange={e=>setNewCampaign({...newCampaign, description:e.target.value})} required data-testid="ncm-desc"/>
-                    </>
-                  )}
-                  <label className="sm:col-span-2 text-sm flex items-center gap-2 text-muted-foreground select-none cursor-pointer font-medium"><input type="checkbox" checked={newCampaign.active} onChange={e=>setNewCampaign({...newCampaign, active:e.target.checked})} className="accent-primary"/>Flag project as active status</label>
-                  <Button type="submit" className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2 cursor-pointer"><Plus size={14} className="mr-1.5"/>Launch Test Campaign</Button>
-                </form>
+                <CampaignForm onSubmit={(data) => post("/scholarships", data, () => setNewCampaign({title:"",description:"",exam_date:"",deadline:"",eligibility:"",venue:"",available_venues:[],whatsapp_community_url:"",exam_time:"10:00 AM",total_marks:100,active:true,is_featured:false,type:"general",start_date:"",end_date:"",eligible_classes:[],time_slots:[]}), "Campaign")} centers={centers} />
                 
                 {filteredCampaigns.length === 0 ? (
                   <EmptyState />

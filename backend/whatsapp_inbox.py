@@ -70,7 +70,7 @@ def _cfg(key: str) -> str:
     return v
 
 
-def build_whatsapp_router(db, require_super_admin_dep) -> APIRouter:
+def build_whatsapp_router(db, require_super_admin_dep, on_inbound=None) -> APIRouter:
     """Attach the WhatsApp routes to an APIRouter mounted at /api."""
     router = APIRouter()
 
@@ -210,6 +210,15 @@ def build_whatsapp_router(db, require_super_admin_dep) -> APIRouter:
             "created_at": now_iso(),
         }
         await db.wa_messages.insert_one(doc)
+        if on_inbound is not None:
+            asyncio.create_task(on_inbound({
+                "wa_id": wa_id,
+                "message_id": wa_msg_id,
+                "thread_id": thread["id"],
+                "type": msg.get("type", "text"),
+                "preview": preview,
+                "wa_timestamp": msg_ts,
+            }))
 
     _STATUS_ORDER = {"failed": -1, "accepted": 0, "sent": 1, "delivered": 2, "read": 3, "received": 0}
 
