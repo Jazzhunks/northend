@@ -237,6 +237,18 @@ export const scholarshipsAPI = {
     }).then(resData),
 };
 
+export const schoolsAPI = {
+  uploadStudents: (scholarshipId, formData) =>
+    api.post(`/school/upload-students?scholarship_id=${encodeURIComponent(scholarshipId)}`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }).then(resData),
+  requestVisit: (data) => api.post("/school/visit-request", data).then(resData),
+  myVisits: () => api.get("/school/my-visits").then(resData),
+  listVisitsAdmin: (params = {}) => api.get("/admin/school-visits", { params }).then(resData),
+  updateVisit: (visitId, data) => api.put(`/admin/school-visits/${visitId}`, data).then(resData),
+  checkDateAvailability: (date) => api.get(`/admin/school-visits/availability?date=${encodeURIComponent(date)}`).then(resData),
+};
+
 export const scholarshipApplicationsAPI = {
   apply: (data) => api.post("/scholarship-applications", data).then(resData),
   listAdmin: () => api.get("/scholarship-applications").then(resData),

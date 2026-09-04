@@ -20,6 +20,8 @@ import Register from "@/pages/Register";
 import StudentDashboard from "@/pages/StudentDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
 import ScholarshipDashboard from "@/pages/ScholarshipDashboard";
+import SchoolDashboard from "@/pages/SchoolDashboard";
+import AdminSchoolVisits from "@/pages/AdminSchoolVisits";
 import Examiner from "@/pages/Examiner";
 import Privacy from "@/pages/Privacy";
 import Gallery from "./pages/Gallery";
@@ -119,7 +121,9 @@ export default function App() {
 
             {/* Authenticated Student/Admin Profile Nodes */}
             <Route path="/dashboard" element={<Protected><StudentDashboard /></Protected>} />
+            <Route path="/school-dashboard" element={<Protected allowedRoles={["school"]}><SchoolDashboard /></Protected>} />
             <Route path="/admin" element={<Protected allowedRoles={["admin"]}><AdminDashboard /></Protected>} />
+            <Route path="/admin/school-visits" element={<Protected allowedRoles={["admin"]}><AdminSchoolVisits /></Protected>} />
             
             {/* Universal Fallback Direct Catch */}
             <Route path="*" element={<Navigate to="/" replace />} />

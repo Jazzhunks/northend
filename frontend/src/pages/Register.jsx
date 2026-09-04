@@ -7,21 +7,27 @@ import GlassPanel from "@/components/GlassPanel";
 import { CTAPrimary, Eyebrow } from "@/components/Cinematic";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import HeroScene, { HeroSceneFallback } from "@/components/three/HeroScene";
-import { User, EnvelopeSimple, Phone, Lock } from "@phosphor-icons/react";
+import { User, EnvelopeSimple, Phone, Lock, GraduationCap, MapPin } from "@phosphor-icons/react";
 
 export default function Register() {
   const { register, formatError } = useAuth();
   const nav = useNavigate();
   const isMobile = useIsMobile();
-  const [f, setF] = useState({ name:"", email:"", password:"", phone:"" });
+  const [accountType, setAccountType] = useState("student");
+  const [f, setF] = useState({ name:"", email:"", password:"", phone:"", school_name:"", address:"", district:"", school_type:"" });
   const [busy, setBusy] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault(); setBusy(true);
     try {
-      await register(f);
+      const payload = accountType === "school" ? { ...f } : { name: f.name, email: f.email, password: f.password, phone: f.phone };
+      await register(payload);
       toast.success("Account created!");
-      nav("/dashboard");
+      if (accountType === "school") {
+        nav("/school-dashboard");
+      } else {
+        nav("/dashboard");
+      }
     } catch (err) {
       toast.error(formatError(err.response?.data?.detail) || err.message);
     } finally { setBusy(false); }
@@ -55,6 +61,10 @@ export default function Register() {
               <h2 className="font-display text-3xl font-medium mt-2">Get started in 90s</h2>
             </div>
             <form onSubmit={submit} className="space-y-3">
+              <div className="grid grid-cols-2 gap-2 p-1 bg-muted/50 rounded-lg">
+                <button type="button" onClick={() => setAccountType("student")} className={`py-2 rounded-md text-sm font-medium transition ${accountType === "student" ? "bg-background shadow-sm" : "text-muted-foreground"}`}>Student</button>
+                <button type="button" onClick={() => setAccountType("school")} className={`py-2 rounded-md text-sm font-medium transition flex items-center justify-center gap-1 ${accountType === "school" ? "bg-background shadow-sm" : "text-muted-foreground"}`}><GraduationCap size={14}/> School</button>
+              </div>
               <div className="relative">
                 <User weight="duotone" size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"/>
                 <input className={inputCls} placeholder="Full name" value={f.name} onChange={e=>setF({...f, name: e.target.value})} required data-testid="reg-name"/>
@@ -71,6 +81,30 @@ export default function Register() {
                 <Lock weight="duotone" size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"/>
                 <input className={inputCls} type="password" placeholder="Password (min 6 chars)" minLength={6} value={f.password} onChange={e=>setF({...f, password: e.target.value})} required data-testid="reg-password"/>
               </div>
+
+              {accountType === "school" && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-3 pt-2 border-t border-border">
+                  <div className="relative">
+                    <GraduationCap weight="duotone" size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"/>
+                    <input className={inputCls} placeholder="School Name" value={f.school_name} onChange={e=>setF({...f, school_name: e.target.value})} required={accountType === "school"} data-testid="reg-school-name"/>
+                  </div>
+                  <div className="relative">
+                    <MapPin weight="duotone" size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"/>
+                    <input className={inputCls} placeholder="Address" value={f.address} onChange={e=>setF({...f, address: e.target.value})} data-testid="reg-address"/>
+                  </div>
+                  <div className="relative">
+                    <MapPin weight="duotone" size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"/>
+                    <input className={inputCls} placeholder="District" value={f.district} onChange={e=>setF({...f, district: e.target.value})} data-testid="reg-district"/>
+                  </div>
+                  <select className="w-full border border-border rounded-md px-3 py-3.5 bg-background text-sm" value={f.school_type} onChange={e=>setF({...f, school_type: e.target.value})} required={accountType === "school"} data-testid="reg-school-type">
+                    <option value="">School Type</option>
+                    <option value="middle">Middle</option>
+                    <option value="high">High</option>
+                    <option value="higher_secondary">Higher Secondary</option>
+                  </select>
+                </motion.div>
+              )}
+
               <div className="pt-2">
                 <CTAPrimary type="submit" className="w-full justify-center" data-testid="reg-submit" disabled={busy}>{busy ? "Creating…" : "Create account"}</CTAPrimary>
               </div>

@@ -19,6 +19,7 @@ import FileUpload from "@/components/FileUpload";
 import { usePaged, Paginator } from "@/components/Paginator";
 import WhatsAppInbox from "@/pages/WhatsAppInbox";
 import WATHManagement from "@/pages/WATHManagement";
+import AdminSchoolVisits from "@/pages/AdminSchoolVisits";
 
 const CATEGORIES = ["NEET", "IIT-JEE", "Foundation", "CBSE", "JKBOSE"];
 
@@ -82,6 +83,7 @@ const SIDE_NAV = [
   { id: "results", label: "Honors Deck", icon: Trophy },
   { id: "campaigns", label: "Campaigns", icon: Megaphone },
   { id: "inquiries", label: "Inquiries", icon: HelpCircle },
+  { id: "school-visits", label: "School Visits", icon: Building2 },
   { id: "gallery", label: "Gallery", icon: Image },
   { id: "blog", label: "Blog", icon: FileText },
 ];
@@ -2168,6 +2170,10 @@ export default function AdminDashboard() {
                   </div>
                 )}
               </div>
+            )}
+
+            {activeTab === "school-visits" && (
+              <AdminSchoolVisits />
             )}
           </div>
         </main>

@@ -246,12 +246,21 @@ async def require_super_admin(user: dict = Depends(get_current_user)) -> dict:
         raise HTTPException(403, "Super admin access required")
     return user
 
+async def require_school(user: dict = Depends(get_current_user)) -> dict:
+    if user.get("role") != "school":
+        raise HTTPException(403, "School access required")
+    return user
+
 # ---------- Models ----------
 class RegisterIn(BaseModel):
     name: str
     email: EmailStr
     password: str
     phone: Optional[str] = None
+    school_name: Optional[str] = None
+    address: Optional[str] = None
+    district: Optional[str] = None
+    school_type: Optional[Literal["middle", "high", "higher_secondary"]] = None
 
 class LoginIn(BaseModel):
     email: EmailStr
@@ -333,6 +342,35 @@ class ScholarshipResultIn(BaseModel):
 class ScholarshipLookupIn(BaseModel):
     phone: str
     application_no: str
+
+class SchoolVisitIn(BaseModel):
+    scholarship_id: str
+    preferred_date: str
+    preferred_slot_time: str
+    notes: Optional[str] = None
+
+class SchoolVisitOut(BaseModel):
+    id: str
+    school_id: str
+    school_name: str
+    scholarship_id: str
+    preferred_date: str
+    preferred_slot_time: str
+    status: Literal["pending", "approved", "rejected"] = "pending"
+    admin_notes: Optional[str] = None
+    created_at: str
+
+class SchoolBulkStudentRow(BaseModel):
+    name: str
+    mobile: str
+    current_class: str
+    course: str
+
+class SchoolBulkRegisterResult(BaseModel):
+    processed: int
+    created: int
+    skipped: int
+    errors: List[str] = []
 
 class AttendanceMarkIn(BaseModel):
     token: str
@@ -451,14 +489,22 @@ async def register(payload: RegisterIn, response: Response):
     if await db.users.find_one({"email": email}):
         raise HTTPException(400, "Email already registered")
     user_id = new_id()
+    role = "school" if payload.school_name else "student"
     doc = {
         "id": user_id, "name": payload.name, "email": email,
-        "phone": payload.phone, "role": "student",
+        "phone": payload.phone, "role": role,
         "password_hash": hash_password(payload.password),
         "created_at": now_iso(),
     }
+    if role == "school":
+        doc.update({
+            "school_name": payload.school_name,
+            "address": payload.address,
+            "district": payload.district,
+            "school_type": payload.school_type,
+        })
     await db.users.insert_one(doc)
-    access = create_access_token(user_id, email, "student")
+    access = create_access_token(user_id, email, role)
     refresh = create_refresh_token(user_id)
     set_auth_cookies(response, access, refresh)
     doc.pop("password_hash")
@@ -704,6 +750,7 @@ async def apply_scholarship(payload: ScholarshipApplicationIn, background: Backg
     doc["email"] = clean_email
     doc["phone"] = clean_phone
     doc["campaign_kind"] = campaign_kind
+    doc["source"] = "self"
 
     for _ in range(10):
         candidate = str(random.randint(10000000, 99999999))
@@ -1013,6 +1060,224 @@ async def lookup_scholarship(payload: ScholarshipLookupIn):
         for k in ("result_marks_obtained", "result_total_marks", "result_rank", "result_percentile", "result_scholarship_percentage", "result_remarks"):
             app_doc.pop(k, None)
     return app_doc
+
+# ---------- School helpers ----------
+
+def _parse_school_excel(file_bytes: bytes) -> List[dict]:
+    wb = openpyxl.load_workbook(io.BytesIO(file_bytes))
+    ws = wb.active
+    headers = [str((c.value or "").strip()).lower() for c in ws[1]]
+    required = {"name", "mobile", "current class", "course"}
+    missing = required - set(headers)
+    if missing:
+        raise HTTPException(status_code=400, detail=f"Missing required columns: {', '.join(sorted(missing))}")
+    name_idx = headers.index("name")
+    mobile_idx = headers.index("mobile")
+    class_idx = headers.index("current class")
+    course_idx = headers.index("course")
+    ALLOWED_CLASSES = {"7th class", "8th class", "9th class", "10th class", "11th class", "12th class"}
+    ALLOWED_COURSES = {"foundation", "neet", "iit jee"}
+    rows = []
+    errors = []
+    for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+        if all(v is None or str(v).strip() == "" for v in row):
+            continue
+        name = str(row[name_idx] or "").strip()
+        mobile = str(row[mobile_idx] or "").strip()
+        cur_class = str(row[class_idx] or "").strip().lower()
+        course = str(row[course_idx] or "").strip().lower()
+        if not name or not mobile or not cur_class or not course:
+            errors.append(f"Row {i}: missing required values")
+            continue
+        if cur_class not in ALLOWED_CLASSES:
+            errors.append(f"Row {i}: invalid class '{row[class_idx]}'")
+            continue
+        if course not in ALLOWED_COURSES:
+            errors.append(f"Row {i}: invalid course '{row[course_idx]}'")
+            continue
+        rows.append({
+            "name": name,
+            "mobile": mobile,
+            "current_class": cur_class.title(),
+            "course": course.title() if course != "iit jee" else "IIT JEE",
+        })
+    return rows, errors
+
+# ---------- School routes ----------
+
+@api.post("/school/register")
+async def school_register(payload: RegisterIn, response: Response):
+    if not payload.school_name:
+        raise HTTPException(400, "school_name is required for school registration")
+    return await register(payload, response)
+
+async def _get_school_visit_or_404(visit_id: str):
+    visit = await db.school_visits.find_one({"id": visit_id}, {"_id": 0})
+    if not visit:
+        raise HTTPException(404, "Visit request not found")
+    return visit
+
+@api.post("/school/upload-students")
+async def school_upload_students(
+    scholarship_id: str = Form(...),
+    file: UploadFile = File(...),
+    school: dict = Depends(require_school),
+):
+    if not file.filename.endswith(".xlsx"):
+        raise HTTPException(400, "Only .xlsx files are allowed")
+    contents = await file.read()
+    if len(contents) > 5 * 1024 * 1024:
+        raise HTTPException(400, "File size must be under 5MB")
+    try:
+        rows, parse_errors = _parse_school_excel(contents)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, f"Failed to parse Excel: {e}")
+    if len(rows) > 500:
+        raise HTTPException(400, "Maximum 500 student rows allowed per upload")
+    campaign = await db.scholarships.find_one({"id": scholarship_id}, {"_id": 0})
+    if not campaign:
+        raise HTTPException(404, "Scholarship campaign not found")
+    if not campaign.get("active"):
+        raise HTTPException(400, "Scholarship campaign is closed")
+    created = 0
+    skipped = 0
+    for row in rows:
+        dup_query = {"$or": [{"email": row["mobile"] + "@school.local"}, {"phone": row["mobile"]}]}
+        dup_query["scholarship_id"] = scholarship_id
+        existing = await db.scholarship_applications.find_one(dup_query)
+        if existing:
+            skipped += 1
+            continue
+        student_doc = {
+            "id": new_id(),
+            "name": row["name"],
+            "email": f"{row['mobile']}@school.local",
+            "phone": row["mobile"],
+            "school": school.get("school_name") or school.get("name") or "",
+            "standard": row["current_class"],
+            "target_exam": row["course"],
+            "city": school.get("district") or "",
+            "scholarship_id": scholarship_id,
+            "venue": campaign.get("available_venues", ["90 FT"])[0] if campaign.get("available_venues") else "90 FT",
+            "address": school.get("address"),
+            "district": school.get("district"),
+            "source": "school",
+            "school_id": school.get("id"),
+            "school_name": school.get("school_name") or school.get("name") or "",
+            "campaign_kind": "scholarship",
+            "status": "pending",
+            "scholarship_title": campaign.get("title", ""),
+            "created_at": now_iso(),
+        }
+        for _ in range(10):
+            candidate = str(random.randint(10000000, 99999999))
+            if not await db.scholarship_applications.find_one({"application_no": candidate}):
+                student_doc["application_no"] = candidate
+                break
+        else:
+            student_doc["application_no"] = str(int(datetime.now(timezone.utc).timestamp() * 1000))[-8:]
+        await db.scholarship_applications.insert_one(student_doc)
+        created += 1
+    return SchoolBulkRegisterResult(
+        processed=len(rows),
+        created=created,
+        skipped=skipped,
+        errors=parse_errors,
+    ).model_dump()
+
+@api.post("/school/visit-request")
+async def school_visit_request(payload: SchoolVisitIn, school: dict = Depends(require_school)):
+    try:
+        pref_date = datetime.strptime(payload.preferred_date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(400, "Invalid date format. Use YYYY-MM-DD")
+    today = datetime.now(timezone.utc).date()
+    if pref_date <= today:
+        raise HTTPException(400, "Preferred date must be in the future")
+    campaign = await db.scholarships.find_one({"id": payload.scholarship_id}, {"_id": 0})
+    if not campaign:
+        raise HTTPException(404, "Scholarship campaign not found")
+    existing = await db.school_visits.find_one({"school_id": school["id"], "scholarship_id": payload.scholarship_id})
+    if existing:
+        raise HTTPException(400, "You have already submitted a visit request for this campaign")
+    count = await db.school_visits.count_documents({
+        "preferred_date": payload.preferred_date,
+        "status": {"$in": ["pending", "approved"]},
+    })
+    if count >= 2:
+        raise HTTPException(400, "This date already has 2 schools scheduled. Please choose another date")
+    visit = {
+        "id": new_id(),
+        "school_id": school["id"],
+        "school_name": school.get("school_name") or school.get("name") or "",
+        "scholarship_id": payload.scholarship_id,
+        "preferred_date": payload.preferred_date,
+        "preferred_slot_time": payload.preferred_slot_time,
+        "status": "pending",
+        "admin_notes": payload.notes or "",
+        "created_at": now_iso(),
+    }
+    await db.school_visits.insert_one(visit)
+    visit.pop("_id", None)
+    return visit
+
+@api.get("/school/my-visits")
+async def school_my_visits(school: dict = Depends(require_school)):
+    visits = await db.school_visits.find({"school_id": school["id"]}, {"_id": 0}).sort("created_at", -1).to_list(None)
+    for v in visits:
+        v.setdefault("admin_notes", "")
+    return visits
+
+@api.get("/admin/school-visits")
+async def admin_list_school_visits(
+    status: Optional[str] = Query(None),
+    date: Optional[str] = Query(None),
+    _admin = Depends(require_admin),
+):
+    q: Dict[str, Any] = {}
+    if status:
+        q["status"] = status
+    if date:
+        q["preferred_date"] = date
+    visits = await db.school_visits.find(q, {"_id": 0}).sort("created_at", -1).to_list(None)
+    for v in visits:
+        v.setdefault("admin_notes", "")
+    return visits
+
+@api.put("/admin/school-visits/{visit_id}")
+async def admin_update_school_visit(
+    visit_id: str,
+    payload: Dict[str, Any],
+    _admin = Depends(require_admin),
+):
+    visit = await _get_school_visit_or_404(visit_id)
+    allowed_statuses = {"pending", "approved", "rejected"}
+    update_fields = {}
+    if "status" in payload:
+        if payload["status"] not in allowed_statuses:
+            raise HTTPException(400, "Invalid status")
+        update_fields["status"] = payload["status"]
+    if "admin_notes" in payload:
+        update_fields["admin_notes"] = payload.get("admin_notes") or ""
+    if not update_fields:
+        raise HTTPException(400, "No updatable fields provided")
+    await db.school_visits.update_one({"id": visit_id}, {"$set": update_fields})
+    updated = await _get_school_visit_or_404(visit_id)
+    return updated
+
+@api.get("/admin/school-visits/availability")
+async def admin_school_visit_availability(date: str = Query(...), _admin = Depends(require_admin)):
+    try:
+        datetime.strptime(date, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(400, "Invalid date format. Use YYYY-MM-DD")
+    count = await db.school_visits.count_documents({
+        "preferred_date": date,
+        "status": {"$in": ["pending", "approved"]},
+    })
+    return {"date": date, "current_count": count, "max": 2, "available": count < 2}
 
 # ---------- Attendance (token-based, no login) ----------
 async def _campaign_by_token(token: str):

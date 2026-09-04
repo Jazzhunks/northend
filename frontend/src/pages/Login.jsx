@@ -107,6 +107,10 @@ export default function Login() {
         nav("/erp");
         return;
       }
+      if (u.role === "school") {
+        nav("/school-dashboard");
+        return;
+      }
       nav(u.role === "admin" ? "/admin" : "/dashboard");
     } catch (err) {
       clearTimeout(timeoutId);
