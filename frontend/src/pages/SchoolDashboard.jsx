@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import GlassPanel from "@/components/GlassPanel";
 import { Eyebrow, Reveal } from "@/components/Cinematic";
 import {
-  Upload, Calendar, Clock, School, FileText, CheckCircle2, XCircle, Loader2, RefreshCw
+  Upload, Calendar, Clock, School, FileText, CheckCircle2, XCircle, Loader2, ArrowLeft, RefreshCw, Download
 } from "lucide-react";
 
 const ALLOWED_CLASSES = ["7th Class", "8th Class", "9th Class", "10th Class", "11th Class", "12th Class"];
@@ -25,6 +25,24 @@ export default function SchoolDashboard() {
   const [submittingVisit, setSubmittingVisit] = useState(false);
 
   const fileInputRef = useRef(null);
+
+  const handleDownloadTemplate = async () => {
+    try {
+      const response = await schoolsAPI.downloadTemplate();
+      const blob = new Blob([response], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "school_students_template.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("Template downloaded");
+    } catch (err) {
+      toast.error(formatError(err.response?.data?.detail) || err.message);
+    }
+  };
 
   useEffect(() => {
     api.get("/scholarships").then(r => {
@@ -147,6 +165,9 @@ export default function SchoolDashboard() {
                     {campaigns.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
                   </select>
                 </div>
+                <button type="button" onClick={handleDownloadTemplate} className="w-full border border-dashed border-border rounded-md px-4 py-3 text-sm text-muted-foreground hover:border-accent/50 transition flex items-center justify-center gap-2">
+                  <Download size={16} /> Download Template
+                </button>
                 <div>
                   <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Excel File</label>
                   <input ref={fileInputRef} type="file" accept=".xlsx" onChange={handleFileChange} className="hidden" />

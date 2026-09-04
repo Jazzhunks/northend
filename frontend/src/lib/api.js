@@ -247,6 +247,8 @@ export const schoolsAPI = {
   listVisitsAdmin: (params = {}) => api.get("/admin/school-visits", { params }).then(resData),
   updateVisit: (visitId, data) => api.put(`/admin/school-visits/${visitId}`, data).then(resData),
   checkDateAvailability: (date) => api.get(`/admin/school-visits/availability?date=${encodeURIComponent(date)}`).then(resData),
+  downloadTemplate: () => api.get("/school/upload-template", { responseType: "blob" }).then(resData),
+  listSchoolApplicationsAdmin: (params = {}) => api.get("/admin/school-applications", { params }).then(resData),
 };
 
 export const scholarshipApplicationsAPI = {

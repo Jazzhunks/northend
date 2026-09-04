@@ -1279,6 +1279,41 @@ async def admin_school_visit_availability(date: str = Query(...), _admin = Depen
     })
     return {"date": date, "current_count": count, "max": 2, "available": count < 2}
 
+@api.get("/school/upload-template")
+async def school_upload_template(school: dict = Depends(require_school)):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Students"
+    ws.append(["Name", "Mobile", "Current Class", "Course"])
+    ws.append(["Rahul Kumar", "9876543210", "10th Class", "NEET"])
+    ws.append(["Ayesha Singh", "9876543211", "12th Class", "IIT JEE"])
+    for col in ws.columns:
+        for cell in col:
+            if cell.value:
+                cell.font = openpyxl.styles.Font(bold=True)
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="school_students_template.xlsx"'}
+    )
+
+@api.get("/admin/school-applications")
+async def admin_list_school_applications(
+    scholarship_id: Optional[str] = Query(None),
+    school_id: Optional[str] = Query(None),
+    _admin = Depends(require_admin),
+):
+    q: Dict[str, Any] = {"source": "school"}
+    if scholarship_id:
+        q["scholarship_id"] = scholarship_id
+    if school_id:
+        q["school_id"] = school_id
+    rows = await db.scholarship_applications.find(q, {"_id": 0}).sort("created_at", -1).to_list(None)
+    return rows
+
 # ---------- Attendance (token-based, no login) ----------
 async def _campaign_by_token(token: str):
     if not token:

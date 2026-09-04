@@ -96,6 +96,8 @@ function Navbar() {
             <>
               {user.role === "admin" ? (
                 <Link to="/admin" data-testid="admin-btn" className="text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-full border border-primary/30 hover:bg-primary/10 text-primary transition">Admin</Link>
+              ) : user.role === "school" ? (
+                <Link to="/school-dashboard" data-testid="dashboard-btn" className="text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-full border border-primary/30 hover:bg-primary/10 text-primary transition">School Dashboard</Link>
               ) : (
                 <Link to="/dashboard" data-testid="dashboard-btn" className="text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-full border border-primary/30 hover:bg-primary/10 text-primary transition">Dashboard</Link>
               )}
@@ -146,7 +148,7 @@ function Navbar() {
               <div className="flex gap-2 pt-3 mt-2 border-t border-border">
                 {user ? (
                   <>
-                    <Link className="flex-1" to={user.role === "admin" ? "/admin" : "/dashboard"}><div className="w-full text-center px-4 py-2.5 rounded-xl border border-primary/30 text-xs font-bold text-primary">{user.role === "admin" ? "Admin" : "Dashboard"}</div></Link>
+                    <Link className="flex-1" to={user.role === "admin" ? "/admin" : user.role === "school" ? "/school-dashboard" : "/dashboard"}><div className="w-full text-center px-4 py-2.5 rounded-xl border border-primary/30 text-xs font-bold text-primary">{user.role === "admin" ? "Admin" : user.role === "school" ? "School Dashboard" : "Dashboard"}</div></Link>
                     <button onClick={logout} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-xs font-bold text-foreground">Logout</button>
                   </>
                 ) : (
