@@ -347,6 +347,22 @@ export default function AdminDashboard() {
 
   useEffect(() => { load(); }, []);
 
+  useEffect(() => {
+    const root = document.querySelector("[data-admin-dashboard-host]") || document.querySelector(".fixed.inset-0.isolate");
+    if (!root) return;
+    const observer = new MutationObserver(() => {
+      root.removeAttribute("aria-hidden");
+      root.removeAttribute("data-aria-hidden");
+      (root.querySelectorAll("[aria-hidden='true']") || []).forEach(el => {
+        if (el.id === "notification-bell" || el.closest("button")) return;
+        el.removeAttribute("aria-hidden");
+        el.removeAttribute("data-aria-hidden");
+      });
+    });
+    observer.observe(root, { attributes: true, attributeFilter: ["aria-hidden", "data-aria-hidden"], subtree: true });
+    return () => observer.disconnect();
+  }, []);
+
   const searchMatch = (obj, fields) => {
     if (!innerSearch.trim()) return true;
     const term = innerSearch.toLowerCase();
