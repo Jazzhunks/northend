@@ -296,6 +296,12 @@ class ScholarshipIn(BaseModel):
     is_featured: bool = False
     kind: Literal["scholarship", "wath"] = "scholarship"
     type: Literal["general", "school"] = "general"
+    school_visit_slots: List[Dict[str, Any]] = []
+
+class SchoolVisitSlot(BaseModel):
+    date: str
+    time: str
+    max_schools: int = 2
 
 class ScholarshipApplicationIn(BaseModel):
     name: str
@@ -1208,12 +1214,20 @@ async def school_visit_request(payload: SchoolVisitIn, school: dict = Depends(re
     existing = await db.school_visits.find_one({"school_id": school["id"], "scholarship_id": payload.scholarship_id})
     if existing:
         raise HTTPException(400, "You have already submitted a visit request for this campaign")
+    slots = campaign.get("school_visit_slots") or []
+    if slots:
+        slot_match = next((s for s in slots if s.get("date") == payload.preferred_date and s.get("time") == payload.preferred_slot_time), None)
+        if not slot_match:
+            raise HTTPException(400, "The selected date/time is not available. Please choose from the available slots.")
+        max_allowed = int(slot_match.get("max_schools") or 2)
+    else:
+        max_allowed = 2
     count = await db.school_visits.count_documents({
         "preferred_date": payload.preferred_date,
         "status": {"$in": ["pending", "approved"]},
     })
-    if count >= 2:
-        raise HTTPException(400, "This date already has 2 schools scheduled. Please choose another date")
+    if count >= max_allowed:
+        raise HTTPException(400, "This date already has the maximum number of schools scheduled. Please choose another date")
     visit = {
         "id": new_id(),
         "school_id": school["id"],

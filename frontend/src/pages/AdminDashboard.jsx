@@ -2160,6 +2160,22 @@ export default function AdminDashboard() {
                     <option value="general">General</option>
                     <option value="school">School</option>
                   </select>
+                  {newCampaign.type === "school" && (
+                    <div className="sm:col-span-2 border border-border rounded-xl p-4 bg-background/30">
+                      <div className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-2">School Visit Slots</div>
+                      <div className="space-y-2">
+                        {(newCampaign.school_visit_slots || []).map((slot, idx) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            <input type="date" value={slot.date} onChange={e => { const slots = [...(newCampaign.school_visit_slots || [])]; slots[idx] = { ...slots[idx], date: e.target.value }; setNewCampaign({ ...newCampaign, school_visit_slots: slots }); }} className="border border-border rounded-md px-2 py-1.5 bg-background text-xs flex-1" />
+                            <input type="time" value={slot.time} onChange={e => { const slots = [...(newCampaign.school_visit_slots || [])]; slots[idx] = { ...slots[idx], time: e.target.value }; setNewCampaign({ ...newCampaign, school_visit_slots: slots }); }} className="border border-border rounded-md px-2 py-1.5 bg-background text-xs flex-1" />
+                            <input type="number" value={slot.max_schools || 2} onChange={e => { const slots = [...(newCampaign.school_visit_slots || [])]; slots[idx] = { ...slots[idx], max_schools: Number(e.target.value) }; setNewCampaign({ ...newCampaign, school_visit_slots: slots }); }} className="border border-border rounded-md px-2 py-1.5 bg-background text-xs w-20" min={1} max={10} />
+                            <button type="button" onClick={() => setNewCampaign({ ...newCampaign, school_visit_slots: (newCampaign.school_visit_slots || []).filter((_, i) => i !== idx) })} className="text-rose-500 hover:text-rose-600 text-xs px-2">Remove</button>
+                          </div>
+                        ))}
+                        <button type="button" onClick={() => setNewCampaign({ ...newCampaign, school_visit_slots: [...(newCampaign.school_visit_slots || []), { date: "", time: "10:00 AM", max_schools: 2 }] })} className="text-xs text-primary hover:text-primary/80 font-medium">+ Add Slot</button>
+                      </div>
+                    </div>
+                  )}
                   <Input placeholder="WhatsApp Community Endpoint URL" value={newCampaign.whatsapp_community_url} onChange={e=>setNewCampaign({...newCampaign, whatsapp_community_url:e.target.value})} className="sm:col-span-2 rounded-xl border-border bg-background/50 text-foreground" data-testid="ncm-wa"/>
                   <div className="sm:col-span-2">
                     <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Authorized Running Venues</label>

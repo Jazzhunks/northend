@@ -23,6 +23,8 @@ export default function SchoolDashboard() {
   const [loadingVisits, setLoadingVisits] = useState(false);
   const [visitForm, setVisitForm] = useState({ preferred_date: "", preferred_slot_time: "", notes: "" });
   const [submittingVisit, setSubmittingVisit] = useState(false);
+  const [availableSlots, setAvailableSlots] = useState([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
 
   const fileInputRef = useRef(null);
 
@@ -55,6 +57,21 @@ export default function SchoolDashboard() {
   useEffect(() => {
     loadVisits();
   }, []);
+
+  useEffect(() => {
+    if (!selectedCampaign) {
+      setAvailableSlots([]);
+      return;
+    }
+    setLoadingSlots(true);
+    api.get(`/scholarships/${selectedCampaign}`)
+      .then(r => {
+        const slots = (r.data && r.data.school_visit_slots) ? r.data.school_visit_slots.filter(s => s && s.date && s.time) : [];
+        setAvailableSlots(slots);
+      })
+      .catch(() => setAvailableSlots([]))
+      .finally(() => setLoadingSlots(false));
+  }, [selectedCampaign]);
 
   const loadVisits = async () => {
     setLoadingVisits(true);
@@ -134,7 +151,6 @@ export default function SchoolDashboard() {
 
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
-  const minDate = tomorrow.toISOString().split("T")[0];
 
   return (
     <div className="relative min-h-[calc(100vh-64px)]" data-testid="school-dashboard">
@@ -202,30 +218,42 @@ export default function SchoolDashboard() {
                 <h2 className="font-display text-2xl font-bold">Request Exam Visit</h2>
               </div>
               <p className="text-sm text-muted-foreground mb-4">Request our team to visit your school for the scholarship exam. Select a preferred date and time.</p>
-              <form onSubmit={handleVisitSubmit} className="space-y-3">
-                <div>
-                  <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Select Campaign</label>
-                  <select className="w-full border border-border rounded-md px-3 py-2.5 bg-background text-sm" value={selectedCampaign} onChange={e => setSelectedCampaign(e.target.value)}>
-                    <option value="">Select a campaign</option>
-                    {campaigns.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Preferred Date</label>
-                  <input type="date" min={minDate} value={visitForm.preferred_date} onChange={e => setVisitForm({...visitForm, preferred_date: e.target.value})} className="w-full border border-border rounded-md px-3 py-2.5 bg-background text-sm" required />
-                </div>
-                <div>
-                  <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Preferred Time Slot</label>
-                  <input type="time" value={visitForm.preferred_slot_time} onChange={e => setVisitForm({...visitForm, preferred_slot_time: e.target.value})} className="w-full border border-border rounded-md px-3 py-2.5 bg-background text-sm" required />
-                </div>
-                <div>
-                  <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Notes (optional)</label>
-                  <textarea value={visitForm.notes} onChange={e => setVisitForm({...visitForm, notes: e.target.value})} className="w-full border border-border rounded-md px-3 py-2.5 bg-background text-sm" rows={3} placeholder="Any special requirements..."></textarea>
-                </div>
-                <button type="submit" disabled={submittingVisit || !selectedCampaign} className="w-full bg-primary text-primary-foreground h-11 rounded-md font-medium flex items-center justify-center gap-2 disabled:opacity-50">
-                  {submittingVisit ? <><Loader2 size={16} className="animate-spin" /> Submitting...</> : <><Calendar size={16} /> Submit Request</>}
-                </button>
-              </form>
+               <form onSubmit={handleVisitSubmit} className="space-y-3">
+                 <div>
+                   <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Select Campaign</label>
+                   <select className="w-full border border-border rounded-md px-3 py-2.5 bg-background text-sm" value={selectedCampaign} onChange={e => setSelectedCampaign(e.target.value)}>
+                     <option value="">Select a campaign</option>
+                     {campaigns.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                   </select>
+                 </div>
+                 <div>
+                   <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Available Visit Slots</label>
+                   {loadingSlots ? (
+                     <div className="text-sm text-muted-foreground">Loading slots...</div>
+                   ) : availableSlots.length === 0 ? (
+                     <div className="text-sm text-rose-500">No visit slots configured for this campaign yet. Please contact admin.</div>
+                   ) : (
+                     <div className="space-y-2">
+                       {availableSlots.map((slot, idx) => (
+                         <label key={idx} className={`flex items-center justify-between border rounded-md px-3 py-2.5 cursor-pointer transition ${visitForm.preferred_date === slot.date && visitForm.preferred_slot_time === slot.time ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}>
+                           <div className="flex items-center gap-2">
+                             <input type="radio" name="visit-slot" className="accent-primary" checked={visitForm.preferred_date === slot.date && visitForm.preferred_slot_time === slot.time} onChange={() => setVisitForm({ ...visitForm, preferred_date: slot.date, preferred_slot_time: slot.time })} />
+                             <span className="text-sm font-medium">{slot.date}</span>
+                           </div>
+                           <span className="text-xs text-muted-foreground">{slot.time}</span>
+                         </label>
+                       ))}
+                     </div>
+                   )}
+                 </div>
+                 <div>
+                   <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Notes (optional)</label>
+                   <textarea value={visitForm.notes} onChange={e => setVisitForm({...visitForm, notes: e.target.value})} className="w-full border border-border rounded-md px-3 py-2.5 bg-background text-sm" rows={3} placeholder="Any special requirements..."></textarea>
+                 </div>
+                 <button type="submit" disabled={submittingVisit || !selectedCampaign || !visitForm.preferred_date || !visitForm.preferred_slot_time} className="w-full bg-primary text-primary-foreground h-11 rounded-md font-medium flex items-center justify-center gap-2 disabled:opacity-50">
+                   {submittingVisit ? <><Loader2 size={16} className="animate-spin" /> Submitting...</> : <><Calendar size={16} /> Submit Request</>}
+                 </button>
+               </form>
             </GlassPanel>
           </Reveal>
         </div>
