@@ -32,6 +32,11 @@ const onTokenRefreshed = (token) => {
   refreshSubscribers = [];
 };
 
+const onTokenRefreshFailed = (err) => {
+  refreshSubscribers.forEach((cb) => cb(null, err));
+  refreshSubscribers = [];
+};
+
 // ============================================================================
 // REQUEST INTERCEPTOR: DYNAMIC TOKEN ATTACHMENT
 // ============================================================================
@@ -72,6 +77,10 @@ api.interceptors.response.use(
     if (status === 401) {
       const originalRequest = error.config;
 
+      if (!originalRequest.headers.Authorization) {
+        return Promise.reject(error);
+      }
+
       if (!isRefreshing) {
         isRefreshing = true;
         try {
@@ -83,6 +92,7 @@ api.interceptors.response.use(
           }
         } catch (refreshError) {
           localStorage.removeItem("nw_token");
+          onTokenRefreshFailed(refreshError);
           if (
             typeof window !== "undefined" &&
             !window.location.pathname.includes("/login") &&
@@ -96,10 +106,21 @@ api.interceptors.response.use(
         } finally {
           isRefreshing = false;
         }
+
+        const token = localStorage.getItem("nw_token");
+        if (token) {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return api(originalRequest);
+        }
+        return Promise.reject(error);
       }
 
       return new Promise((resolve, reject) => {
-        subscribeTokenRefresh((token) => {
+        subscribeTokenRefresh((token, err) => {
+          if (err) {
+            reject(err);
+            return;
+          }
           if (originalRequest) {
             originalRequest.headers.Authorization = `Bearer ${token}`;
             resolve(api(originalRequest));
