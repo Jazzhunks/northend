@@ -19,6 +19,7 @@ import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import StudentDashboard from "@/pages/StudentDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
+import CarnivalDashboard from "@/pages/CarnivalDashboard";
 import ScholarshipDashboard from "@/pages/ScholarshipDashboard";
 import SchoolDashboard from "@/pages/SchoolDashboard";
 import AdminSchoolVisits from "@/pages/AdminSchoolVisits";
@@ -124,6 +125,7 @@ export default function App() {
             <Route path="/school-dashboard" element={<Protected allowedRoles={["school"]}><SchoolDashboard /></Protected>} />
             <Route path="/admin" element={<Protected allowedRoles={["admin"]}><AdminDashboard /></Protected>} />
             <Route path="/admin/school-visits" element={<Protected allowedRoles={["admin"]}><AdminSchoolVisits /></Protected>} />
+            <Route path="/admin/carnivals/:id/dashboard" element={<Protected allowedRoles={["admin"]}><CarnivalDashboard /></Protected>} />
             
             {/* Universal Fallback Direct Catch */}
             <Route path="*" element={<Navigate to="/" replace />} />
