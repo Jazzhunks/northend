@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Bell, Info, CheckCircle2, AlertCircle, XCircle, MessageSquare, Trophy } from "lucide-react";
 import { toast } from "sonner";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { addNotification, getNotifications, markAsRead as storeMarkAsRead, markAllAsRead as storeMarkAllAsRead } from "@/lib/notificationStore";
@@ -163,9 +163,9 @@ export default function NotificationCenter() {
             <div className="flex items-center justify-between">
               <div>
                 <SheetTitle className="text-base font-bold">Notifications</SheetTitle>
-                <div className="text-xs text-muted-foreground">
+                <SheetDescription>
                   {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
-                </div>
+                </SheetDescription>
               </div>
               {unreadCount > 0 && (
                 <Button
