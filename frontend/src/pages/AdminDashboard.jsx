@@ -1094,7 +1094,7 @@ export default function AdminDashboard() {
   const [newCenter, setNewCenter] = useState({ name:"", city:"", address:"", phone:"", timing:"8:00 AM – 8:00 PM", lat:34.0837, lng:74.7973 });
   const [newTestimonial, setNewTestimonial] = useState({ name:"", role:"", quote:"" });
   const [newResult, setNewResult] = useState({ student_name:"", exam:"", rank:"", year:new Date().getFullYear(), course:"NEET", photo_url:"", quote:"" });
-  const [newCampaign, setNewCampaign] = useState({ title:"", description:"", exam_date:"", deadline:"", eligibility:"", venue:"", available_venues: [], whatsapp_community_url:"", exam_time:"10:00 AM", total_marks:100, active:true, is_featured:false, type:"general" });
+  const [newCampaign, setNewCampaign] = useState({ title:"", description:"", exam_date:"", deadline:"", eligibility:"", venue:"", available_venues: [], whatsapp_community_url:"", exam_time:"10:00 AM", total_marks:100, active:true, is_featured:false, type:"general", start_date:"", end_date:"", eligible_classes:[], time_slots:[] });
   const [newGallery, setNewGallery] = useState({ title:"", description:"", media_type:"image", media_url:"", category:"", order:0 });
   const [selectedGalleryCategory, setSelectedGalleryCategory] = useState("");
   const [editingGalleryId, setEditingGalleryId] = useState(null);
@@ -2149,7 +2149,7 @@ export default function AdminDashboard() {
             {activeTab === "campaigns" && (
               <div className="space-y-4 animate-fadeIn">
                 <div className="font-display font-bold text-xl text-foreground">Scholarship Campaigns Drivers</div>
-                <form onSubmit={(e)=>{e.preventDefault(); post("/scholarships", newCampaign, ()=>setNewCampaign({title:"",description:"",exam_date:"",deadline:"",eligibility:"",venue:"",available_venues:[],whatsapp_community_url:"",exam_time:"10:00 AM",total_marks:100,active:true,is_featured:false,type:"general"}), "Campaign");}} className="glass border border-border p-4 sm:p-5 rounded-2xl grid grid-cols-1 sm:grid-cols-2 gap-4 bg-background/20">
+                <form onSubmit={(e)=>{e.preventDefault(); post("/scholarships", newCampaign, ()=>setNewCampaign({title:"",description:"",exam_date:"",deadline:"",eligibility:"",venue:"",available_venues:[],whatsapp_community_url:"",exam_time:"10:00 AM",total_marks:100,active:true,is_featured:false,type:"general",start_date:"",end_date:"",eligible_classes:[],time_slots:[]}), "Campaign");}} className="glass border border-border p-4 sm:p-5 rounded-2xl grid grid-cols-1 sm:grid-cols-2 gap-4 bg-background/20">
                   <Input placeholder="Driver Name (e.g. NST 2026)" value={newCampaign.title} onChange={e=>setNewCampaign({...newCampaign, title:e.target.value})} required data-testid="ncm-title" className="rounded-xl border-border bg-background/50 text-foreground"/>
                   <Input placeholder="Eligibility Criteria Parameters" value={newCampaign.eligibility} onChange={e=>setNewCampaign({...newCampaign, eligibility:e.target.value})} required data-testid="ncm-elig" className="rounded-xl border-border bg-background/50 text-foreground"/>
                   <Input placeholder="Examination Date" value={newCampaign.exam_date} onChange={e=>setNewCampaign({...newCampaign, exam_date:e.target.value})} required data-testid="ncm-exam" className="rounded-xl border-border bg-background/50 text-foreground font-mono"/>
@@ -2160,6 +2160,52 @@ export default function AdminDashboard() {
                     <option value="general">General</option>
                     <option value="school">School</option>
                   </select>
+                  {newCampaign.type === "school" && (
+                    <>
+                      <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Campaign Start Date</label>
+                          <input type="date" value={newCampaign.start_date} onChange={e=>setNewCampaign({...newCampaign, start_date:e.target.value})} className="w-full border border-border rounded-xl px-3 py-2 bg-background text-sm" data-testid="ncm-start-date" />
+                        </div>
+                        <div>
+                          <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Campaign End Date</label>
+                          <input type="date" value={newCampaign.end_date} onChange={e=>setNewCampaign({...newCampaign, end_date:e.target.value})} className="w-full border border-border rounded-xl px-3 py-2 bg-background text-sm" data-testid="ncm-end-date" />
+                        </div>
+                      </div>
+                      <div className="sm:col-span-2 border border-border rounded-xl p-4 bg-background/30">
+                        <div className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-2">Eligible Classes</div>
+                        <div className="flex flex-wrap gap-2">
+                          {["ALL","7th Class","8th Class","9th Class","10th Class","11th Class","12th Class"].map(cls => {
+                            const checked = newCampaign.eligible_classes?.includes(cls);
+                            return (
+                              <label key={cls} className={`text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg border cursor-pointer select-none transition ${checked ? "bg-primary text-primary-foreground border-primary shadow-md" : "border-border text-muted-foreground hover:bg-muted/50"}`}>
+                                <input type="checkbox" className="hidden" checked={checked} onChange={() => setNewCampaign(prev => ({ ...prev, eligible_classes: checked ? (prev.eligible_classes || []).filter(c => c !== cls) : [...(prev.eligible_classes || []), cls] }))} />
+                                {cls}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div className="sm:col-span-2 border border-border rounded-xl p-4 bg-background/30">
+                        <div className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-2">Time Slots</div>
+                        <div className="space-y-2">
+                          {(newCampaign.time_slots || []).map((slot, idx) => (
+                            <div key={idx} className="flex items-center gap-2">
+                              <input type="time" value={slot.from_time || ""} onChange={e => { const slots = [...(newCampaign.time_slots || [])]; slots[idx] = { ...slots[idx], from_time: e.target.value }; setNewCampaign({ ...newCampaign, time_slots: slots }); }} className="border border-border rounded-md px-2 py-1.5 bg-background text-xs flex-1" />
+                              <span className="text-xs text-muted-foreground">to</span>
+                              <input type="time" value={slot.to_time || ""} onChange={e => { const slots = [...(newCampaign.time_slots || [])]; slots[idx] = { ...slots[idx], to_time: e.target.value }; setNewCampaign({ ...newCampaign, time_slots: slots }); }} className="border border-border rounded-md px-2 py-1.5 bg-background text-xs flex-1" />
+                              <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer">
+                                <input type="checkbox" checked={slot.enabled !== false} onChange={e => { const slots = [...(newCampaign.time_slots || [])]; slots[idx] = { ...slots[idx], enabled: e.target.checked }; setNewCampaign({ ...newCampaign, time_slots: slots }); }} />
+                                Enabled
+                              </label>
+                              <button type="button" onClick={() => setNewCampaign({ ...newCampaign, time_slots: (newCampaign.time_slots || []).filter((_, i) => i !== idx) })} className="text-rose-500 hover:text-rose-600 text-xs px-2">Remove</button>
+                            </div>
+                          ))}
+                          <button type="button" onClick={() => setNewCampaign({ ...newCampaign, time_slots: [...(newCampaign.time_slots || []), { from_time: "09:00", to_time: "10:00", enabled: true }] })} className="text-xs text-primary hover:text-primary/80 font-medium">+ Add Time Slot</button>
+                        </div>
+                      </div>
+                    </>
+                  )}
                   {newCampaign.type === "school" && (
                     <div className="sm:col-span-2 border border-border rounded-xl p-4 bg-background/30">
                       <div className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-2">School Visit Slots</div>
@@ -2211,8 +2257,16 @@ export default function AdminDashboard() {
                               {c.is_featured && <span className="text-[9px] uppercase font-bold tracking-widest bg-accent text-accent-foreground px-2 py-0.5 rounded">★ Top Showcase</span>}
                             </div>
                             <div className="font-bold text-foreground text-lg mt-1">{c.title}</div>
-                            <div className="text-xs text-muted-foreground mt-1">Slot: <span className="font-semibold text-foreground">{c.exam_date}</span> {c.exam_time ? `at ${c.exam_time}` : ""} · Expiration Lock: <span className="font-semibold text-foreground font-mono">{c.deadline}</span></div>
-                            {(c.available_venues || []).length > 0 && (
+                             <div className="text-xs text-muted-foreground mt-1">Slot: <span className="font-semibold text-foreground">{c.exam_date}</span> {c.exam_time ? `at ${c.exam_time}` : ""} · Expiration Lock: <span className="font-semibold text-foreground font-mono">{c.deadline}</span></div>
+                             {(c.start_date || c.end_date) && (
+                               <div className="text-xs text-muted-foreground mt-1">Campaign Duration: <span className="font-semibold text-foreground">{c.start_date || "..."}</span> → <span className="font-semibold text-foreground">{c.end_date || "..."}</span></div>
+                             )}
+                             {c.eligible_classes && c.eligible_classes.length > 0 && (
+                               <div className="flex flex-wrap gap-1 mt-1.5">
+                                 {c.eligible_classes.map(cls => <span key={cls} className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-medium">{cls}</span>)}
+                               </div>
+                             )}
+                             {(c.available_venues || []).length > 0 && (
                               <div className="flex flex-wrap gap-1 mt-2.5">
                                 {c.available_venues.map((v) => <span key={v} className="text-[10px] uppercase font-bold font-mono tracking-wider bg-muted/50 px-2.5 py-0.5 border border-border rounded text-muted-foreground">{v}</span>)}
                               </div>

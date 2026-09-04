@@ -63,15 +63,11 @@ export default function SchoolDashboard() {
       setAvailableSlots([]);
       return;
     }
-    setLoadingSlots(true);
-    api.get(`/scholarships/${selectedCampaign}`)
-      .then(r => {
-        const slots = (r.data && r.data.school_visit_slots) ? r.data.school_visit_slots.filter(s => s && s.date && s.time) : [];
-        setAvailableSlots(slots);
-      })
-      .catch(() => setAvailableSlots([]))
-      .finally(() => setLoadingSlots(false));
-  }, [selectedCampaign]);
+    const camp = campaigns.find(c => c.id === selectedCampaign);
+    const slots = (camp && camp.school_visit_slots) ? camp.school_visit_slots.filter(s => s && s.date && s.time) : [];
+    setAvailableSlots(slots);
+    setLoadingSlots(false);
+  }, [selectedCampaign, campaigns]);
 
   const loadVisits = async () => {
     setLoadingVisits(true);
@@ -180,8 +176,29 @@ export default function SchoolDashboard() {
                     <option value="">Select a campaign</option>
                     {campaigns.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
                   </select>
-                </div>
-                <button type="button" onClick={handleDownloadTemplate} className="w-full border border-dashed border-border rounded-md px-4 py-3 text-sm text-muted-foreground hover:border-accent/50 transition flex items-center justify-center gap-2">
+                 </div>
+                 {selectedCampaign && (() => {
+                   const camp = campaigns.find(c => c.id === selectedCampaign);
+                   if (!camp) return null;
+                   return (
+                     <div className="glass rounded-xl p-4 border border-border bg-background/30 space-y-2">
+                       <div className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground">Campaign Details</div>
+                       {(camp.start_date || camp.end_date) && (
+                         <div className="text-xs text-muted-foreground">
+                           Duration: {camp.start_date || "..."} → {camp.end_date || "..."}
+                         </div>
+                       )}
+                       {camp.eligible_classes && camp.eligible_classes.length > 0 && (
+                         <div className="flex flex-wrap gap-1">
+                           {camp.eligible_classes.map(cls => (
+                             <span key={cls} className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-medium">{cls}</span>
+                           ))}
+                         </div>
+                       )}
+                     </div>
+                   );
+                 })()}
+                 <button type="button" onClick={handleDownloadTemplate} className="w-full border border-dashed border-border rounded-md px-4 py-3 text-sm text-muted-foreground hover:border-accent/50 transition flex items-center justify-center gap-2">
                   <Download size={16} /> Download Template
                 </button>
                 <div>

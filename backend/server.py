@@ -108,6 +108,23 @@ def _sanitize_venue(venue: Optional[str]) -> str:
             
     return v_clean
 
+ALLOWED_SCHOOL_CLASSES = {"ALL","7th Class","8th Class","9th Class","10th Class","11th Class","12th Class"}
+
+def _validate_school_campaign(doc: Dict[str, Any]):
+    if doc.get("type") != "school":
+        return
+    if doc.get("start_date") and doc.get("end_date"):
+        if doc["end_date"] < doc["start_date"]:
+            raise HTTPException(400, "end_date must be after start_date")
+    if doc.get("eligible_classes"):
+        invalid = set(doc["eligible_classes"]) - ALLOWED_SCHOOL_CLASSES
+        if invalid:
+            raise HTTPException(400, f"Invalid eligible_classes: {', '.join(sorted(invalid))}")
+    if doc.get("time_slots"):
+        for idx, slot in enumerate(doc["time_slots"]):
+            if not slot.get("from_time") or not slot.get("to_time"):
+                raise HTTPException(400, f"time_slots[{idx}] must have from_time and to_time")
+
 async def _run_maybe_async(func, *args, **kwargs):
     """Run either an async or synchronous client function safely."""
     if inspect.iscoroutinefunction(func):
@@ -296,12 +313,16 @@ class ScholarshipIn(BaseModel):
     is_featured: bool = False
     kind: Literal["scholarship", "wath"] = "scholarship"
     type: Literal["general", "school"] = "general"
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    eligible_classes: List[str] = []
+    time_slots: List[Dict[str, Any]] = []
     school_visit_slots: List[Dict[str, Any]] = []
 
-class SchoolVisitSlot(BaseModel):
-    date: str
-    time: str
-    max_schools: int = 2
+class SchoolTimeSlot(BaseModel):
+    from_time: str
+    to_time: str
+    enabled: bool = True
 
 class ScholarshipApplicationIn(BaseModel):
     name: str
@@ -678,6 +699,7 @@ async def create_scholarship(payload: ScholarshipIn, _admin = Depends(require_ad
     if doc.get("available_venues"):
         doc["available_venues"] = [_sanitize_venue(v) for v in doc["available_venues"]]
     await db.scholarships.insert_one(doc)
+    _validate_school_campaign(doc)
     if doc.get("is_featured"):
         await _clear_featured_except("scholarships", doc["id"])
     doc.pop("_id", None)
@@ -690,6 +712,7 @@ async def update_scholarship(sid: str, payload: ScholarshipIn, _admin = Depends(
     if data.get("available_venues"):
         data["available_venues"] = [_sanitize_venue(v) for v in data["available_venues"]]
     await db.scholarships.update_one({"id": sid}, {"$set": data})
+    _validate_school_campaign(data)
     if data.get("is_featured"):
         await _clear_featured_except("scholarships", sid)
     return await db.scholarships.find_one({"id": sid}, {"_id": 0})
