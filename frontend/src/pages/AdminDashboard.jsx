@@ -640,9 +640,9 @@ export default function AdminDashboard() {
               <div className="text-[10px] uppercase tracking-[0.22em] text-accent font-bold">Northend Group</div>
               <div className="font-display text-lg sm:text-xl font-medium tracking-tight mt-0.5 text-foreground">Operations Engine</div>
             </div>
-            <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-muted-foreground p-1 hover:text-foreground">
-              <X size={20} />
-            </button>
+             <button type="button" onClick={() => setSidebarOpen(false)} className="lg:hidden text-muted-foreground p-1 hover:text-foreground cursor-pointer">
+               <X size={20} />
+             </button>
           </div>
           <div className="p-3 sm:p-4 border-b border-border bg-background/40">
             <div className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-bold">System Identity</div>
@@ -707,24 +707,24 @@ export default function AdminDashboard() {
           </div>
           
            <div className="flex items-center gap-2 w-full sm:w-auto">
-             <div className="relative w-full sm:w-80 shrink-0">
-               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"/>
-               <input 
-                 type="text"
-                 value={innerSearch}
-                 onChange={e => setInnerSearch(e.target.value)}
-                 placeholder="Search active tab records..."
-                 className="w-full pl-9 pr-8 py-2 border border-border bg-background/50 rounded-xl text-sm focus:outline-none focus:border-accent/40 transition text-foreground placeholder:text-muted-foreground/60"
-               />
-               {innerSearch && (
-                 <button onClick={() => setInnerSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                   <X size={14} />
-                 </button>
-               )}
-             </div>
-             <NotificationCenter />
-             <Button size="icon" variant="outline" onClick={load} disabled={loadingData} className="rounded-xl border-border shrink-0 hover:bg-muted/50 cursor-pointer">
-              <RefreshCw size={14} className={loadingData ? "animate-spin" : ""} />
+              <div className="relative flex-1 sm:w-80 sm:shrink-0 min-w-0">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"/>
+                <input 
+                  type="text"
+                  value={innerSearch}
+                  onChange={e => setInnerSearch(e.target.value)}
+                  placeholder="Search active tab records..."
+                  className="w-full pl-9 pr-8 py-2 border border-border bg-background/50 rounded-xl text-sm focus:outline-none focus:border-accent/40 transition text-foreground placeholder:text-muted-foreground/60"
+                />
+                {innerSearch && (
+                  <button type="button" onClick={() => setInnerSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+              <NotificationCenter />
+              <Button size="icon" variant="outline" onClick={load} disabled={loadingData} className="rounded-xl border-border shrink-0 hover:bg-muted/50 cursor-pointer">
+               <RefreshCw size={14} className={loadingData ? "animate-spin" : ""} />
             </Button>
           </div>
         </header>

@@ -229,11 +229,11 @@ function CarnivalEditor({ value, onClose, onSaved }) {
   const patchSlot = (di, si, patch) => patchDate(di, { slots: c.exam_dates[di].slots.map((s, idx) => idx === si ? { ...s, ...patch } : s) });
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 grid place-items-center p-4" onClick={onClose}>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] grid place-items-center p-4" onClick={onClose}>
       <motion.div initial={{ y: 24, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 24, opacity: 0 }} className="w-full max-w-3xl bg-background border border-white/10 rounded-2xl overflow-hidden max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()} data-testid="carnival-editor">
-        <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
+        <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between shrink-0 bg-background">
           <div className="font-medium">{isNew ? "New Carnival" : "Edit Carnival"}</div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/5"><XCircle size={16}/></button>
+          <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/5"><XCircle size={16}/></button>
         </div>
 
         <div className="p-5 space-y-4 overflow-y-auto flex-1">
@@ -345,34 +345,34 @@ function RegistrationsDrawer({ carnival, onClose }) {
   }, [regs]);
 
   const StatCard = ({ label, value, sub }) => (
-    <div className="glass border border-white/10 rounded-xl p-3 text-center flex flex-col justify-center min-h-[76px]">
+    <div className="glass border border-white/10 rounded-xl p-3 text-center flex flex-col justify-center min-h-[56px] sm:min-h-[76px]">
       <div className="text-[9px] uppercase tracking-[0.16em] text-muted-foreground font-bold leading-tight">{label}</div>
-      <div className="font-display text-xl sm:text-2xl font-medium text-foreground mt-1 leading-none">{value}</div>
+      <div className="font-display text-lg sm:text-2xl font-medium text-foreground mt-1 leading-none">{value}</div>
       {sub && <div className="text-[10px] text-muted-foreground mt-1">{sub}</div>}
     </div>
   );
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 grid place-items-center p-4" onClick={onClose}>
-      <motion.div initial={{ y: 24, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 24, opacity: 0 }} className="w-full max-w-5xl bg-background border border-white/10 rounded-2xl overflow-hidden max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()} data-testid="carnival-regs-drawer">
-        <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between shrink-0 bg-background">
-          <div>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] grid place-items-center p-3 sm:p-4" onClick={onClose}>
+      <motion.div initial={{ y: 24, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 24, opacity: 0 }} className="w-full max-w-5xl bg-background border border-white/10 rounded-2xl overflow-hidden max-h-[95vh] sm:max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()} data-testid="carnival-regs-drawer">
+        <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-white/10 flex items-center justify-between shrink-0 bg-background">
+          <div className="min-w-0">
             <div className="text-[10px] uppercase tracking-[0.22em] text-accent font-bold">WATH Carnival Dashboard</div>
-            <div className="font-medium text-sm mt-0.5">{carnival.title}</div>
+            <div className="font-medium text-sm mt-0.5 truncate">{carnival.title}</div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <div className="text-xs text-muted-foreground">{regs.length} registrations</div>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/5"><XCircle size={16}/></button>
+            <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/5 cursor-pointer"><XCircle size={16}/></button>
           </div>
         </div>
 
-        <div className="overflow-y-auto flex-1">
+        <div className="overflow-y-auto flex-1 overscroll-contain">
           {loading && <div className="p-6 text-center text-xs text-muted-foreground">Loading…</div>}
           {!loading && (
             <>
               {/* Summary stats */}
-              <div className="p-4 sm:p-6 space-y-5 border-b border-white/[0.06]" data-testid="carnival-dashboard-stats">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div className="p-3 sm:p-6 space-y-4 sm:space-y-5 border-b border-white/[0.06]" data-testid="carnival-dashboard-stats">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
                   <StatCard label="Registrations" value={stats.total}/>
                   <StatCard label="Total capacity" value={stats.totalCap}/>
                   <StatCard label="Overall fill" value={`${stats.pct}%`} sub={`${stats.total}/${stats.totalCap} seats`}/>
@@ -382,15 +382,15 @@ function RegistrationsDrawer({ carnival, onClose }) {
                 {/* Per-date fill */}
                 {stats.byDate.length > 0 && (
                   <div>
-                    <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold mb-2.5 flex items-center gap-1.5"><Calendar size={11}/> Fill by exam date</div>
-                    <div className="space-y-2">
+                    <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold mb-2 flex items-center gap-1.5"><Calendar size={11}/> Fill by exam date</div>
+                    <div className="space-y-1.5 sm:space-y-2">
                       {stats.byDate.map(d => (
-                        <div key={d.date} className="flex items-center gap-3" data-testid={`carnival-date-fill-${d.date}`}>
-                          <div className="text-xs w-24 shrink-0 text-foreground/80">{d.date}</div>
-                          <div className="flex-1 h-2.5 rounded-full bg-white/[0.06] overflow-hidden">
+                        <div key={d.date} className="flex items-center gap-2 sm:gap-3" data-testid={`carnival-date-fill-${d.date}`}>
+                          <div className="text-[11px] sm:text-xs w-20 sm:w-24 shrink-0 text-foreground/80 truncate">{d.date}</div>
+                          <div className="flex-1 h-2 rounded-full bg-white/[0.06] overflow-hidden">
                             <div className="h-full rounded-full bg-gradient-to-r from-primary to-accent" style={{ width: `${Math.min(100, d.pct)}%` }}/>
                           </div>
-                          <div className="text-[11px] font-mono text-muted-foreground w-24 text-right shrink-0">{d.count}/{d.cap} · {d.pct}%</div>
+                          <div className="text-[10px] sm:text-[11px] font-mono text-muted-foreground w-20 sm:w-24 text-right shrink-0">{d.count}/{d.cap} · {d.pct}%</div>
                         </div>
                       ))}
                     </div>
@@ -398,53 +398,53 @@ function RegistrationsDrawer({ carnival, onClose }) {
                 )}
 
                 {/* Venue + Class breakdown */}
-                <div className="grid sm:grid-cols-2 gap-x-8 gap-y-5">
+                <div className="grid sm:grid-cols-2 gap-3 sm:gap-x-8 sm:gap-y-5">
                   <div>
-                    <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold mb-2.5 flex items-center gap-1.5"><Users size={11}/> By venue</div>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold mb-1.5 sm:mb-2.5 flex items-center gap-1.5"><Users size={11}/> By venue</div>
+                    <div className="flex flex-wrap gap-1 sm:gap-1.5">
                       {stats.byVenue.length === 0 && <span className="text-[11px] text-muted-foreground">—</span>}
-                      {stats.byVenue.map(([v, n]) => <span key={v} className="text-[11px] px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/10 whitespace-nowrap">{v} <b className="text-accent ml-0.5">{n}</b></span>)}
+                      {stats.byVenue.map(([v, n]) => <span key={v} className="text-[11px] px-2 py-0.5 sm:py-1 rounded-md sm:rounded-lg bg-white/[0.04] border border-white/10 whitespace-nowrap">{v} <b className="text-accent ml-0.5">{n}</b></span>)}
                     </div>
                   </div>
                   <div>
-                    <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold mb-2.5 flex items-center gap-1.5"><GraduationCap size={11}/> By class</div>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold mb-1.5 sm:mb-2.5 flex items-center gap-1.5"><GraduationCap size={11}/> By class</div>
+                    <div className="flex flex-wrap gap-1 sm:gap-1.5">
                       {stats.byClass.length === 0 && <span className="text-[11px] text-muted-foreground">—</span>}
-                      {stats.byClass.map(([cl, n]) => <span key={cl} className="text-[11px] px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/10 whitespace-nowrap">{cl} <b className="text-accent ml-0.5">{n}</b></span>)}
+                      {stats.byClass.map(([cl, n]) => <span key={cl} className="text-[11px] px-2 py-0.5 sm:py-1 rounded-md sm:rounded-lg bg-white/[0.04] border border-white/10 whitespace-nowrap">{cl} <b className="text-accent ml-0.5">{n}</b></span>)}
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Registrant tables grouped by slot */}
-              {regs.length === 0 && <div className="p-8 text-center text-xs text-muted-foreground">No registrations yet</div>}
+              {regs.length === 0 && <div className="p-6 sm:p-8 text-center text-xs text-muted-foreground">No registrations yet</div>}
               {bySlot.map(grp => (
                 <div key={`${grp.date}|${grp.time}`} className="border-b border-white/[0.05]">
-                  <div className="px-5 py-2 bg-white/[0.02] text-[11px] uppercase tracking-[0.18em] font-bold text-muted-foreground flex items-center justify-between">
-                    <span className="inline-flex items-center gap-2"><Calendar size={11}/>{grp.date || "—"} · <Clock size={11}/>{grp.time || "—"}</span>
-                    <span>{grp.rows.length} students</span>
+                  <div className="px-3 sm:px-5 py-1.5 sm:py-2 bg-white/[0.02] text-[10px] sm:text-[11px] uppercase tracking-[0.16em] font-bold text-muted-foreground flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1.5 sm:gap-2 truncate"><Calendar size={11}/>{grp.date || "—"} · <Clock size={11}/>{grp.time || "—"}</span>
+                    <span className="shrink-0">{grp.rows.length} students</span>
                   </div>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-xs min-w-[640px]">
+                    <table className="w-full text-xs min-w-[480px] sm:min-w-[640px]">
                       <thead>
-                        <tr className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70">
-                          <th className="text-left px-5 py-2">App No</th>
-                          <th className="text-left px-5 py-2">Name</th>
-                          <th className="text-left px-5 py-2">Phone</th>
-                          <th className="text-left px-5 py-2">Class</th>
-                          <th className="text-left px-5 py-2">Venue</th>
-                          <th className="text-left px-5 py-2">Registered on</th>
+                        <tr className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70">
+                          <th className="text-left px-3 sm:px-5 py-1.5 sm:py-2">App No</th>
+                          <th className="text-left px-3 sm:px-5 py-1.5 sm:py-2">Name</th>
+                          <th className="text-left px-3 sm:px-5 py-1.5 sm:py-2">Phone</th>
+                          <th className="text-left px-3 sm:px-5 py-1.5 sm:py-2">Class</th>
+                          <th className="text-left px-3 sm:px-5 py-1.5 sm:py-2">Venue</th>
+                          <th className="text-left px-3 sm:px-5 py-1.5 sm:py-2">Registered on</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/[0.03]">
                         {grp.rows.map(r => (
                           <tr key={r.id} className="hover:bg-white/[0.02]">
-                            <td className="px-5 py-2 font-mono text-accent">{r.application_no}</td>
-                            <td className="px-5 py-2">{r.name}</td>
-                            <td className="px-5 py-2 text-muted-foreground">{r.phone}</td>
-                            <td className="px-5 py-2 text-muted-foreground">{r.standard || "—"}</td>
-                            <td className="px-5 py-2 text-muted-foreground">{r.venue || "—"}</td>
-                            <td className="px-5 py-2 text-muted-foreground font-mono">{fmtDate(r.created_at)}</td>
+                            <td className="px-3 sm:px-5 py-1.5 sm:py-2 font-mono text-accent">{r.application_no}</td>
+                            <td className="px-3 sm:px-5 py-1.5 sm:py-2">{r.name}</td>
+                            <td className="px-3 sm:px-5 py-1.5 sm:py-2 text-muted-foreground">{r.phone}</td>
+                            <td className="px-3 sm:px-5 py-1.5 sm:py-2 text-muted-foreground">{r.standard || "—"}</td>
+                            <td className="px-3 sm:px-5 py-1.5 sm:py-2 text-muted-foreground">{r.venue || "—"}</td>
+                            <td className="px-3 sm:px-5 py-1.5 sm:py-2 text-muted-foreground font-mono">{fmtDate(r.created_at)}</td>
                           </tr>
                         ))}
                       </tbody>
