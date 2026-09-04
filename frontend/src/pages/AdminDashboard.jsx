@@ -2150,17 +2150,12 @@ export default function AdminDashboard() {
               <div className="space-y-4 animate-fadeIn">
                 <div className="font-display font-bold text-xl text-foreground">Scholarship Campaigns Drivers</div>
                 <form onSubmit={(e)=>{e.preventDefault(); post("/scholarships", newCampaign, ()=>setNewCampaign({title:"",description:"",exam_date:"",deadline:"",eligibility:"",venue:"",available_venues:[],whatsapp_community_url:"",exam_time:"10:00 AM",total_marks:100,active:true,is_featured:false,type:"general",start_date:"",end_date:"",eligible_classes:[],time_slots:[]}), "Campaign");}} className="glass border border-border p-4 sm:p-5 rounded-2xl grid grid-cols-1 sm:grid-cols-2 gap-4 bg-background/20">
-                  <Input placeholder="Driver Name (e.g. NST 2026)" value={newCampaign.title} onChange={e=>setNewCampaign({...newCampaign, title:e.target.value})} required data-testid="ncm-title" className="rounded-xl border-border bg-background/50 text-foreground"/>
-                  <Input placeholder="Eligibility Criteria Parameters" value={newCampaign.eligibility} onChange={e=>setNewCampaign({...newCampaign, eligibility:e.target.value})} required data-testid="ncm-elig" className="rounded-xl border-border bg-background/50 text-foreground"/>
-                  <Input placeholder="Examination Date" value={newCampaign.exam_date} onChange={e=>setNewCampaign({...newCampaign, exam_date:e.target.value})} required data-testid="ncm-exam" className="rounded-xl border-border bg-background/50 text-foreground font-mono"/>
-                  <Input placeholder="Lock Expiration Deadline" value={newCampaign.deadline} onChange={e=>setNewCampaign({...newCampaign, deadline:e.target.value})} required data-testid="ncm-dead" className="rounded-xl border-border bg-background/50 text-foreground font-mono"/>
-                  <Input placeholder="Execution Time Grid" value={newCampaign.exam_time} onChange={e=>setNewCampaign({...newCampaign, exam_time:e.target.value})} data-testid="ncm-time" className="rounded-xl border-border bg-background/50 text-foreground font-mono"/>
-                  <Input placeholder="Total marks value" type="number" value={newCampaign.total_marks} onChange={e=>setNewCampaign({...newCampaign, total_marks:Number(e.target.value)})} data-testid="ncm-marks" className="rounded-xl border-border bg-background/50 text-foreground font-mono"/>
+                  <Input placeholder="Campaign Name" value={newCampaign.title} onChange={e=>setNewCampaign({...newCampaign, title:e.target.value})} required data-testid="ncm-title" className="rounded-xl border-border bg-background/50 text-foreground"/>
                   <select className="border border-border rounded-xl px-3 py-2 bg-background text-sm" value={newCampaign.type} onChange={e=>setNewCampaign({...newCampaign, type:e.target.value})} data-testid="ncm-type">
                     <option value="general">General</option>
                     <option value="school">School</option>
                   </select>
-                  {newCampaign.type === "school" && (
+                  {newCampaign.type === "school" ? (
                     <>
                       <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
@@ -2205,6 +2200,32 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                     </>
+                  ) : (
+                    <>
+                      <Input placeholder="Eligibility Criteria Parameters" value={newCampaign.eligibility} onChange={e=>setNewCampaign({...newCampaign, eligibility:e.target.value})} required data-testid="ncm-elig" className="rounded-xl border-border bg-background/50 text-foreground"/>
+                      <Input placeholder="Examination Date" value={newCampaign.exam_date} onChange={e=>setNewCampaign({...newCampaign, exam_date:e.target.value})} required data-testid="ncm-exam" className="rounded-xl border-border bg-background/50 text-foreground font-mono"/>
+                      <Input placeholder="Lock Expiration Deadline" value={newCampaign.deadline} onChange={e=>setNewCampaign({...newCampaign, deadline:e.target.value})} required data-testid="ncm-dead" className="rounded-xl border-border bg-background/50 text-foreground font-mono"/>
+                      <Input placeholder="Execution Time Grid" value={newCampaign.exam_time} onChange={e=>setNewCampaign({...newCampaign, exam_time:e.target.value})} data-testid="ncm-time" className="rounded-xl border-border bg-background/50 text-foreground font-mono"/>
+                      <Input placeholder="Total marks value" type="number" value={newCampaign.total_marks} onChange={e=>setNewCampaign({...newCampaign, total_marks:Number(e.target.value)})} data-testid="ncm-marks" className="rounded-xl border-border bg-background/50 text-foreground font-mono"/>
+                      <Input placeholder="WhatsApp Community Endpoint URL" value={newCampaign.whatsapp_community_url} onChange={e=>setNewCampaign({...newCampaign, whatsapp_community_url:e.target.value})} className="sm:col-span-2 rounded-xl border-border bg-background/50 text-foreground" data-testid="ncm-wa"/>
+                      <div className="sm:col-span-2">
+                        <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Authorized Running Venues</label>
+                        <div className="flex flex-wrap gap-2 glass rounded-xl p-2.5 bg-background/50 border border-border">
+                          {centers.map((c) => {
+                            const checked = newCampaign.available_venues.includes(c.name);
+                            return (
+                              <label key={c.id} className={`text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg border cursor-pointer select-none transition ${checked ? "bg-primary text-primary-foreground border-primary shadow-md" : "border-border text-muted-foreground hover:bg-muted/50"}`} data-testid={`ncm-venue-${c.id}`}>
+                                <input type="checkbox" className="hidden" checked={checked} onChange={() => {
+                                  setNewCampaign(prev => ({...prev, available_venues: checked ? prev.available_venues.filter(v=>v!==c.name) : [...prev.available_venues, c.name]}));
+                                }}/>
+                                {c.name}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <textarea className="sm:col-span-2 border border-border rounded-xl px-3 py-2 bg-background/50 text-sm focus:outline-none focus:border-accent text-foreground min-h-20 resize-none" placeholder="Description data string..." value={newCampaign.description} onChange={e=>setNewCampaign({...newCampaign, description:e.target.value})} required data-testid="ncm-desc"/>
+                    </>
                   )}
                   {newCampaign.type === "school" && (
                     <div className="sm:col-span-2 border border-border rounded-xl p-4 bg-background/30">
@@ -2222,25 +2243,7 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                   )}
-                  <Input placeholder="WhatsApp Community Endpoint URL" value={newCampaign.whatsapp_community_url} onChange={e=>setNewCampaign({...newCampaign, whatsapp_community_url:e.target.value})} className="sm:col-span-2 rounded-xl border-border bg-background/50 text-foreground" data-testid="ncm-wa"/>
-                  <div className="sm:col-span-2">
-                    <label className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1.5 block">Authorized Running Venues</label>
-                    <div className="flex flex-wrap gap-2 glass rounded-xl p-2.5 bg-background/50 border border-border">
-                      {centers.map((c) => {
-                        const checked = newCampaign.available_venues.includes(c.name);
-                        return (
-                          <label key={c.id} className={`text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg border cursor-pointer select-none transition ${checked ? "bg-primary text-primary-foreground border-primary shadow-md" : "border-border text-muted-foreground hover:bg-muted/50"}`} data-testid={`ncm-venue-${c.id}`}>
-                            <input type="checkbox" className="hidden" checked={checked} onChange={() => {
-                              setNewCampaign(prev => ({...prev, available_venues: checked ? prev.available_venues.filter(v=>v!==c.name) : [...prev.available_venues, c.name]}));
-                            }}/>
-                            {c.name}
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <textarea className="sm:col-span-2 border border-border rounded-xl px-3 py-2 bg-background/50 text-sm focus:outline-none focus:border-accent text-foreground min-h-20 resize-none" placeholder="Description data string..." value={newCampaign.description} onChange={e=>setNewCampaign({...newCampaign, description:e.target.value})} required data-testid="ncm-desc"/>
-                  <label className="text-sm flex items-center gap-2 text-muted-foreground select-none cursor-pointer font-medium"><input type="checkbox" checked={newCampaign.active} onChange={e=>setNewCampaign({...newCampaign, active:e.target.checked})} className="accent-primary"/>Flag project as active status</label>
+                  <label className="sm:col-span-2 text-sm flex items-center gap-2 text-muted-foreground select-none cursor-pointer font-medium"><input type="checkbox" checked={newCampaign.active} onChange={e=>setNewCampaign({...newCampaign, active:e.target.checked})} className="accent-primary"/>Flag project as active status</label>
                   <Button type="submit" className="bg-primary text-primary-foreground rounded-xl text-xs font-bold uppercase tracking-wider px-4 py-2 cursor-pointer"><Plus size={14} className="mr-1.5"/>Launch Test Campaign</Button>
                 </form>
                 

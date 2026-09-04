@@ -112,6 +112,14 @@ ALLOWED_SCHOOL_CLASSES = {"ALL","7th Class","8th Class","9th Class","10th Class"
 
 def _validate_school_campaign(doc: Dict[str, Any]):
     if doc.get("type") != "school":
+        if not doc.get("description"):
+            raise HTTPException(400, "description is required for general campaigns")
+        if not doc.get("exam_date"):
+            raise HTTPException(400, "exam_date is required for general campaigns")
+        if not doc.get("deadline"):
+            raise HTTPException(400, "deadline is required for general campaigns")
+        if not doc.get("eligibility"):
+            raise HTTPException(400, "eligibility is required for general campaigns")
         return
     if doc.get("start_date") and doc.get("end_date"):
         if doc["end_date"] < doc["start_date"]:
@@ -300,10 +308,10 @@ class CourseIn(BaseModel):
 
 class ScholarshipIn(BaseModel):
     title: str
-    description: str
-    exam_date: str
-    deadline: str
-    eligibility: str
+    description: Optional[str] = ""
+    exam_date: Optional[str] = None
+    deadline: Optional[str] = None
+    eligibility: Optional[str] = None
     venue: Optional[str] = None
     available_venues: List[str] = []
     exam_time: Optional[str] = None
