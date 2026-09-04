@@ -336,6 +336,8 @@ export default function AdminDashboard() {
 
     const host = document.createElement("div");
     host.setAttribute("data-admin-dashboard-host", "true");
+    host.setAttribute("role", "region");
+    host.setAttribute("aria-label", "Admin Dashboard");
     host.style.position = "fixed";
     host.style.inset = "0";
     host.style.width = "100vw";
