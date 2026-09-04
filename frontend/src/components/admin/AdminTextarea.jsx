@@ -3,7 +3,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 const AdminTextarea = forwardRef(function AdminTextarea(
-  { label, error, id, maxLength, autoResize = false, className, ...props },
+  { label, error, id, maxLength, autoResize = false, className, testId, ...props },
   ref
 ) {
   const inputId = id || props.name;
@@ -24,6 +24,7 @@ const AdminTextarea = forwardRef(function AdminTextarea(
         ref={ref}
         id={inputId}
         maxLength={maxLength}
+        data-testid={testId}
         className={cn("rounded-xl border resize-none", autoResize && "resize-y", error && "border-rose-500 focus-visible:ring-rose-500")}
         onInput={(e) => setCount(e.target.value.length)}
         {...props}

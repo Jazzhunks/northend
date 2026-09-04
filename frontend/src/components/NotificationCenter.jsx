@@ -160,8 +160,8 @@ export default function NotificationCenter() {
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
         <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col">
           <SheetHeader className="p-4 border-b border-border shrink-0">
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
                 <SheetTitle className="text-base font-bold">Notifications</SheetTitle>
                 <SheetDescription>
                   {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
@@ -172,7 +172,7 @@ export default function NotificationCenter() {
                   size="sm"
                   variant="outline"
                   onClick={handleMarkAllAsRead}
-                  className="text-xs rounded-lg border-border cursor-pointer"
+                  className="text-xs rounded-lg border-border cursor-pointer shrink-0"
                 >
                   Mark all read
                 </Button>

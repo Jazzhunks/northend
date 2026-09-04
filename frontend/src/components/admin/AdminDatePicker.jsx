@@ -24,6 +24,7 @@ export default function AdminDatePicker({
   const [open, setOpen] = useState(false);
   const dateValue = value ? new Date(value) : undefined;
   const validDate = dateValue instanceof Date && !isNaN(dateValue);
+  const safeFormat = validDate ? format(dateValue, "yyyy-MM-dd") : null;
 
   const handleSelect = (day) => {
     if (!day) return;
@@ -55,7 +56,7 @@ export default function AdminDatePicker({
             {...props}
           >
             <CalendarIcon size={16} className="mr-2" />
-             {validDate ? format(dateValue, "yyyy-MM-dd") : <span>{placeholder}</span>}
+             {safeFormat !== null ? safeFormat : <span>{placeholder}</span>}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
