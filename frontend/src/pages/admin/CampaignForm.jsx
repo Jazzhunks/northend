@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AdminForm, AdminInput, AdminSelect, AdminDatePicker, AdminDateTimePicker, AdminCheckbox } from "@/components/admin";
+import { AdminForm, AdminInput, AdminSelect, AdminDatePicker, AdminDateTimePicker, AdminCheckbox, AdminTextarea } from "@/components/admin";
 import { campaignSchema } from "@/lib/schemas";
 
 const CLASSES_OPTIONS = ["ALL", "7th Class", "8th Class", "9th Class", "10th Class", "11th Class", "12th Class"];
