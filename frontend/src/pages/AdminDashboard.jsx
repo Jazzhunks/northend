@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef, useMemo } from "react";
-import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { api, formatError } from "@/lib/api";
@@ -312,8 +311,6 @@ export default function AdminDashboard() {
   const [operationsModalId, setOperationsModalId] = useState(null);
   const [broadcastModalId, setBroadcastModalId] = useState(null);
   
-  const [portalHost, setPortalHost] = useState(null);
-
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [bulkState, setBulkState] = useState({
     title: "",
@@ -330,35 +327,6 @@ export default function AdminDashboard() {
   const [applicantDialogAppNo, setApplicantDialogAppNo] = useState(null);
   const [resultDialogOpen, setResultDialogOpen] = useState(false);
   const [resultDialogId, setResultDialogId] = useState(null);
-
-  useEffect(() => {
-    if (typeof document === "undefined") return undefined;
-
-    const host = document.createElement("div");
-    host.setAttribute("data-admin-dashboard-host", "true");
-    host.setAttribute("role", "region");
-    host.setAttribute("aria-label", "Admin Dashboard");
-    host.style.position = "fixed";
-    host.style.inset = "0";
-    host.style.width = "100vw";
-    host.style.height = "100dvh";
-    host.style.margin = "0";
-    host.style.padding = "0";
-    host.style.zIndex = "2147483647";
-    host.style.display = "block";
-    host.style.visibility = "visible";
-    host.style.opacity = "1";
-    host.style.pointerEvents = "auto";
-    host.style.overflow = "hidden";
-    host.style.isolation = "isolate";
-
-    document.body.appendChild(host);
-    setPortalHost(host);
-
-    return () => {
-      host.remove();
-    };
-  }, []);
 
   const load = async () => {
     setLoadingData(true);
@@ -572,11 +540,11 @@ export default function AdminDashboard() {
     }
   };
 
-  if (!portalHost) return null;
-
-  return createPortal(
+  return (
     <div
       className="fixed inset-0 isolate w-screen h-[100dvh] min-h-0 flex flex-col lg:flex-row overflow-hidden select-none"
+      role="region"
+      aria-label="Admin Dashboard"
       style={{
         position: "fixed",
         inset: 0,
@@ -1329,7 +1297,6 @@ export default function AdminDashboard() {
           </div>
         </main>
       </div>
-    </div>,
-    portalHost
+    </div>
   );
 }
