@@ -53,7 +53,7 @@ from notifications import (
     emit_result_published,
     emit_broadcast_complete,
 )
-from onesignal_client import notify_admins, notify_students
+from onesignal_client import notify_admins, notify_students, send_onesignal_notification
 
 
 # ---------- Constants & Helpers ----------
@@ -477,6 +477,13 @@ class ContactIn(BaseModel):
     phone: Optional[str] = None
     subject: str
     message: str
+
+class PushNotificationIn(BaseModel):
+    title: str
+    message: str
+    target: str = Field("all", pattern="^(all|admin|student)$")
+    url: Optional[str] = None
+    image: Optional[str] = None
 
 class CenterIn(BaseModel):
     name: str
@@ -2362,6 +2369,24 @@ async def contact(payload: ContactIn, request: Request):
 @api.get("/inquiries")
 async def list_inquiries(_admin = Depends(require_admin)):
     return await db.inquiries.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+
+@api.post("/admin/push-notifications")
+async def send_push_notification(payload: PushNotificationIn, _admin = Depends(require_admin)):
+    target_map = {
+        "all": None,
+        "admin": [{"field": "tag", "key": "role", "value": "admin"}],
+        "student": [{"field": "tag", "key": "role", "value": "student"}],
+    }
+    result = await send_onesignal_notification(
+        headings={"en": payload.title},
+        contents={"en": payload.message},
+        filters=target_map.get(payload.target),
+        data={"source": "admin_dashboard"},
+        url=payload.url,
+        image=payload.image,
+        name="admin_push_" + uuid.uuid4().hex[:8],
+    )
+    return {"ok": True, "result": result}
 
 # ---------- Admin Dashboard summary ----------
 @api.get("/admin/summary")

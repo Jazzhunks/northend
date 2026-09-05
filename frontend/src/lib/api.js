@@ -392,6 +392,8 @@ export const adminAPI = {
     api.post(`/admin/feature?kind=${kind}&id=${id}`).then(resData),
   getInquiries: () => api.get("/inquiries").then(resData),
   getExportUrl: (kind) => `${API_BASE}/admin/export/${kind}`,
+  sendPushNotification: (data) =>
+    api.post("/admin/push-notifications", data).then(resData),
 };
 
 export const filesAPI = {
