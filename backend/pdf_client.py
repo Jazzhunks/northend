@@ -198,6 +198,32 @@ def _fmt_dob(dob):
     return str(dob)
 
 
+def _fmt_time(val):
+    if not val:
+        return "—"
+    s = str(val).strip()
+    m = re.match(r"^\d{4}-\d{2}-\d{2}T(\d{1,2}:\d{2})(?::\d{2})?(?:[^\d].*)?$", s)
+    if m:
+        hhmm = m.group(1)
+        return _to_ampm(hhmm)
+    m = re.match(r"^(\d{1,2}:\d{2})(?::\d{2})?$", s)
+    if m:
+        return _to_ampm(m.group(1))
+    return s
+
+
+def _to_ampm(hhmm: str) -> str:
+    try:
+        parts = hhmm.split(":")
+        h = int(parts[0])
+        m = int(parts[1])
+        period = "AM" if h < 12 else "PM"
+        h12 = h % 12 or 12
+        return f"{h12}:{m:02d} {period}"
+    except Exception:
+        return hhmm
+
+
 def admit_card_pdf(application_no, name, phone, school, standard, target_exam,
                    exam_date, venue=None, exam_time=None, scholarship_title=None,
                    father_name=None, gender=None, dob=None, email=None,
@@ -224,7 +250,7 @@ def admit_card_pdf(application_no, name, phone, school, standard, target_exam,
 
     target_exam_str = str(target_exam or "N/A")
     exam_date_str = _fmt_dob(exam_date) if re.match(r"^\d{4}-\d{2}-\d{2}$", str(exam_date or "")) else str(exam_date or "TBA")
-    exam_time_str = str(exam_time or "10:00 AM")
+    exam_time_str = _fmt_time(exam_time)
     title_str = str(scholarship_title or "Scholarship Aptitude Test")[:44]
     valid_venue = _sanitize_venue(venue)
 
