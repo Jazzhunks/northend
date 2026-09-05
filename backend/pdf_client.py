@@ -156,14 +156,20 @@ def _draw_unacademy_logo(c: canvas.Canvas, X0: float, Ytop: float, target_width:
         _render_svg_path(c, fill_hex, path_d, X0, Ytop, scale)
 
 def _sanitize_venue(venue: str | None) -> str:
-    """Ensure venue is strictly one of the allowed locations."""
-    if venue and venue.strip().title() in ALLOWED_VENUES:
-        return venue.strip().title()
-    if venue:
-        for allowed in ALLOWED_VENUES:
-            if allowed.lower() in venue.strip().lower():
-                return allowed
-    return "Srinagar"
+    """Sanitize standard venues or preserve custom school venue names."""
+    if not venue:
+        return "90 FT"
+    v_clean = venue.strip()
+    v_lower = v_clean.lower()
+
+    if v_lower in ("90 ft", "90ft", "srinagar"):
+        return "90 FT"
+
+    for allowed in ALLOWED_VENUES:
+        if allowed.lower() == v_lower:
+            return allowed
+
+    return v_clean
 
 def _qr_bytes(data: str) -> ImageReader:
     """Generate QR code and return as ReportLab ImageReader."""
