@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api, formatError } from "@/lib/api";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, MapPin, ChevronDown } from "lucide-react";
+import { ArrowLeft, Loader2, MapPin, ChevronDown, Check, Download, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import PageHero from "@/components/PageHero";
+import { API_BASE } from "@/lib/api";
 
 const CLASSES = ["Class 7", "Class 8", "Class 9", "Class 10", "Class 11 (NEET)", "Class 11 (IIT-JEE)", "Class 12 (NEET)", "Class 12 (IIT-JEE)", "Dropper (NEET)", "Dropper (IIT-JEE)"];
 const GENDERS = ["Male", "Female", "Other"];
@@ -85,11 +86,43 @@ export default function ScholarshipApply() {
         <PageHero eyebrow="Application Received" title="Save your application number" subtitle={campaign.title} />
         <div className="max-w-2xl mx-auto px-4 lg:px-8 pb-24">
           <div className="border border-primary p-8 rounded-md bg-primary/5" data-testid="submission-success">
-            <div className="text-xs uppercase tracking-[0.2em] font-bold text-primary">Application Received</div>
-            <h3 className="font-display text-3xl font-black mt-2">Save your application number</h3>
-            <div className="font-mono text-2xl mt-4 p-4 bg-background border border-border rounded-md">{submitted.application_no}</div>
-            <p className="text-sm text-muted-foreground mt-4">Save this number along with your phone <b className="font-mono">{submitted.phone}</b> — you'll need both to view your result later.</p>
-            <div className="flex flex-wrap gap-2 mt-4">
+            <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-primary font-bold">
+              <Check weight="bold" size={14}/> Application successful
+            </div>
+            <h3 className="font-display text-2xl font-light tracking-tight mt-2">
+              Welcome to <span className="font-medium italic text-primary">{campaign.title}.</span>
+            </h3>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <div>
+                <div className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1">Application no</div>
+                <div className="font-mono text-lg">{submitted.application_no}</div>
+              </div>
+              <div>
+                <div className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1">Phone</div>
+                <div className="font-mono text-lg">{submitted.phone}</div>
+              </div>
+              {submitted.venue && (
+                <div>
+                  <div className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1">Venue</div>
+                  <div className="text-sm">{submitted.venue}</div>
+                </div>
+              )}
+              {submitted.exam_date && (
+                <div>
+                  <div className="text-xs uppercase tracking-[0.18em] font-bold text-muted-foreground mb-1">Exam date</div>
+                  <div className="font-mono text-sm">{submitted.exam_date}</div>
+                </div>
+              )}
+            </div>
+            <div className="mt-5 p-5 bg-background border border-border rounded-md space-y-3">
+              <p className="text-xs text-muted-foreground leading-relaxed">Download your admit card and save it to your phone for exam day entry. You'll also need your application number and phone to view your result later.</p>
+              <a href={`${API_BASE}/scholarship-applications/${submitted.application_no}/admit-card?phone=${encodeURIComponent(submitted.phone)}`} target="_blank" rel="noreferrer" data-testid="download-admit-card">
+                <button type="button" className="w-full flex items-center justify-center gap-2 py-3.5 px-6 rounded-md bg-primary text-primary-foreground font-medium text-xs uppercase tracking-[0.15em] hover:opacity-95 transition">
+                  <Download weight="bold" size={16}/> Download Admit Card <ArrowRight weight="bold" size={14}/>
+                </button>
+              </a>
+            </div>
+            <div className="mt-4">
               <Button onClick={() => navigate("/scholarship")} className="bg-primary text-primary-foreground">Submit another</Button>
             </div>
           </div>
