@@ -132,5 +132,17 @@
 
     <!-- OneSignal Web SDK -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script>
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({
+          appId: "41952295-559a-4ac1-9431-36443a3195ee",
+          serviceWorkerPath: "/push/onesignal/OneSignalSDKWorker.js",
+          serviceWorkerParam: {
+            scope: "/push/onesignal/",
+          },
+        });
+      });
+    </script>
   </body>
 </html>
