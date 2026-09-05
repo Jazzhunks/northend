@@ -43,6 +43,10 @@ const onTokenRefreshFailed = (err) => {
 
 api.interceptors.request.use(
   (config) => {
+    if (config?.skipAuth) {
+      delete config.headers.Authorization;
+      return config;
+    }
     const token = localStorage.getItem("nw_token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -76,6 +80,10 @@ api.interceptors.response.use(
     // 401 — Expired Session / Unauthenticated
     if (status === 401) {
       const originalRequest = error.config;
+
+      if (originalRequest?.skipAuth) {
+        return Promise.reject(error);
+      }
 
       if (!originalRequest.headers.Authorization) {
         return Promise.reject(error);
@@ -132,6 +140,7 @@ api.interceptors.response.use(
     }
 
     if (
+      status === 401 &&
       typeof window !== "undefined" &&
       !window.location.pathname.includes("/login") &&
       !isRedirecting
@@ -279,7 +288,7 @@ export const schoolsAPI = {
 };
 
 export const scholarshipApplicationsAPI = {
-  apply: (data) => api.post("/scholarship-applications", data).then(resData),
+  apply: (data) => api.post("/scholarship-applications", data, { skipAuth: true }).then(resData),
   listAdmin: () => api.get("/scholarship-applications").then(resData),
   getByNo: (appNo, phone) =>
     api
