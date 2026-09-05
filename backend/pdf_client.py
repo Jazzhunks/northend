@@ -349,7 +349,8 @@ def admit_card_pdf(application_no, name, phone, school, standard, target_exam,
 
     c.setStrokeColor(CARD_LINE)
     c.line(LM + 3 * mm, ex_top - 32 * mm, RM - 3 * mm, ex_top - 32 * mm)
-    kv(col1, ex_top - 38 * mm, "Designated Exam Venue", f"Unacademy Kashmir  –  {valid_venue}", BRAND_BLUE, 11)
+    venue_display = f"Unacademy Kashmir  –  {valid_venue}" if valid_venue in ALLOWED_VENUES else valid_venue
+    kv(col1, ex_top - 38 * mm, "Designated Exam Venue", venue_display, BRAND_BLUE, 11)
 
     # ================= INSTRUCTIONS =================
     ins_head_y = ex_y - 8 * mm
