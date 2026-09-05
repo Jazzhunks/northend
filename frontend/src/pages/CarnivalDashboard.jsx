@@ -17,17 +17,30 @@ export default function CarnivalDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
     setLoading(true);
     Promise.all([
       api.get(`/admin/wath/carnivals/${id}`),
       api.get(`/admin/wath/carnivals/${id}/registrations`),
     ])
       .then(([cRes, rRes]) => {
+        if (!mounted) return;
         setCarnival(cRes.data);
         setRegs(Array.isArray(rRes.data) ? rRes.data : []);
       })
-      .catch(e => toast.error(formatError(e.response?.data?.detail) || "Failed to load carnival dashboard"))
-      .finally(() => setLoading(false));
+      .catch(e => {
+        if (!mounted) return;
+        const status = e?.response?.status;
+        if (status === 401) {
+          toast.error("Session expired. Please log in again.");
+        } else {
+          toast.error(formatError(e.response?.data?.detail) || "Failed to load carnival dashboard");
+        }
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => { mounted = false; };
   }, [id]);
 
   const fmtDate = (iso) => {
