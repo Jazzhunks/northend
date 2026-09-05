@@ -42,18 +42,20 @@ export function useOneSignal() {
       onesignal = os;
       if (!os || !user) return;
 
-      const tags = {
-        role: user.role || "user",
-        user_id: String(user.id || ""),
-        name: String(user.name || ""),
-        email: String(user.email || ""),
-      };
+      if (typeof os.sendTags === "function") {
+        const tags = {
+          role: user.role || "user",
+          user_id: String(user.id || ""),
+          name: String(user.name || ""),
+          email: String(user.email || ""),
+        };
 
-      os.sendTags(tags).catch((err) => {
-        console.error("OneSignal sendTags failed:", err);
-      });
+        os.sendTags(tags).catch((err) => {
+          console.error("OneSignal sendTags failed:", err);
+        });
+      }
 
-      if (user.id) {
+      if (user.id && typeof os.login === "function") {
         os.login(String(user.id)).catch((err) => {
           console.error("OneSignal login failed:", err);
         });
@@ -61,7 +63,7 @@ export function useOneSignal() {
     });
 
     return () => {
-      if (onesignal && user?.id) {
+      if (onesignal && user?.id && typeof onesignal.logout === "function") {
         onesignal.logout().catch(() => {});
       }
     };
