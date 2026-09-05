@@ -8,6 +8,8 @@ import About from "@/pages/About";
 import Courses from "@/pages/Courses";
 import CourseDetail from "@/pages/CourseDetail";
 import Scholarship from "@/pages/Scholarship";
+import ScholarshipApply from "@/pages/ScholarshipApply";
+import ScholarshipResult from "@/pages/ScholarshipResult";
 import WATH from "@/pages/WATH";
 import Enroll from "@/pages/Enroll";
 import Jobs from "@/pages/Jobs";
@@ -103,6 +105,8 @@ export default function App() {
             <Route path="/courses" element={<Courses />} />
             <Route path="/courses/:id" element={<CourseDetail />} />
             <Route path="/scholarship" element={<Scholarship />} />
+            <Route path="/scholarship/:id/apply" element={<ScholarshipApply />} />
+            <Route path="/scholarship/result" element={<ScholarshipResult />} />
             <Route path="/wath" element={<WATH />} />
             <Route path="/enroll" element={<Enroll />} />
             <Route path="/jobs" element={<Jobs />} />
