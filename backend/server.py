@@ -849,6 +849,9 @@ async def apply_scholarship(payload: ScholarshipApplicationIn, background: Backg
     doc["campaign_kind"] = campaign_kind
     doc["source"] = "self"
 
+    if campaign and doc.get("scholarship_id"):
+        doc["scholarship_id"] = campaign["id"]
+
     for _ in range(10):
         candidate = str(random.randint(10000000, 99999999))
         if not await db.scholarship_applications.find_one({"application_no": candidate}):
@@ -1022,6 +1025,16 @@ async def scholarship_stats(sid: str, request: Request, token: str | None = None
         raise HTTPException(404, "Campaign not found")
     real_id = camp["id"]
 
+    # Collect all scholarships that represent the same campaign:
+    # 1. The resolved primary scholarship
+    # 2. Any other scholarships sharing the same slug
+    related_ids = [real_id]
+    if camp.get("slug"):
+        related_camps = await db.scholarships.find({"slug": camp["slug"]}, {"_id": 0}).to_list(None)
+        for rc in related_camps:
+            if rc.get("id") and rc["id"] not in related_ids:
+                related_ids.append(rc["id"])
+
     # Check authorization or examiner token
     is_authorized = False
     try:
@@ -1043,7 +1056,7 @@ async def scholarship_stats(sid: str, request: Request, token: str | None = None
     prev_week_start = today_start - timedelta(days=14)
 
     apps = await db.scholarship_applications.find(
-        {"scholarship_id": real_id}, {"_id": 0, "venue": 1, "created_at": 1}
+        {"$or": [{"scholarship_id": rid} for rid in related_ids] + [{"scholarship_id": camp.get("slug")}]}, {"_id": 0, "venue": 1, "created_at": 1}
     ).to_list(None)
 
     def _parse(ts):
@@ -1055,6 +1068,10 @@ async def scholarship_stats(sid: str, request: Request, token: str | None = None
             return None
 
     venues_seed = list(camp.get("available_venues") or [])
+    for rc in related_camps:
+        for v in rc.get("available_venues") or []:
+            if v not in venues_seed:
+                venues_seed.append(v)
     venues = {v: {"venue": v, "total": 0, "today": 0, "last_7_days": 0} for v in venues_seed}
 
     total = 0

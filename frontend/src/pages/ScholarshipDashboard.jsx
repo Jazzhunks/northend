@@ -172,6 +172,11 @@ export default function ScholarshipDashboard() {
               <h1 className="font-display text-base font-medium truncate max-w-[40vw] sm:max-w-[60vw]" data-testid="dashboard-title">
                 {stats.campaign?.title}
               </h1>
+              {stats.campaign?.slug && (
+                <span className="text-[10px] text-muted-foreground font-mono">
+                  /{stats.campaign.slug}
+                </span>
+              )}
             </div>
           </div>
 
