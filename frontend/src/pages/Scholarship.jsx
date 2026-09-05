@@ -65,7 +65,7 @@ export default function Scholarship() {
                     </div>
                   </div>
                 )}
-                <Button onClick={() => navigate(`/scholarship/${c.id}/apply`)} className="mt-4 w-full bg-primary text-primary-foreground" data-testid={`campaign-apply-${c.id}`}>
+                  <Button onClick={() => navigate(`/scholarship/${c.slug || c.id}/apply`)} className="mt-4 w-full bg-primary text-primary-foreground" data-testid={`campaign-apply-${c.id}`}>
                   Apply <ArrowRight size={14} className="ml-1.5"/>
                 </Button>
               </div>

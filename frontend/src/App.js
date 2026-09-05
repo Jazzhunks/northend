@@ -105,7 +105,7 @@ export default function App() {
             <Route path="/courses" element={<Courses />} />
             <Route path="/courses/:id" element={<CourseDetail />} />
             <Route path="/scholarship" element={<Scholarship />} />
-            <Route path="/scholarship/:id/apply" element={<ScholarshipApply />} />
+            <Route path="/scholarship/:slug/apply" element={<ScholarshipApply />} />
             <Route path="/scholarship/result" element={<ScholarshipResult />} />
             <Route path="/wath" element={<WATH />} />
             <Route path="/enroll" element={<Enroll />} />
