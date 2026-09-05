@@ -231,7 +231,7 @@ function CarnivalEditor({ value, onClose, onSaved }) {
       <motion.div initial={{ y: 24, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 24, opacity: 0 }} className="w-full max-w-3xl bg-background border border-white/10 rounded-2xl overflow-hidden max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()} data-testid="carnival-editor">
         <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between shrink-0 bg-background">
           <div className="font-medium">{isNew ? "New Carnival" : "Edit Carnival"}</div>
-          <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/5"><XCircle size={16}/></button>
+           <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/5 cursor-pointer z-10"><XCircle size={16}/></button>
         </div>
 
         <div className="p-5 space-y-4 overflow-y-auto flex-1">
