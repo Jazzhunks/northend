@@ -1,6 +1,7 @@
 import io
 import os
 import re
+import json
 import csv
 import uuid
 import logging
@@ -11,6 +12,7 @@ from typing import List, Optional, Dict, Any, Tuple
 import httpx
 import openpyxl
 from pydantic import BaseModel, Field
+from fastapi import Request
 
 logger = logging.getLogger("whatsapp_broadcast")
 
