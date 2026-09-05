@@ -58,6 +58,12 @@ export function useOneSignal() {
           console.error("OneSignal login failed:", err);
         });
       }
+    }).catch((err) => {
+      if (err && /Can only be used on/i.test(err.message || "")) {
+        console.warn("OneSignal skipped: domain not authorized in OneSignal dashboard.");
+      } else {
+        console.error("OneSignal initialization error:", err);
+      }
     });
 
     return () => {
