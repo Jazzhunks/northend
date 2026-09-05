@@ -42,16 +42,14 @@ export function useOneSignal() {
       onesignal = os;
       if (!os || !user) return;
 
-      if (typeof os.sendTags === "function") {
-        const tags = {
+      if (typeof os.User !== "undefined" && typeof os.User.addTags === "function") {
+        os.User.addTags({
           role: user.role || "user",
           user_id: String(user.id || ""),
           name: String(user.name || ""),
           email: String(user.email || ""),
-        };
-
-        os.sendTags(tags).catch((err) => {
-          console.error("OneSignal sendTags failed:", err);
+        }).catch((err) => {
+          console.error("OneSignal addTags failed:", err);
         });
       }
 
