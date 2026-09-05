@@ -174,10 +174,8 @@ export default function WATHManagement() {
         </div>
       </div>
 
-      <AnimatePresence>
         {editing && <CarnivalEditor value={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload(); }}/>}
-      </AnimatePresence>
-    </div>
+      </div>
   );
 }
 

@@ -349,17 +349,21 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const root = document.querySelector("[data-admin-dashboard-host]") || document.querySelector(".fixed.inset-0.isolate");
-    if (!root) return;
+    const layoutRoot = document.querySelector(".min-h-screen.bg-background.text-foreground.overflow-x-hidden");
+    const targets = [root, layoutRoot].filter(Boolean);
+    if (!targets.length) return;
     const observer = new MutationObserver(() => {
-      root.removeAttribute("aria-hidden");
-      root.removeAttribute("data-aria-hidden");
-      (root.querySelectorAll("[aria-hidden='true']") || []).forEach(el => {
-        if (el.id === "notification-bell" || el.closest("button")) return;
-        el.removeAttribute("aria-hidden");
-        el.removeAttribute("data-aria-hidden");
+      targets.forEach(target => {
+        target.removeAttribute("aria-hidden");
+        target.removeAttribute("data-aria-hidden");
+        (target.querySelectorAll("[aria-hidden='true']") || []).forEach(el => {
+          if (el.id === "notification-bell" || el.closest("button")) return;
+          el.removeAttribute("aria-hidden");
+          el.removeAttribute("data-aria-hidden");
+        });
       });
     });
-    observer.observe(root, { attributes: true, attributeFilter: ["aria-hidden", "data-aria-hidden"], subtree: true });
+    targets.forEach(target => observer.observe(target, { attributes: true, attributeFilter: ["aria-hidden", "data-aria-hidden"], subtree: true }));
     return () => observer.disconnect();
   }, []);
 

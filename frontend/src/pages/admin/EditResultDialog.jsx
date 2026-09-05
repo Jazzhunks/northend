@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter, DrawerDescription } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Save, X, Trophy } from "lucide-react";
 import { AdminInput, AdminTextarea, AdminCheckbox } from "@/components/admin";
@@ -33,6 +33,9 @@ export default function EditResultDialog({ open, resultId, resultData, onClose, 
           <DrawerTitle className="flex items-center gap-2 text-lg">
             <Trophy size={18} className="text-accent" /> Edit Examination Scores
           </DrawerTitle>
+          <DrawerDescription>
+            Enter marks, rank, percentile, and optional remarks for this applicant.
+          </DrawerDescription>
         </DrawerHeader>
         <form onSubmit={handleSubmit(submit)} data-testid={`result-form-${resultId}`} className="px-4 pb-2 space-y-4 overflow-y-auto max-h-[60vh]">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
