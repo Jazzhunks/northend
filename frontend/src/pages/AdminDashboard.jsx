@@ -11,7 +11,7 @@ import {
   HelpCircle, Megaphone, Trophy, Search, Menu, X,
   Loader2, CheckCircle2, AlertCircle, Send, FileSpreadsheet,
   UploadCloud, PlaySquare, Filter, RefreshCw, Eye, ExternalLink,
-  User, UserPlus, Printer, Wand2, Image, FileText, Users
+  User, UserPlus, Printer, Wand2, Image, FileText, Users, Pencil
 } from "lucide-react";
 import ChipInput from "@/components/ChipInput";
 import FileUpload from "@/components/FileUpload";
@@ -27,7 +27,7 @@ import TestimonialForm from "./admin/TestimonialForm";
 import ResultForm from "./admin/ResultForm";
 import GalleryForm from "./admin/GalleryForm";
 import BlogPostForm from "./admin/BlogPostForm";
-import CampaignForm from "./admin/CampaignForm";
+import CampaignFormPage from "@/pages/CampaignFormPage";
 import EditApplicantDialog from "./admin/EditApplicantDialog";
 import EditResultDialog from "./admin/EditResultDialog";
 import BulkProgressModal from "./admin/BulkProgressModal";
@@ -1185,8 +1185,10 @@ export default function AdminDashboard() {
 
             {activeTab === "campaigns" && (
               <div className="space-y-4 animate-fadeIn">
-                <div className="font-display font-bold text-xl text-foreground">Scholarship Campaigns Drivers</div>
-                <CampaignForm onSubmit={(data) => post("/scholarships", data, () => setNewCampaign({title:"",description:"",exam_date:"",deadline:"",eligibility:"",venue:"",available_venues:[],whatsapp_community_url:"",exam_time:"10:00 AM",total_marks:100,active:true,is_featured:false,type:"general",start_date:"",end_date:"",eligible_classes:[],time_slots:[]}), "Campaign")} centers={centers} />
+                <div className="flex items-center justify-between gap-2">
+                  <div className="font-display font-bold text-xl text-foreground">Scholarship Campaigns Drivers</div>
+                  <Button size="sm" onClick={() => navigate("/admin/campaigns/new")} className="rounded-lg text-xs font-bold bg-accent text-accent-foreground hover:bg-accent/90 cursor-pointer">New Campaign</Button>
+                </div>
                 
                 {filteredCampaigns.length === 0 ? (
                   <EmptyState />
@@ -1220,6 +1222,10 @@ export default function AdminDashboard() {
                           <div className="grid grid-cols-2 sm:flex sm:flex-row gap-1.5 shrink-0 w-full sm:w-auto">
                             <Button size="sm" variant="default" onClick={() => navigate(`/admin/scholarships/${c.slug || c.id}/dashboard`)} className="rounded-lg text-xs font-bold bg-accent text-accent-foreground hover:bg-accent/90 cursor-pointer" data-testid={`campaign-dashboard-${c.id}`}>Dashboard</Button>
                             
+                            <Button size="sm" variant="outline" onClick={() => navigate(`/admin/campaigns/${c.id}/edit`)} className="rounded-lg text-xs font-bold cursor-pointer">
+                              <Pencil size={13} className="mr-1.5"/> Edit
+                            </Button>
+
                             <Button size="sm" onClick={() => setBroadcastModalId(c.id)} className="rounded-lg text-xs font-bold bg-[#25D366] hover:bg-[#20b858] text-black cursor-pointer shadow-md">
                               <MessageSquare size={13} className="mr-1.5"/> Broadcast
                             </Button>
