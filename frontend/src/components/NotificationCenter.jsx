@@ -159,7 +159,7 @@ export default function NotificationCenter() {
       </button>
 
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col z-[99999]">
+        <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col">
           <SheetHeader className="p-4 border-b border-border shrink-0">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">

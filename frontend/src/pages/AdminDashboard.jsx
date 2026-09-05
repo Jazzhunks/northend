@@ -347,26 +347,6 @@ export default function AdminDashboard() {
 
   useEffect(() => { load(); }, []);
 
-  useEffect(() => {
-    const root = document.querySelector("[data-admin-dashboard-host]") || document.querySelector(".fixed.inset-0.isolate");
-    const layoutRoot = document.querySelector(".min-h-screen.bg-background.text-foreground.overflow-x-hidden");
-    const targets = [root, layoutRoot].filter(Boolean);
-    if (!targets.length) return;
-    const observer = new MutationObserver(() => {
-      targets.forEach(target => {
-        target.removeAttribute("aria-hidden");
-        target.removeAttribute("data-aria-hidden");
-        (target.querySelectorAll("[aria-hidden='true']") || []).forEach(el => {
-          if (el.id === "notification-bell" || el.closest("button")) return;
-          el.removeAttribute("aria-hidden");
-          el.removeAttribute("data-aria-hidden");
-        });
-      });
-    });
-    targets.forEach(target => observer.observe(target, { attributes: true, attributeFilter: ["aria-hidden", "data-aria-hidden"], subtree: true }));
-    return () => observer.disconnect();
-  }, []);
-
   const searchMatch = (obj, fields) => {
     if (!innerSearch.trim()) return true;
     const term = innerSearch.toLowerCase();
@@ -573,7 +553,7 @@ export default function AdminDashboard() {
         minHeight: 0,
         margin: 0,
         padding: 0,
-        zIndex: 2147483647,
+        zIndex: 40,
         background: "#ffffff",
         color: "#3C4952",
         visibility: "visible",

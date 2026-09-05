@@ -28,7 +28,7 @@ export default function EditResultDialog({ open, resultId, resultData, onClose, 
 
   return (
     <Drawer open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DrawerContent className="z-[99999]">
+      <DrawerContent>
         <DrawerHeader>
           <DrawerTitle className="flex items-center gap-2 text-lg">
             <Trophy size={18} className="text-accent" /> Edit Examination Scores
