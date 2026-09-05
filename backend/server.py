@@ -796,7 +796,7 @@ async def apply_scholarship(payload: ScholarshipApplicationIn, background: Backg
             raise HTTPException(400, "Please pick an exam date and time slot")
         campaign_kind = "carnival"
     elif payload.scholarship_id:
-        campaign = await db.scholarships.find_one({"id": payload.scholarship_id}, {"_id": 0})
+        campaign = await db.scholarships.find_one({"$or": [{"id": payload.scholarship_id}, {"slug": payload.scholarship_id}]}, {"_id": 0})
         if not campaign:
             raise HTTPException(404, "Scholarship campaign not found")
         if not campaign.get("active"):
