@@ -15,6 +15,10 @@ function initOneSignal() {
         await OneSignal.init({
           appId: ONESIGNAL_APP_ID,
           allowLocalhostAsSecureOrigin: true,
+          serviceWorkerPath: "/push/onesignal/OneSignalSDKWorker.js",
+          serviceWorkerParam: {
+            scope: "/push/onesignal/",
+          },
         });
         resolve(OneSignal);
       } catch (err) {
@@ -70,6 +74,10 @@ export function useOneSignalPermission() {
         await OneSignal.init({
           appId: ONESIGNAL_APP_ID,
           allowLocalhostAsSecureOrigin: true,
+          serviceWorkerPath: "/push/onesignal/OneSignalSDKWorker.js",
+          serviceWorkerParam: {
+            scope: "/push/onesignal/",
+          },
         });
         await OneSignal.showNativePrompt();
       } catch (err) {
