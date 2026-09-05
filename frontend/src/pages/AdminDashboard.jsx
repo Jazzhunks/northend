@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { api, formatError } from "@/lib/api";
+import { api, formatError, adminAPI } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ScholarshipNotificationButton from "../components/ScholarshipNotificationButton";
