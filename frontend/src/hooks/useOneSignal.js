@@ -3,30 +3,34 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const ONESIGNAL_APP_ID = "41952295-559a-4ac1-9431-36443a3195ee";
 
-function initOneSignal() {
-  return new Promise((resolve) => {
-    if (typeof window === "undefined" || !window.OneSignalDeferred) {
-      resolve(null);
-      return;
-    }
+let onesignalInitPromise = null;
 
-    window.OneSignalDeferred.push(async function (OneSignal) {
-      try {
-        await OneSignal.init({
-          appId: ONESIGNAL_APP_ID,
-          allowLocalhostAsSecureOrigin: true,
-          serviceWorkerPath: "/push/onesignal/OneSignalSDKWorker.js",
-          serviceWorkerParam: {
-            scope: "/push/onesignal/",
-          },
-        });
-        resolve(OneSignal);
-      } catch (err) {
-        console.error("OneSignal init failed:", err);
-        resolve(null);
-      }
+function initOneSignal() {
+  if (typeof window === "undefined" || !window.OneSignalDeferred) {
+    return Promise.resolve(null);
+  }
+
+  if (!onesignalInitPromise) {
+    onesignalInitPromise = new Promise((resolve) => {
+      window.OneSignalDeferred.push(async function (OneSignal) {
+        try {
+          const instance = await OneSignal.init({
+            appId: ONESIGNAL_APP_ID,
+            serviceWorkerPath: "/push/onesignal/OneSignalSDKWorker.js",
+            serviceWorkerParam: {
+              scope: "/push/onesignal/",
+            },
+          });
+          resolve(instance);
+        } catch (err) {
+          console.error("OneSignal init failed:", err);
+          resolve(null);
+        }
+      });
     });
-  });
+  }
+
+  return onesignalInitPromise;
 }
 
 export function useOneSignal() {
@@ -73,7 +77,6 @@ export function useOneSignalPermission() {
       try {
         await OneSignal.init({
           appId: ONESIGNAL_APP_ID,
-          allowLocalhostAsSecureOrigin: true,
           serviceWorkerPath: "/push/onesignal/OneSignalSDKWorker.js",
           serviceWorkerParam: {
             scope: "/push/onesignal/",
