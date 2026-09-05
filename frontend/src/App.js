@@ -46,6 +46,7 @@ import ErpBranches from "@/pages/erp/ErpBranches";
 import ErpAudit from "@/pages/erp/ErpAudit";
 import ErpIdCards from "@/pages/erp/ErpIdCards";       
 import ErpAttendance from "@/pages/erp/ErpAttendance";   
+import ErpWhatsApp from "@/pages/erp/ErpWhatsApp";
 
 // Array containing all valid enterprise staffing role signatures
 const ERP_ALLOWED_ROLES = ["admin", "super_admin", "center_manager", "accountant", "counsellor"];
@@ -101,6 +102,7 @@ export default function App() {
             <Route path="audit" element={<ErpAudit />} />
             <Route path="erpidcards" element={<ErpIdCards />} />
             <Route path="erpattendance" element={<ErpAttendance />} />
+            <Route path="whatsapp" element={<ErpWhatsApp />} />
           </Route>
 
           {/* ============================================================================

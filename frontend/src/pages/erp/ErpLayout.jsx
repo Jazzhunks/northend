@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { erp, isSuper, isManagerPlus, isERPUser } from "@/lib/erpApi";
 import {
   LayoutDashboard, Users, Receipt, Wallet, UserPlus, Building2,
-  ScrollText, LogOut, Menu, X, GraduationCap, Contact2, QrCode
+  ScrollText, LogOut, Menu, X, GraduationCap, Contact2, QrCode, MessageSquare
 } from "lucide-react";
 
 const NAV = [
@@ -18,6 +18,7 @@ const NAV = [
   { to: "/erp/audit", label: "Audit Log", icon: ScrollText, show: isSuper },
   { to: "/erp/erpattendance", label: "Gate Attendance", icon: QrCode, show: () => true },
   { to: "/erp/erpidcards", label: "ID Cards", icon: Contact2, show: (u) => u.role === "super_admin" || u.role === "admin" || u.role === "accountant" || u.role === "center_manager" },
+  { to: "/erp/whatsapp", label: "WhatsApp Broadcast", icon: MessageSquare, show: () => true },
 ];
 
 export default function ErpLayout() {

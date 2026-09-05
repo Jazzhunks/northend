@@ -408,3 +408,18 @@ export const filesAPI = {
 export async function notifyScholarshipApplicants(scholarshipId) {
   return scholarshipsAPI.notifyApplicants(scholarshipId);
 }
+
+export const waAPI = {
+  listTemplates: () => api.get("/whatsapp/templates").then(resData),
+  parseTemplate: (data) => api.post("/whatsapp/templates/parse", data).then(resData),
+  uploadContacts: (formData) =>
+    api.post("/whatsapp/upload-contacts", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }).then(resData),
+  createCampaign: (data) => api.post("/whatsapp/campaigns", data).then(resData),
+  sendCampaign: (id) => api.post(`/whatsapp/campaigns/${id}/send`).then(resData),
+  listCampaigns: () => api.get("/whatsapp/campaigns").then(resData),
+  getCampaign: (id) => api.get(`/whatsapp/campaigns/${id}`).then(resData),
+  getCampaignAnalytics: (id) => api.get(`/whatsapp/campaigns/${id}/analytics`).then(resData),
+  getCostReport: (params) => api.get("/whatsapp/costs", { params }).then(resData),
+};

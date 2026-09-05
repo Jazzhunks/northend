@@ -42,21 +42,33 @@ export function useOneSignal() {
       onesignal = os;
       if (!os || !user) return;
 
-      if (typeof os.User !== "undefined" && typeof os.User.addTags === "function") {
-        os.User.addTags({
-          role: user.role || "user",
-          user_id: String(user.id || ""),
-          name: String(user.name || ""),
-          email: String(user.email || ""),
-        }).catch((err) => {
-          console.error("OneSignal addTags failed:", err);
-        });
-      }
+      try {
+        if (typeof os.User !== "undefined" && typeof os.User.addTags === "function") {
+          const result = os.User.addTags({
+            role: user.role || "user",
+            user_id: String(user.id || ""),
+            name: String(user.name || ""),
+            email: String(user.email || ""),
+          });
 
-      if (user.id && typeof os.login === "function") {
-        os.login(String(user.id)).catch((err) => {
-          console.error("OneSignal login failed:", err);
-        });
+          if (result && typeof result.catch === "function") {
+            result.catch((err) => {
+              console.error("OneSignal addTags failed:", err);
+            });
+          }
+        }
+
+        if (user.id && typeof os.login === "function") {
+          const loginResult = os.login(String(user.id));
+
+          if (loginResult && typeof loginResult.catch === "function") {
+            loginResult.catch((err) => {
+              console.error("OneSignal login failed:", err);
+            });
+          }
+        }
+      } catch (err) {
+        console.error("OneSignal tagging/login error:", err);
       }
     }).catch((err) => {
       if (err && /Can only be used on/i.test(err.message || "")) {
@@ -67,8 +79,16 @@ export function useOneSignal() {
     });
 
     return () => {
-      if (onesignal && user?.id && typeof onesignal.logout === "function") {
-        onesignal.logout().catch(() => {});
+      try {
+        if (onesignal && user?.id && typeof onesignal.logout === "function") {
+          const logoutResult = onesignal.logout();
+
+          if (logoutResult && typeof logoutResult.catch === "function") {
+            logoutResult.catch(() => {});
+          }
+        }
+      } catch (err) {
+        console.error("OneSignal logout error:", err);
       }
     };
   }, [user]);
