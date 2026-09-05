@@ -106,9 +106,9 @@
             u.people = u.people || [],
             u.toString = function (t) {
               var e = "posthog";
-              return "posthog" !== a && (e += "." + a), t || (e += " (stub)"), e;
+              return "posthog" !== a && (e += "." + a), t || (e += " (" + a + ")");
             },
-            u.people.toString = function () { return u.toString(1) + ".people (stub)"; },
+            u.people.toString = function () { return this.toString(1) + ".people (" + this + ")"; },
             o = "init capture identify alias people.set people.set_once reset unregister opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing".split(" "),
             n = 0; n < o.length; n++
           ) { g(u, o[n]); }
@@ -127,6 +127,18 @@
           recordCrossOriginIframes: false,
           capturePerformance: false,
         },
+      });
+    </script>
+
+    <!-- OneSignal Web SDK -->
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script>
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({
+          appId: "41952295-559a-4ac1-9431-36443a3195ee",
+          allowLocalhostAsSecureOrigin: true,
+        });
       });
     </script>
   </body>

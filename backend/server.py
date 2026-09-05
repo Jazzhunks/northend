@@ -53,6 +53,7 @@ from notifications import (
     emit_result_published,
     emit_broadcast_complete,
 )
+from onesignal_client import notify_admins, notify_students
 
 
 # ---------- Constants & Helpers ----------
@@ -751,6 +752,12 @@ async def create_scholarship(payload: ScholarshipIn, _admin = Depends(require_ad
     if doc.get("is_featured"):
         await _clear_featured_except("scholarships", doc["id"])
     doc.pop("_id", None)
+    asyncio.create_task(notify_students(
+        "New Scholarship Campaign",
+        doc.get("title", "A new scholarship campaign is now open."),
+        data={"type": "campaign", "scholarship_id": doc.get("id")},
+        url="/scholarship",
+    ))
     return doc
 
 @api.put("/scholarships/{sid}")
@@ -876,6 +883,11 @@ async def apply_scholarship(payload: ScholarshipApplicationIn, background: Backg
         "scholarship_title": title_for_email,
         "venue": selected_venue,
     }))
+    asyncio.create_task(notify_admins(
+        "New Scholarship Application",
+        f"{payload.name} applied for {title_for_email}. App No: {doc['application_no']}",
+        data={"type": "scholarship_application", "application_no": doc["application_no"]},
+    ))
 
     admit_pdf_bytes = None
     try:
@@ -1150,6 +1162,12 @@ async def set_scholarship_result(aid: str, payload: ScholarshipResultIn, backgro
             "email": app_doc.get("email", ""),
             "scholarship_percentage": pct,
         }))
+        asyncio.create_task(notify_students(
+            "Result Published",
+            f"Your result for {app_doc.get('target_exam', 'the exam')} is now available. App No: {app_doc['application_no']}",
+            data={"type": "result_published", "application_no": app_doc["application_no"]},
+            url=f"/scholarship/result?app_no={app_doc['application_no']}",
+        ))
     return {"ok": True, **update}
 
 @api.post("/scholarship-applications/lookup")
@@ -2147,6 +2165,12 @@ async def create_notice(payload: NoticeIn, _admin = Depends(require_admin)):
     if doc.get("is_featured"):
         await _clear_featured_except("notices", doc["id"])
     doc.pop("_id", None)
+    asyncio.create_task(notify_students(
+        "New Notice",
+        doc.get("title", "A new notice has been published."),
+        data={"type": "notice", "notice_id": doc.get("id")},
+        url="/notices",
+    ))
     return doc
 
 @api.put("/notices/{nid}")
@@ -2326,6 +2350,12 @@ async def contact(payload: ContactIn, request: Request):
     doc["created_at"] = now_iso()
     doc["status"] = "new"
     await db.inquiries.insert_one(doc)
+    asyncio.create_task(notify_admins(
+        "New Inquiry Received",
+        f"{doc.get('name', 'Someone')} sent a new query: {doc.get('subject', 'No subject')}",
+        data={"type": "inquiry", "inquiry_id": doc.get("id")},
+        url="/admin",
+    ))
     doc.pop("_id", None)
     return doc
 
@@ -2717,7 +2747,16 @@ erp_router = build_erp_router(db, get_current_user, hash_password, verify_passwo
 api.include_router(erp_router)
 
 from whatsapp_inbox import build_whatsapp_router
-api.include_router(build_whatsapp_router(db, require_super_admin, on_inbound=emit_whatsapp_message))
+async def _on_whatsapp_inbound(payload: Dict[str, Any]) -> None:
+    await emit_whatsapp_message(payload)
+    asyncio.create_task(notify_admins(
+        "New WhatsApp Message",
+        payload.get("name") or payload.get("from_number", "Unknown"),
+        data={"type": "whatsapp_message", "message_id": payload.get("message_id")},
+        url="/admin",
+    ))
+
+api.include_router(build_whatsapp_router(db, require_super_admin, on_inbound=_on_whatsapp_inbound))
 # WATH Carnival + page config
 notifications_router = build_notifications_router(require_admin)
 api.include_router(notifications_router)

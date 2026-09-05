@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { useOneSignal } from "@/hooks/useOneSignal";
 import ScrollToTop from "@/components/ScrollToTop";
 import Layout from "@/components/Layout";
 import Home from "@/pages/Home";
@@ -63,11 +64,17 @@ function Protected({ children, allowedRoles }) {
   return children;
 }
 
+function OneSignalBridge() {
+  useOneSignal();
+  return null;
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <ScrollToTop />
+        <OneSignalBridge />
         <Toaster position="top-right" richColors />
         <Routes>
           <Route path="/examiner" element={<Examiner />} />
