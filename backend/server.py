@@ -730,6 +730,13 @@ async def list_scholarships(include_wath: bool = False, type: Optional[str] = Qu
 async def list_scholarships_admin(_admin = Depends(require_admin)):
     return await db.scholarships.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
 
+@api.get("/scholarships/{sid}")
+async def get_scholarship(sid: str):
+    camp = await db.scholarships.find_one({"$or": [{"id": sid}, {"slug": sid}]}, {"_id": 0, "examiner_token": 0})
+    if not camp:
+        raise HTTPException(404, "Campaign not found")
+    return camp
+
 @api.post("/scholarships")
 async def create_scholarship(payload: ScholarshipIn, _admin = Depends(require_admin)):
     doc = payload.model_dump()

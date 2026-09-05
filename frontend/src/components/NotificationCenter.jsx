@@ -105,11 +105,52 @@ export default function NotificationCenter() {
         const data = JSON.parse(event.data);
         const type = data.type || "info";
         const payload = data.payload || {};
+
+        const buildTitle = () => {
+          if (payload.title) return payload.title;
+          switch (type) {
+            case "scholarship_application":
+              return `New scholarship application from ${payload.name || "a student"}`;
+            case "enrollment":
+              return `New enrollment from ${payload.name || "a student"}`;
+            case "job_application":
+              return `New job application from ${payload.name || "an applicant"}`;
+            case "whatsapp_message_received":
+              return "New WhatsApp message received";
+            case "result_published":
+              return `Result published for ${payload.name || "a student"}`;
+            case "broadcast_complete":
+              return "Broadcast completed";
+            default:
+              return "New Notification";
+          }
+        };
+
+        const buildMessage = () => {
+          if (payload.message) return payload.message;
+          switch (type) {
+            case "scholarship_application":
+              return `Application #${payload.application_no || "—"} · ${payload.scholarship_title || payload.campaign_kind || "Scholarship"} · ${payload.venue || ""}`;
+            case "enrollment":
+              return `Enrollment #${payload.application_no || payload.enrollment_no || "—"} · ${payload.course || payload.program || ""}`;
+            case "job_application":
+              return `Application #${payload.application_no || "—"} · ${payload.department || payload.job_title || ""}`;
+            case "whatsapp_message_received":
+              return payload.body || payload.message || "You received a new WhatsApp message.";
+            case "result_published":
+              return `${payload.name || "Student"} · ${payload.exam || ""} · Marks: ${payload.marks_obtained ?? ""}`;
+            case "broadcast_complete":
+              return payload.summary || "Your broadcast campaign has finished sending.";
+            default:
+              return "";
+          }
+        };
+
         const notification = {
           id: data.id || crypto.randomUUID(),
           type: type,
-          title: payload.title || data.title || "New Notification",
-          message: payload.message || data.message || "",
+          title: buildTitle(),
+          message: buildMessage(),
           timestamp: data.timestamp || new Date().toISOString(),
           read: false,
         };
