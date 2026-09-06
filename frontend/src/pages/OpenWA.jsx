@@ -7,7 +7,15 @@ export default function OpenWA() {
   useEffect(() => {
     let cancelled = false;
 
-    fetch("/admin/openwa/api/health", { credentials: "include" })
+    const token = localStorage.getItem("nw_token");
+    const headers = {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+
+    fetch("/admin/openwa/api/health", {
+      credentials: "include",
+      headers,
+    })
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.text();

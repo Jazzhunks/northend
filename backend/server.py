@@ -2816,7 +2816,7 @@ notifications_router = build_notifications_router(require_admin)
 api.include_router(notifications_router)
 from wath_carnival import build_wath_router, try_reserve_slot, release_slot  # noqa: E402
 api.include_router(build_wath_router(db, require_admin))
-from openwa_proxy import router as openwa_router  # noqa: E402
+from openwa_proxy import router as openwa_router, _ensure_openwa_running  # noqa: E402
 app.include_router(openwa_router, prefix="/admin/openwa", dependencies=[Depends(require_admin)])
 
 # ============================================================================
@@ -3233,6 +3233,10 @@ async def _run_boot_tasks():
         await _backfill_slugs()
     except Exception as e:
         logging.error(f"_backfill_slugs() failed: {e}")
+    try:
+        await _ensure_openwa_running()
+    except Exception as e:
+        logging.error(f"_ensure_openwa_running() failed: {e}")
     logging.info("Unacademy Offline Centre backend ready.")
 
 

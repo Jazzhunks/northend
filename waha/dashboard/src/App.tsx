@@ -105,7 +105,7 @@ function AppContent() {
 
   return (
     <ToastProvider>
-      <BrowserRouter>
+      <BrowserRouter basename="/admin/openwa">
         <Suspense fallback={loadingFallback}>
           <Routes>
             <Route path="/" element={<Layout onLogout={handleLogout} userRole={role} />}>
