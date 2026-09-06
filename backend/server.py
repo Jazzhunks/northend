@@ -2826,7 +2826,7 @@ async def wa_list_templates(_admin = Depends(require_admin)):
     token = os.environ.get("WHATSAPP_ACCESS_TOKEN", "")
     waba_id = os.environ.get("WHATSAPP_BUSINESS_ACCOUNT_ID", "")
     if not token or not waba_id:
-        return {"data": []}
+        raise HTTPException(500, "WhatsApp credentials not configured on server")
     try:
         templates = await fetch_approved_templates(token, waba_id)
         return {"data": templates}
@@ -3070,6 +3070,113 @@ async def wa_cost_report(month: Optional[str] = Query(None), _admin = Depends(re
         "total_cost_usd": round(total, 4),
         "by_category": {k: round(v, 4) for k, v in by_category.items()},
     }
+
+
+# ============================================================================
+# WhatsApp Quick Replies
+# ============================================================================
+
+@api.get("/whatsapp/quick-replies")
+async def wa_list_quick_replies(category: Optional[str] = None, _admin = Depends(require_admin)):
+    q: Dict[str, Any] = {}
+    if category:
+        q["category"] = category
+    items = await db.wa_quick_replies.find(q, {"_id": 0}).sort("created_at", -1).to_list(200)
+    return items
+
+
+@api.post("/whatsapp/quick-replies")
+async def wa_create_quick_reply(payload: Dict[str, Any], _admin = Depends(require_admin)):
+    doc = {
+        "id": new_id(),
+        "shortcut": payload.get("shortcut", ""),
+        "text": payload.get("text", ""),
+        "category": payload.get("category", "general"),
+        "created_by": _admin.get("id"),
+        "created_at": now_iso(),
+    }
+    await db.wa_quick_replies.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+@api.put("/whatsapp/quick-replies/{qr_id}")
+async def wa_update_quick_reply(qr_id: str, payload: Dict[str, Any], _admin = Depends(require_admin)):
+    await db.wa_quick_replies.update_one({"id": qr_id}, {"$set": payload})
+    doc = await db.wa_quick_replies.find_one({"id": qr_id}, {"_id": 0})
+    return doc or {}
+
+
+@api.delete("/whatsapp/quick-replies/{qr_id}")
+async def wa_delete_quick_reply(qr_id: str, _admin = Depends(require_admin)):
+    await db.wa_quick_replies.delete_one({"id": qr_id})
+    return {"ok": True}
+
+
+# ============================================================================
+# WhatsApp Template Preview / Sandbox
+# ============================================================================
+
+@api.post("/whatsapp/templates/{template_name}/preview")
+async def wa_preview_template(template_name: str, payload: Dict[str, Any], _admin = Depends(require_admin)):
+    token = os.environ.get("WHATSAPP_ACCESS_TOKEN", "")
+    phone_id = os.environ.get("WHATSAPP_PHONE_NUMBER_ID", "")
+    if not token or not phone_id:
+        raise HTTPException(500, "WhatsApp credentials not configured")
+    target = payload.get("to") or _admin.get("phone") or _admin.get("email")
+    if not target:
+        raise HTTPException(400, "No recipient phone provided and admin profile has no phone")
+    language = payload.get("language", "en_US")
+    components = payload.get("components") or []
+    if not components:
+        waba_id = os.environ.get("WHATSAPP_BUSINESS_ACCOUNT_ID", "")
+        if not waba_id:
+            raise HTTPException(500, "WhatsApp credentials not configured")
+        templates = await fetch_approved_templates(token, waba_id)
+        match = next((t for t in templates if t.get("name") == template_name), None)
+        if not match:
+            raise HTTPException(404, f"Template {template_name} not found or not approved")
+        components = match.get("components") or []
+        language = match.get("language", language)
+    variables = parse_template_variables(components)
+    sample_vars = []
+    for v in variables:
+        idx = v["index"]
+        sample_vars.append({"type": "text", "text": payload.get(f"var_{idx}") or f"sample_{idx}"})
+    result = await send_broadcast_template(
+        wa_id=target,
+        template_name=template_name,
+        language=language,
+        components=components,
+        variables=sample_vars,
+        access_token=token,
+        phone_id=phone_id,
+    )
+    if not result.get("ok"):
+        raise HTTPException(502, result.get("error", "Failed to send preview"))
+    return {"ok": True, "wa_message_id": result.get("wa_message_id")}
+
+
+# ============================================================================
+# Excel Template Download
+# ============================================================================
+
+@api.get("/whatsapp/upload-template")
+async def wa_download_upload_template(_admin = Depends(require_admin)):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "contacts"
+    ws.append(["phone", "name", "email", "city", "course", "var_1", "var_2"])
+    ws.append(["919876543210", "John Doe", "john@example.com", "Srinagar", "NEET", "A", "2025-01-01"])
+    ws.append(["919876543211", "Jane Smith", "jane@example.com", "Jammu", "IIT-JEE", "B", "2025-01-02"])
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=wa_upload_template.xlsx"},
+    )
 
 
 app.include_router(api)

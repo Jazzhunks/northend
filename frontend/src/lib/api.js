@@ -422,4 +422,10 @@ export const waAPI = {
   getCampaign: (id) => api.get(`/whatsapp/campaigns/${id}`).then(resData),
   getCampaignAnalytics: (id) => api.get(`/whatsapp/campaigns/${id}/analytics`).then(resData),
   getCostReport: (params) => api.get("/whatsapp/costs", { params }).then(resData),
+  listQuickReplies: (category) => api.get("/whatsapp/quick-replies", { params: category ? { category } : {} }).then(resData),
+  createQuickReply: (data) => api.post("/whatsapp/quick-replies", data).then(resData),
+  updateQuickReply: (id, data) => api.put(`/whatsapp/quick-replies/${id}`, data).then(resData),
+  deleteQuickReply: (id) => api.delete(`/whatsapp/quick-replies/${id}`).then(resData),
+  previewTemplate: (templateName, data) => api.post(`/whatsapp/templates/${encodeURIComponent(templateName)}/preview`, data).then(resData),
+  downloadUploadTemplate: () => api.get("/whatsapp/upload-template", { responseType: "blob" }).then(resData),
 };

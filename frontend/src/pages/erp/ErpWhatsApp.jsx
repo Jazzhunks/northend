@@ -38,6 +38,7 @@ import AnalyticsCharts from "@/components/wa/AnalyticsCharts";
 const TABS = [
   { id: "campaigns", label: "Campaigns", icon: MessageSquare },
   { id: "new", label: "New Broadcast", icon: Plus },
+  { id: "quick-replies", label: "Quick Replies", icon: MessageSquare },
   { id: "monitor", label: "Live Monitor", icon: Play },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
   { id: "templates", label: "Templates", icon: LayoutTemplate },
@@ -78,6 +79,9 @@ export default function ErpWhatsApp() {
   const [monitorJobStatus, setMonitorJobStatus] = useState(null);
   const [analyticsCampaignId, setAnalyticsCampaignId] = useState(null);
   const [analytics, setAnalytics] = useState(null);
+  const [quickReplies, setQuickReplies] = useState([]);
+  const [qrForm, setQrForm] = useState({ shortcut: "", text: "", category: "general" });
+  const [qrLoading, setQrLoading] = useState(false);
   const { upload: uploadContacts, uploading: uploadingContacts } = useBroadcastUpload();
 
   const refreshCampaigns = async () => {
@@ -98,9 +102,19 @@ export default function ErpWhatsApp() {
     }
   };
 
+  const refreshQuickReplies = async () => {
+    try {
+      const { data } = await waAPI.listQuickReplies();
+      setQuickReplies(data || []);
+    } catch (e) {
+      // silent
+    }
+  };
+
   useEffect(() => {
     refreshCampaigns();
     refreshTemplates();
+    refreshQuickReplies();
   }, []);
 
   const handleTemplateChange = async (name) => {
@@ -175,6 +189,27 @@ export default function ErpWhatsApp() {
     } catch (e) {
       toast.error("Failed to load analytics");
     }
+  };
+
+  const handleCreateQR = async () => {
+    if (!qrForm.text.trim()) return toast.error("Quick reply text is required");
+    setQrLoading(true);
+    try {
+      await waAPI.createQuickReply(qrForm);
+      setQrForm({ shortcut: "", text: "", category: "general" });
+      toast.success("Quick reply saved");
+      refreshQuickReplies();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || e.message);
+    } finally {
+      setQrLoading(false);
+    }
+  };
+
+  const handleDeleteQR = async (id) => {
+    await waAPI.deleteQuickReply(id);
+    setQuickReplies((prev) => prev.filter((q) => q.id !== id));
+    toast.success("Deleted");
   };
 
   const handleJobEvent = (event) => {
@@ -390,16 +425,39 @@ export default function ErpWhatsApp() {
                   Upload an Excel/CSV file with at least a phone column. Duplicates within the file will be
                   skipped with a warning. Numbers already in the database will still receive this broadcast.
                 </p>
-                <input
-                  type="file"
-                  accept=".xlsx,.xls,.csv"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileUpload(file);
-                  }}
-                  disabled={uploadingContacts}
-                  className="block text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-accent file:text-accent-foreground hover:file:bg-accent/90"
-                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFileUpload(file);
+                    }}
+                    disabled={uploadingContacts}
+                    className="block text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-accent file:text-accent-foreground hover:file:bg-accent/90"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={async () => {
+                      try {
+                        const blob = await waAPI.downloadUploadTemplate();
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = "wa_upload_template.xlsx";
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        toast.success("Template downloaded");
+                      } catch (e) {
+                        toast.error("Failed to download template");
+                      }
+                    }}
+                    className="rounded-xl text-xs cursor-pointer"
+                  >
+                    <FileSpreadsheet size={14} className="mr-1.5" /> Download Template
+                  </Button>
+                </div>
                 {uploadResult && (
                   <div className="text-xs text-muted-foreground space-y-1">
                     <div>Imported: {uploadResult.contacts_imported} contacts</div>
@@ -439,6 +497,54 @@ export default function ErpWhatsApp() {
               </Button>
             </div>
           </Card>
+        </div>
+      )}
+
+      {activeTab === "quick-replies" && (
+        <div className="space-y-4 animate-fadeIn">
+          <Card className="p-5 rounded-2xl border border-border bg-background/30 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Input
+                value={qrForm.shortcut}
+                onChange={(e) => setQrForm((f) => ({ ...f, shortcut: e.target.value }))}
+                placeholder="Shortcut / label"
+                className="rounded-xl"
+              />
+              <Input
+                value={qrForm.text}
+                onChange={(e) => setQrForm((f) => ({ ...f, text: e.target.value }))}
+                placeholder="Reply text"
+                className="rounded-xl"
+              />
+              <Input
+                value={qrForm.category}
+                onChange={(e) => setQrForm((f) => ({ ...f, category: e.target.value }))}
+                placeholder="Category"
+                className="rounded-xl"
+              />
+            </div>
+            <Button onClick={handleCreateQR} disabled={qrLoading} className="rounded-xl text-xs font-bold cursor-pointer">
+              {qrLoading ? "Saving..." : "Save Quick Reply"}
+            </Button>
+          </Card>
+          <div className="space-y-2">
+            {quickReplies.map((q) => (
+              <Card key={q.id} className="p-3 rounded-2xl border border-border bg-background/40 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-sm font-bold text-foreground">{q.shortcut || q.category}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">{q.text}</div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleDeleteQR(q.id)}
+                  className="rounded-xl text-xs text-rose-600 cursor-pointer"
+                >
+                  Delete
+                </Button>
+              </Card>
+            ))}
+          </div>
         </div>
       )}
 
@@ -530,17 +636,31 @@ export default function ErpWhatsApp() {
                         Language: {t.language} · Category: {t.category}
                       </div>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedTemplate(t.name);
-                        setActiveTab("new");
-                      }}
-                      className="rounded-xl text-xs cursor-pointer"
-                    >
-                      Use Template
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedTemplate(t.name);
+                          setActiveTab("new");
+                        }}
+                        className="rounded-xl text-xs cursor-pointer"
+                      >
+                        Use Template
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          const phone = prompt("Enter phone number to send preview to:");
+                          if (!phone) return;
+                          waAPI.previewTemplate(t.name, { to: phone }).then(() => toast.success("Preview sent")).catch((e) => toast.error(e.response?.data?.detail || e.message));
+                        }}
+                        className="rounded-xl text-xs cursor-pointer"
+                      >
+                        Send Test
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               ))}
