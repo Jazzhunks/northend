@@ -28,6 +28,7 @@ import CampaignFormPage from "@/pages/CampaignFormPage";
 import SchoolDashboard from "@/pages/SchoolDashboard";
 import AdminSchoolVisits from "@/pages/AdminSchoolVisits";
 import Examiner from "@/pages/Examiner";
+import OpenWA from "@/pages/OpenWA";
 import Privacy from "@/pages/Privacy";
 import Gallery from "./pages/Gallery";
 import Blog from "./pages/Blog";
@@ -142,6 +143,7 @@ export default function App() {
             <Route path="/admin/carnivals/:id/dashboard" element={<Protected allowedRoles={["admin"]}><CarnivalDashboard /></Protected>} />
             <Route path="/admin/campaigns/new" element={<Protected allowedRoles={["admin"]}><CampaignFormPage /></Protected>} />
             <Route path="/admin/campaigns/:id/edit" element={<Protected allowedRoles={["admin"]}><CampaignFormPage /></Protected>} />
+            <Route path="/admin/openwa" element={<Protected allowedRoles={["admin"]}><OpenWA /></Protected>} />
             
             {/* Universal Fallback Direct Catch */}
             <Route path="*" element={<Navigate to="/" replace />} />

@@ -2816,6 +2816,8 @@ notifications_router = build_notifications_router(require_admin)
 api.include_router(notifications_router)
 from wath_carnival import build_wath_router, try_reserve_slot, release_slot  # noqa: E402
 api.include_router(build_wath_router(db, require_admin))
+from openwa_proxy import router as openwa_router  # noqa: E402
+app.include_router(openwa_router, prefix="/admin/openwa", dependencies=[Depends(require_admin)])
 
 # ============================================================================
 # WhatsApp Broadcasting System Routes
