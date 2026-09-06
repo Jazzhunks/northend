@@ -55,7 +55,7 @@ export default function OpenWA() {
           <p className="text-lg font-medium text-destructive">OpenWA Dashboard Unavailable</p>
           <p className="text-sm text-muted-foreground">{message}</p>
           <p className="text-xs text-muted-foreground">
-            Ensure the OpenWA service is running and reachable at localhost:2785.
+            Ensure the OpenWA service is running and reachable at the configured OPENWA_URL.
           </p>
         </div>
       </div>
