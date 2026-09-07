@@ -170,11 +170,47 @@ def _safe_send_whatsapp_admit_card(*args, **kwargs) -> None:
         logging.error(f"Background WhatsApp task failed: {e}")
 
 def _safe_send_whatsapp_wath_carnival(*args, **kwargs) -> None:
-    """Sync wrapper for FastAPI BackgroundTasks for WATH Carnival messages."""
+    """Sync wrapper for FastAPI BackgroundTasks for WATH Carnival WhatsApp messages."""
     try:
         asyncio.run(_run_maybe_async(send_whatsapp_wath_carnival, *args, **kwargs))
     except Exception as e:
         logging.error(f"Background WATH Carnival WhatsApp task failed: {e}")
+
+
+async def _send_registration_group_notification(user_doc: dict) -> None:
+    """Send a new-registration notification to the configured OpenWA group."""
+    openwa_url = os.getenv("OPENWA_URL")
+    api_key = os.getenv("OPENWA_API_MASTER_KEY")
+    session_id = os.getenv("OPENWA_SESSION_ID")
+    group_id = os.getenv("OPENWA_REGISTRATION_GROUP_ID")
+    if not all([openwa_url, api_key, session_id, group_id]):
+        logging.warning("OpenWA group notification skipped: missing OPENWA_URL/OPENWA_API_MASTER_KEY/OPENWA_SESSION_ID/OPENWA_REGISTRATION_GROUP_ID")
+        return
+
+    name = user_doc.get("name", "User")
+    email = user_doc.get("email", "")
+    phone = user_doc.get("phone", "")
+    role = user_doc.get("role", "student")
+    text = (
+        "🆕 *New Registration*\n\n"
+        f"*Name:* {name}\n"
+        f"*Email:* {email}\n"
+        f"*Phone:* {phone}\n"
+        f"*Role:* {role}"
+    )
+    payload = {
+        "chatId": group_id,
+        "text": text,
+    }
+    url = f"{openwa_url.rstrip('/')}/api/sessions/{session_id}/chats/{group_id}/send-text"
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.post(url, json=payload, headers={"Authorization": f"Bearer {api_key}"})
+            resp.raise_for_status()
+            logging.info("Sent registration notification to OpenWA group %s", group_id)
+    except Exception as e:
+        logging.error("Failed to send registration group notification: %s", e)
+
 
 def export_excel(rows: list, sheet_name: str, filename: str):
     """Helper utility for generating Excel downloads."""
@@ -545,8 +581,16 @@ async def unique_slug(collection: str, base: str, exclude_id: str | None = None)
         i += 1
 
 # ---------- Auth Routes ----------
+def _safe_send_registration_group_notification(user_doc: dict) -> None:
+    """Sync wrapper for FastAPI BackgroundTasks for OpenWA registration group notifications."""
+    try:
+        asyncio.run(_send_registration_group_notification(user_doc))
+    except Exception as e:
+        logging.error("Background OpenWA registration notification failed: %s", e)
+
+
 @api.post("/auth/register")
-async def register(payload: RegisterIn, response: Response):
+async def register(payload: RegisterIn, response: Response, background: BackgroundTasks):
     email = payload.email.lower().strip()
     if len(email) > 254 or len(payload.password) > 128:
         raise HTTPException(400, "Invalid payload length")
@@ -575,6 +619,7 @@ async def register(payload: RegisterIn, response: Response):
     set_auth_cookies(response, access, refresh, refresh_max_age=refresh_ttl)
     doc.pop("password_hash")
     doc.pop("_id", None)
+    background.add_task(_safe_send_registration_group_notification, doc)
     return {"user": doc, "access_token": access}
 
 @api.post("/auth/login")
