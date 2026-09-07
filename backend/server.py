@@ -252,10 +252,10 @@ async def _send_carnival_booking_notification(booking: dict) -> None:
         venue_contacts = json.loads(venue_contacts_raw)
     except Exception:
         venue_contacts = {}
-    venue_phone = venue_contacts.get(venue)
-    if not venue_phone:
+    venue_contact = venue_contacts.get(venue)
+    if not venue_contact:
         return
-    venue_chat_id = f"{venue_phone}@c.us"
+    venue_chat_id = venue_contact if "@" in venue_contact else f"{venue_contact}@c.us"
     venue_payload = {
         "chatId": venue_chat_id,
         "text": text,
