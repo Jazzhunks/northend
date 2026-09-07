@@ -3429,16 +3429,30 @@ async def _backfill_slugs():
 
 
 async def _schedule_daily_summary():
-    """Send carnival daily booking summary at 8:00 AM server time, then every 24h."""
+    """Send carnival daily booking summary at 8:00 AM server time, with catch-up for missed days."""
     while True:
         now = datetime.now(timezone.utc)
+        today = now.strftime("%Y-%m-%d")
         target = now.replace(hour=8, minute=0, second=0, microsecond=0)
+        missed_today = False
         if now >= target:
+            cfg = await db.system_meta.find_one({"key": "wath_page_config"}, {"_id": 0})
+            active_carnival_id = (cfg or {}).get("active_carnival_id")
+            if active_carnival_id:
+                marker_key = f"carnival_daily_summary:{active_carnival_id}:{today}"
+                marker = await db.system_meta.find_one({"key": marker_key}, {"_id": 0})
+                if not marker:
+                    missed_today = True
             target = target + timedelta(days=1)
         try:
             await asyncio.sleep(max(0, (target - now).total_seconds()))
         except Exception:
             return
+        if missed_today:
+            try:
+                await _send_carnival_daily_summary(force=True)
+            except Exception as e:
+                logging.error("Catch-up daily carnival summary send failed: %s", e)
         try:
             await _send_carnival_daily_summary()
         except Exception as e:
