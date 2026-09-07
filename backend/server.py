@@ -214,7 +214,7 @@ async def _send_registration_group_notification(user_doc: dict) -> None:
 
 
 async def _send_carnival_booking_notification(booking: dict) -> None:
-    """Send a new carnival slot booking notification to the configured OpenWA group."""
+    """Send a new carnival slot booking notification to the configured OpenWA group and venue contact."""
     openwa_url = os.getenv("OPENWA_URL")
     api_key = os.getenv("OPENWA_API_MASTER_KEY")
     session_id = os.getenv("OPENWA_SESSION_ID")
@@ -244,6 +244,29 @@ async def _send_carnival_booking_notification(booking: dict) -> None:
             logging.info("Sent carnival booking notification to OpenWA group %s", group_id)
     except Exception as e:
         logging.error("Failed to send carnival booking group notification: %s", e)
+
+    venue = (booking.get("venue") or "").strip().lower()
+    venue_contacts_raw = os.getenv("OPENWA_VENUE_CONTACTS", "{}")
+    try:
+        import json
+        venue_contacts = json.loads(venue_contacts_raw)
+    except Exception:
+        venue_contacts = {}
+    venue_phone = venue_contacts.get(venue)
+    if not venue_phone:
+        return
+    venue_chat_id = f"{venue_phone}@c.us"
+    venue_payload = {
+        "chatId": venue_chat_id,
+        "text": text,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.post(url, json=venue_payload, headers={"X-API-Key": api_key})
+            resp.raise_for_status()
+            logging.info("Sent carnival booking notification to venue contact %s", venue_chat_id)
+    except Exception as e:
+        logging.error("Failed to send carnival booking venue notification: %s", e)
 
 
 async def _send_carnival_daily_summary(force: bool = False) -> None:
