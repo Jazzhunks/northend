@@ -202,10 +202,10 @@ async def _send_registration_group_notification(user_doc: dict) -> None:
         "chatId": group_id,
         "text": text,
     }
-    url = f"{openwa_url.rstrip('/')}/api/sessions/{session_id}/chats/{group_id}/send-text"
+    url = f"{openwa_url.rstrip('/')}/api/sessions/{session_id}/messages/send-text"
     try:
         async with httpx.AsyncClient(timeout=15) as client:
-            resp = await client.post(url, json=payload, headers={"Authorization": f"Bearer {api_key}"})
+            resp = await client.post(url, json=payload, headers={"X-API-Key": api_key})
             resp.raise_for_status()
             logging.info("Sent registration notification to OpenWA group %s", group_id)
     except Exception as e:
