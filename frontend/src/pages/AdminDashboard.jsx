@@ -643,14 +643,8 @@ export default function AdminDashboard() {
           })}
         </nav>
 
-        <div className="p-3 border-t border-border shrink-0 bg-background/40 space-y-2">
-          <button
-            onClick={() => navigate("/admin/openwa")}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs uppercase font-bold tracking-wider text-accent border border-accent/20 bg-accent/5 hover:bg-accent/15 transition duration-200 cursor-pointer"
-          >
-            <MessageSquare size={14} className="shrink-0"/> <span>OpenWA Dashboard</span>
-          </button>
-          <button
+        <div className="p-3 border-t border-border shrink-0 bg-background/40">
+          <button 
             onClick={() => navigate("/erp")}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs uppercase font-bold tracking-wider text-accent border border-accent/20 bg-accent/5 hover:bg-accent/15 transition duration-200 cursor-pointer"
           >
