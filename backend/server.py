@@ -29,6 +29,7 @@ from typing import List, Optional, Literal, Dict, Any
 import bcrypt
 import jwt
 import openpyxl
+import httpx
 from fastapi import FastAPI, APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Depends, Request, Response, Query, Form
 from fastapi.responses import StreamingResponse
 from starlette.middleware.cors import CORSMiddleware
