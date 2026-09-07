@@ -246,6 +246,87 @@ async def _send_carnival_booking_notification(booking: dict) -> None:
         logging.error("Failed to send carnival booking group notification: %s", e)
 
 
+async def _send_carnival_daily_summary(force: bool = False) -> None:
+    """Send a daily 8 AM summary of today's carnival bookings grouped by venue and class."""
+    openwa_url = os.getenv("OPENWA_URL")
+    api_key = os.getenv("OPENWA_API_MASTER_KEY")
+    session_id = os.getenv("OPENWA_SESSION_ID")
+    group_id = os.getenv("OPENWA_REGISTRATION_GROUP_ID") or os.getenv("OPENWA_CARNIVAL_GROUP_ID")
+    if not all([openwa_url, api_key, session_id, group_id]):
+        logging.warning("OpenWA daily summary skipped: missing OPENWA_URL/OPENWA_API_MASTER_KEY/OPENWA_SESSION_ID/OPENWA_REGISTRATION_GROUP_ID")
+        return
+
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    cfg = await db.system_meta.find_one({"key": "wath_page_config"}, {"_id": 0})
+    active_carnival_id = (cfg or {}).get("active_carnival_id")
+    if not active_carnival_id:
+        logging.info("No active carnival configured; skipping daily summary")
+        return
+
+    marker_key = f"carnival_daily_summary:{active_carnival_id}:{today}"
+    marker = await db.system_meta.find_one({"key": marker_key}, {"_id": 0})
+    if not force and marker:
+        logging.info("Daily summary already sent for %s; skipping", today)
+        return
+
+    cursor = db.scholarship_applications.find(
+        {"carnival_id": active_carnival_id, "chosen_date": today},
+        {"_id": 0, "venue": 1, "standard": 1, "name": 1, "phone": 1, "chosen_slot_time": 1},
+    ).sort("created_at", 1).to_list(1000)
+
+    rows = await cursor
+    if not rows:
+        logging.info("No carnival bookings for today %s; skipping daily summary", today)
+        return
+
+    venues: Dict[str, Any] = {}
+    for row in rows:
+        venue = (row.get("venue") or "—").strip()
+        standard = (row.get("standard") or "—").strip()
+        name = (row.get("name") or "—").strip()
+        phone = (row.get("phone") or "—").strip()
+        time = (row.get("chosen_slot_time") or "—").strip()
+        venues.setdefault(venue, {}).setdefault(standard, []).append({
+            "name": name,
+            "phone": phone,
+            "time": time,
+        })
+
+    lines = [f"📋 *Today's Slot Bookings* ({today})\n"]
+    for venue, classes in venues.items():
+        lines.append(f"🏢 *Venue:* {venue}")
+        for standard, entries in classes.items():
+            if not entries:
+                continue
+            lines.append(f"\n*Class {standard}*")
+            for entry in entries:
+                lines.append(f"{entry['name']} -- {entry['phone']} -- {entry['time']}")
+        lines.append("")
+
+    text = "\n".join(lines).strip()
+    payload = {
+        "chatId": group_id,
+        "text": text,
+    }
+    url = f"{openwa_url.rstrip('/')}/api/sessions/{session_id}/messages/send-text"
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.post(url, json=payload, headers={"X-API-Key": api_key})
+            resp.raise_for_status()
+            await db.system_meta.update_one({"key": marker_key}, {"$set": {"sent_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+            logging.info("Sent carnival daily summary to OpenWA group %s", group_id)
+    except Exception as e:
+        logging.error("Failed to send carnival daily summary: %s", e)
+
+
+def _safe_send_carnival_daily_summary(force: bool = False) -> None:
+    """Sync wrapper for FastAPI BackgroundTasks for OpenWA daily carnival summary."""
+    try:
+        asyncio.run(_send_carnival_daily_summary(force=force))
+    except Exception as e:
+        logging.error("Background OpenWA carnival daily summary failed: %s", e)
+
+
 def export_excel(rows: list, sheet_name: str, filename: str):
     """Helper utility for generating Excel downloads."""
     wb = openpyxl.Workbook()
@@ -1010,6 +1091,11 @@ async def apply_scholarship(payload: ScholarshipApplicationIn, background: Backg
                 "standard": payload.standard,
             },
         )
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        marker_key = f"carnival_daily_summary:{carnival.get('id', payload.carnival_id)}:{today}"
+        marker = await db.system_meta.find_one({"key": marker_key}, {"_id": 0})
+        if marker:
+            background.add_task(_safe_send_carnival_daily_summary, True)
 
     admit_pdf_bytes = None
     try:
@@ -3341,9 +3427,31 @@ async def _backfill_slugs():
             slug = await unique_slug(coll, doc.get("title") or "item", exclude_id=doc.get("id"))
             await db[coll].update_one({"id": doc["id"]}, {"$set": {"slug": slug}})
 
+
+async def _schedule_daily_summary():
+    """Send carnival daily booking summary at 8:00 AM server time, then every 24h."""
+    while True:
+        now = datetime.now(timezone.utc)
+        target = now.replace(hour=8, minute=0, second=0, microsecond=0)
+        if now >= target:
+            target = target + timedelta(days=1)
+        try:
+            await asyncio.sleep(max(0, (target - now).total_seconds()))
+        except Exception:
+            return
+        try:
+            await _send_carnival_daily_summary()
+        except Exception as e:
+            logging.error("Daily carnival summary task failed: %s", e)
+        try:
+            await asyncio.sleep(24 * 60 * 60)
+        except Exception:
+            return
+
 @app.on_event("startup")
 async def on_start():
     asyncio.create_task(_run_boot_tasks())
+    asyncio.create_task(_schedule_daily_summary())
 
 @app.on_event("shutdown")
 async def on_stop():
