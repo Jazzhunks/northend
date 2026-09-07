@@ -212,6 +212,39 @@ async def _send_registration_group_notification(user_doc: dict) -> None:
         logging.error("Failed to send registration group notification: %s", e)
 
 
+async def _send_carnival_booking_notification(booking: dict) -> None:
+    """Send a new carnival slot booking notification to the configured OpenWA group."""
+    openwa_url = os.getenv("OPENWA_URL")
+    api_key = os.getenv("OPENWA_API_MASTER_KEY")
+    session_id = os.getenv("OPENWA_SESSION_ID")
+    group_id = os.getenv("OPENWA_REGISTRATION_GROUP_ID") or os.getenv("OPENWA_CARNIVAL_GROUP_ID")
+    if not all([openwa_url, api_key, session_id, group_id]):
+        logging.warning("OpenWA carnival notification skipped: missing OPENWA_URL/OPENWA_API_MASTER_KEY/OPENWA_SESSION_ID/OPENWA_REGISTRATION_GROUP_ID")
+        return
+
+    text = (
+        "🎪 *New Carnival Slot Booking*\n\n"
+        f"*Venue:* {booking.get('venue', '—')}\n"
+        f"*Name:* {booking.get('name', '—')}\n"
+        f"*Mobile Number:* {booking.get('phone', '—')}\n"
+        f"*Date:* {booking.get('chosen_date', '—')}\n"
+        f"*Time:* {booking.get('chosen_slot_time', '—')}\n"
+        f"*Class:* {booking.get('standard', '—')}"
+    )
+    payload = {
+        "chatId": group_id,
+        "text": text,
+    }
+    url = f"{openwa_url.rstrip('/')}/api/sessions/{session_id}/messages/send-text"
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.post(url, json=payload, headers={"X-API-Key": api_key})
+            resp.raise_for_status()
+            logging.info("Sent carnival booking notification to OpenWA group %s", group_id)
+    except Exception as e:
+        logging.error("Failed to send carnival booking group notification: %s", e)
+
+
 def export_excel(rows: list, sheet_name: str, filename: str):
     """Helper utility for generating Excel downloads."""
     wb = openpyxl.Workbook()
@@ -589,6 +622,14 @@ def _safe_send_registration_group_notification(user_doc: dict) -> None:
         logging.error("Background OpenWA registration notification failed: %s", e)
 
 
+def _safe_send_carnival_booking_notification(booking: dict) -> None:
+    """Sync wrapper for FastAPI BackgroundTasks for OpenWA carnival booking group notifications."""
+    try:
+        asyncio.run(_send_carnival_booking_notification(booking))
+    except Exception as e:
+        logging.error("Background OpenWA carnival booking notification failed: %s", e)
+
+
 @api.post("/auth/register")
 async def register(payload: RegisterIn, response: Response, background: BackgroundTasks):
     email = payload.email.lower().strip()
@@ -955,6 +996,19 @@ async def apply_scholarship(payload: ScholarshipApplicationIn, background: Backg
         f"{payload.name} applied for {title_for_email}. App No: {doc['application_no']}",
         data={"type": "scholarship_application", "application_no": doc["application_no"]},
     ))
+
+    if carnival:
+        background.add_task(
+            _safe_send_carnival_booking_notification,
+            {
+                "venue": selected_venue,
+                "name": payload.name,
+                "phone": clean_phone,
+                "chosen_date": payload.chosen_date,
+                "chosen_slot_time": payload.chosen_slot_time,
+                "standard": payload.standard,
+            },
+        )
 
     admit_pdf_bytes = None
     try:
