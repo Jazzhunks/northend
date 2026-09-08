@@ -87,7 +87,7 @@ export default function Login() {
         setInlineError("Authentication request timed out. Please try again.");
         setBusy(false);
       }
-    }, 15000);
+    }, 30000);
 
     try {
       const u = await login(cleanEmail, password, {
