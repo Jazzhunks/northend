@@ -51,6 +51,15 @@ let webpackConfig = {
         ],
       };
 
+      // Silence missing-source-map warnings from third-party packages that ship compiled JS without TS source maps
+      webpackConfig.ignoreWarnings = [
+        ...(webpackConfig.ignoreWarnings || []),
+        (warning) => {
+          const msg = warning.message || "";
+          return /html5-qrcode|react-image-crop|source-map-loader/.test(msg) && /Failed to parse source map/.test(msg);
+        },
+      ];
+
       // Add health check plugin to webpack if enabled
       if (config.enableHealthCheck && healthPluginInstance) {
         webpackConfig.plugins.push(healthPluginInstance);
