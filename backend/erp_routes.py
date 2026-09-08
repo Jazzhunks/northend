@@ -474,6 +474,7 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
         q: Optional[str] = None,
         course_id: Optional[str] = None,
         counsellor_id: Optional[str] = None,
+        include_temporary: bool = False,
         user: dict = Depends(require_erp),
     ):
         f = scope_branch_filter(user, branch_id)
@@ -483,6 +484,8 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
             f["counsellor_id"] = counsellor_id
         if user["role"] == "counsellor":
             f["counsellor_id"] = user["id"]
+        if not include_temporary:
+            f["status"] = {"$ne": "temporary"}
         if q:
             f["$or"] = [
                 {"full_name": {"$regex": q, "$options": "i"}},
@@ -1125,6 +1128,62 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
         photo_url = f"/api/files/{file_id}"
         await db.erp_students.update_one({"id": student_id}, {"$set": {"photo_url": photo_url}})
         return {"photo_url": photo_url}
+
+    # ===== TEMP STUDENTS =====
+    @erp.get("/temp-students/check")
+    async def check_temp_student(phone: str, branch_id: Optional[str] = None, user: dict = Depends(require_erp)):
+        f = {"status": "temporary", "contact_phone": phone}
+        if user["role"] != "super_admin":
+            f["branch_id"] = user.get("branch_id")
+        elif branch_id:
+            f["branch_id"] = branch_id
+        s = await db.erp_students.find_one(f, {"_id": 0})
+        if not s:
+            return {"match": False}
+        lead = await db.erp_leads.find_one({"converted_student_id": s["id"]}, {"_id": 0})
+        return {
+            "match": True,
+            "student": s,
+            "lead": lead,
+        }
+
+    @erp.get("/temp-students")
+    async def list_temp_students(branch_id: Optional[str] = None, user: dict = Depends(require_erp)):
+        f = {"status": "temporary"}
+        if user["role"] != "super_admin":
+            f["branch_id"] = user.get("branch_id")
+        elif branch_id:
+            f["branch_id"] = branch_id
+        items = await db.erp_students.find(f, {"_id": 0}).sort("created_at", -1).to_list(1000)
+        return items
+
+    @erp.post("/temp-students/{student_id}/merge")
+    async def merge_temp_student(student_id: str, user: dict = Depends(require_erp)):
+        s = await db.erp_students.find_one({"id": student_id, "status": "temporary"}, {"_id": 0})
+        if not s:
+            raise HTTPException(404, "Temporary student not found")
+        if not can_view_branch(user, s["branch_id"]):
+            raise HTTPException(403, "Cross-branch denied")
+        await db.erp_students.update_one({"id": student_id}, {"$set": {"status": "active"}})
+        lead = await db.erp_leads.find_one({"converted_student_id": student_id}, {"_id": 0})
+        if lead:
+            await db.erp_leads.update_one({"id": lead["id"]}, {"$set": {"status": "converted"}})
+        await audit(user, "merge_temp_student", "student", student_id, s["branch_id"], {"student_no": s.get("student_no")})
+        return {"ok": True, "message": "Temporary student merged into active roster"}
+
+    @erp.post("/temp-students/{student_id}/nullify")
+    async def nullify_temp_student(student_id: str, user: dict = Depends(require_erp)):
+        s = await db.erp_students.find_one({"id": student_id, "status": "temporary"}, {"_id": 0})
+        if not s:
+            raise HTTPException(404, "Temporary student not found")
+        if not can_view_branch(user, s["branch_id"]):
+            raise HTTPException(403, "Cross-branch denied")
+        await db.erp_students.delete_one({"id": student_id})
+        lead = await db.erp_leads.find_one({"converted_student_id": student_id}, {"_id": 0})
+        if lead:
+            await db.erp_leads.update_one({"id": lead["id"]}, {"$set": {"status": "lost"}})
+        await audit(user, "nullify_temp_student", "student", student_id, s["branch_id"], {"student_no": s.get("student_no")})
+        return {"ok": True, "message": "Temporary student record nullified"}
 
     # ===== ID CARD QUEUE =====
     @erp.post("/students/{student_id}/queue-id-card")

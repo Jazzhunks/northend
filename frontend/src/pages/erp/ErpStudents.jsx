@@ -170,6 +170,8 @@ function CreateStudentModal({ erpUser, branches, onClose, onCreated }) {
     counsellor_id: "", total_fee: "", scholarship_percent: 0, discount: 0
   });
   const [busy, setBusy] = useState(false);
+  const [tempMatch, setTempMatch] = useState(null);
+  const [checkingTemp, setCheckingTemp] = useState(false);
 
   useEffect(() => { api.get("/courses").then(r => setCourses(r.data)); }, []);
   
@@ -178,6 +180,58 @@ function CreateStudentModal({ erpUser, branches, onClose, onCreated }) {
       erp.listStaff(form.branch_id).then(s => setCounsellors(s.filter(x => x.role === "counsellor")));
     }
   }, [form.branch_id]);
+
+  const checkTempMatch = async (phone, branchId) => {
+    if (!phone || phone.length < 10) {
+      setTempMatch(null);
+      return;
+    }
+    setCheckingTemp(true);
+    try {
+      const res = await erp.checkTempStudent(phone, branchId || undefined);
+      if (res.match) {
+        setTempMatch(res);
+      } else {
+        setTempMatch(null);
+      }
+    } catch (e) {
+      console.error("Temp student check failed:", e);
+    } finally {
+      setCheckingTemp(false);
+    }
+  };
+
+  const handlePhoneBlur = () => {
+    checkTempMatch(form.contact_phone.trim(), form.branch_id);
+  };
+
+  const handleMerge = async () => {
+    if (!tempMatch?.student?.id) return;
+    setBusy(true);
+    try {
+      await erp.mergeTempStudent(tempMatch.student.id);
+      toast.success("Temporary student merged into active roster. You can now proceed with enrollment.");
+      setTempMatch(null);
+    } catch (e) {
+      toast.error(formatError(e) || "Failed to merge temporary student");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleNullify = async () => {
+    if (!tempMatch?.student?.id) return;
+    setBusy(true);
+    try {
+      await erp.nullifyTempStudent(tempMatch.student.id);
+      toast.success("Temporary student record nullified");
+      setTempMatch(null);
+    } catch (e) {
+      toast.error(formatError(e) || "Failed to nullify temporary student");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const calculatedFee = Number(form.total_fee || 0);
   const calculatedScholarshipAmt = (Number(form.scholarship_percent || 0) / 100) * calculatedFee;
@@ -188,6 +242,10 @@ function CreateStudentModal({ erpUser, branches, onClose, onCreated }) {
     e.preventDefault();
     if (calculatedFee <= 0) {
       toast.error("Tuition value configurations must break out of structural zero values");
+      return;
+    }
+    if (tempMatch) {
+      toast.error("Resolve the temporary student match before creating a new record");
       return;
     }
     setBusy(true);
@@ -232,7 +290,7 @@ function CreateStudentModal({ erpUser, branches, onClose, onCreated }) {
             opts={[{v:"JKBOSE", l:"JKBOSE"}, {v:"CBSE", l:"CBSE"}, {v:"ICSE", l:"ICSE"}, {v:"Other", l:"Other"}]}/>
           <Sel label="Category" v={form.category} on={v => setForm({...form, category: v})} testid="cs-category"
             opts={[{v:"General", l:"General"}, {v:"OBC", l:"OBC"}, {v:"SC/ST", l:"SC / ST"}, {v:"EWS", l:"EWS"}]}/>
-          <Input label="Primary Phone String" v={form.contact_phone} on={v => setForm({...form, contact_phone: v})} req placeholder="10-digit sequence" testid="cs-phone" icon={Smartphone}/>
+          <Input label="Primary Phone String" v={form.contact_phone} on={v => setForm({...form, contact_phone: v})} req placeholder="10-digit sequence" testid="cs-phone" icon={Smartphone} onBlur={handlePhoneBlur}/>
           <Input label="Email Address" type="email" v={form.contact_email} on={v => setForm({...form, contact_email: v})} placeholder="name@domain.com" testid="cs-email" icon={Mail}/>
           <Input label="Parent / Guardian Name" v={form.parent_name} on={v => setForm({...form, parent_name: v})} placeholder="Father/Mother Identity" testid="cs-pname" icon={Users}/>
           <Input label="Parent Contact Line" v={form.parent_phone} on={v => setForm({...form, parent_phone: v})} placeholder="Parent mobile" testid="cs-pphone" icon={Smartphone}/>
@@ -268,6 +326,24 @@ function CreateStudentModal({ erpUser, branches, onClose, onCreated }) {
           </div>
         </div>
 
+        {tempMatch && (
+          <div className="p-4 border border-amber-500/30 bg-amber-500/5 rounded-xl space-y-3">
+            <div className="text-xs font-bold text-amber-600 uppercase tracking-wider">Temporary Student Match Detected</div>
+            <div className="text-xs text-muted-foreground">
+              A temporary record exists for <b className="text-foreground">{tempMatch.student?.full_name}</b> ({tempMatch.student?.contact_phone}).
+              {tempMatch.lead ? ` Lead status: ${tempMatch.lead.status}` : ""}
+            </div>
+            <div className="flex gap-2">
+              <button type="button" onClick={handleMerge} disabled={busy} className="flex-1 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold uppercase tracking-wider disabled:opacity-50">
+                Merge into Student
+              </button>
+              <button type="button" onClick={handleNullify} disabled={busy} className="flex-1 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold uppercase tracking-wider disabled:opacity-50">
+                Skip / Nullify
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="flex gap-3 pt-2 shrink-0">
           <button disabled={busy} type="submit" className="flex-1 py-3 bg-primary text-primary-foreground rounded-xl font-bold text-xs uppercase tracking-wider disabled:opacity-50 transition shadow-lg flex items-center justify-center" data-testid="cs-submit">
             {busy ? "Writing Ledger Matrix..." : "Authorize Academic Enrollment"}
@@ -281,7 +357,7 @@ function CreateStudentModal({ erpUser, branches, onClose, onCreated }) {
   );
 }
 
-function Input({ label, v, on, type = "text", req, testid, placeholder, icon: Icon }) {
+function Input({ label, v, on, type = "text", req, testid, placeholder, icon: Icon, onBlur }) {
   return (
     <div>
       <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground mb-1 block">{label}{req && " *"}</label>
@@ -293,6 +369,7 @@ function Input({ label, v, on, type = "text", req, testid, placeholder, icon: Ic
           required={req} 
           placeholder={placeholder} 
           onChange={e => on(e.target.value)}
+          onBlur={onBlur}
           className={`w-full pr-3 py-2 border border-border bg-background/50 rounded-xl text-sm focus:outline-none focus:border-accent transition text-foreground ${Icon ? "pl-9" : "px-3"}`} 
           data-testid={testid}
         />

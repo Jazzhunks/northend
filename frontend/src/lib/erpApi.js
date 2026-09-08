@@ -54,6 +54,10 @@ export const erp = {
   listStudents: (params = {}) => api.get("/erp/students", { params }).then(resData),
   getStudent: (id) => api.get(`/erp/students/${encodeURIComponent(id)}`).then(resData),
   idCardQueue: (params = {}) => api.get("/erp/id-cards/queue", { params }).then(resData),
+  listTempStudents: (params = {}) => api.get("/erp/temp-students", { params }).then(resData),
+  checkTempStudent: (phone, branch_id) => api.get("/erp/temp-students/check", { params: { phone, branch_id } }).then(resData),
+  mergeTempStudent: (id) => api.post(`/erp/temp-students/${encodeURIComponent(id)}/merge`).then(resData),
+  nullifyTempStudent: (id) => api.post(`/erp/temp-students/${encodeURIComponent(id)}/nullify`).then(resData),
   
   /**
    * Accepts both direct JSON payloads and standard binary payload objects seamlessly.
