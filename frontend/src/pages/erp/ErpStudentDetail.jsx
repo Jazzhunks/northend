@@ -324,6 +324,7 @@ export default function ErpStudentDetail() {
           student={s}
           onClose={() => setShowEditProfile(false)}
           onUpdated={() => { setShowEditProfile(false); reload(); }}
+          onPhotoSelect={handlePhotoSelect}
         />
       )}
       {cropping && cropSrc && (
@@ -360,7 +361,7 @@ function StatCard({ label, value, sub, accent, actionElement, testid }) {
   );
 }
 
-function EditStudentProfileModal({ student, onClose, onUpdated }) {
+function EditStudentProfileModal({ student, onClose, onUpdated, onPhotoSelect }) {
   const [form, setForm] = useState({
     full_name: student.full_name || "",
     contact_phone: student.contact_phone || "",
@@ -455,7 +456,7 @@ function EditStudentProfileModal({ student, onClose, onUpdated }) {
           </div>
           <div>
             <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground mb-1 block">Profile Photo</label>
-            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhotoSelect} className="w-full px-3 py-2 border border-border bg-background/50 rounded-xl text-sm text-foreground focus:outline-none focus:border-accent" />
+            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={onPhotoSelect} className="w-full px-3 py-2 border border-border bg-background/50 rounded-xl text-sm text-foreground focus:outline-none focus:border-accent" />
             <p className="text-[10px] text-muted-foreground mt-1">You will crop the photo to a circle before uploading.</p>
           </div>
         </div>
