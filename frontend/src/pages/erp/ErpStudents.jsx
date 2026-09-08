@@ -28,6 +28,11 @@ export default function ErpStudents() {
   useEffect(() => { erp.listBranches().then(setBranches); }, []);
   useEffect(() => { reload(); }, [q, branchId, reload]);
 
+  useEffect(() => {
+    const id = setInterval(() => { reload(); }, 30000);
+    return () => clearInterval(id);
+  }, [reload]);
+
   return (
     <div className="space-y-6 h-[calc(100vh-120px)] flex flex-col min-h-0 animate-fadeIn" data-testid="erp-students-page">
       {/* Upper Operational Header Card */}

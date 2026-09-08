@@ -1100,12 +1100,29 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
         if len(data) == 0:
             raise HTTPException(400, "Empty file")
         ext = {"image/jpeg": "jpg", "image/jpg": "jpg", "image/png": "png", "image/webp": "webp"}[ctype]
-        path = f"{APP_NAME}/uploads/student-photos/{student_id}.{ext}"
+        file_id = new_id()
+        path = f"{APP_NAME}/uploads/student-photos/{file_id}.{ext}"
         try:
             result = await put_object(path, data, ctype)
+        except RuntimeError as e:
+            msg = str(e)
+            if "not initialised" in msg.lower():
+                raise HTTPException(500, "File upload is currently unavailable because object storage is not configured on the server.")
+            raise HTTPException(500, f"Upload failed: {e}")
         except Exception as e:
             raise HTTPException(500, f"Upload failed: {e}")
-        photo_url = f"/api/files/{result.get('id', student_id)}"
+        record = {
+            "id": file_id,
+            "storage_path": result.get("path", path),
+            "original_filename": file.filename or f"student-photo-{student_id}.{ext}",
+            "content_type": ctype,
+            "size": result.get("size", len(data)),
+            "is_deleted": False,
+            "created_at": now_iso(),
+        }
+        await db.files.insert_one(record)
+        record.pop("_id", None)
+        photo_url = f"/api/files/{file_id}"
         await db.erp_students.update_one({"id": student_id}, {"$set": {"photo_url": photo_url}})
         return {"photo_url": photo_url}
 
@@ -1152,8 +1169,22 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
             raise HTTPException(403, "Cross-branch denied")
         b = await db.centers.find_one({"id": s["branch_id"]}, {"_id": 0}) or {}
         c = await db.courses.find_one({"id": s.get("course_id")}, {"_id": 0}) or {}
-        from pdf_client import id_card_pdf
-        pdf_bytes = id_card_pdf(s, b, c)
+        try:
+            from pdf_client import id_card_pdf
+            photo_bytes = None
+            photo_url = s.get("photo_url")
+            if photo_url and photo_url.startswith("/api/files/"):
+                file_id = photo_url.split("/")[-1]
+                file_record = await db.files.find_one({"id": file_id, "is_deleted": False}, {"_id": 0})
+                if file_record:
+                    try:
+                        from storage_client import get_object
+                        photo_bytes, _ = await get_object(file_record["storage_path"])
+                    except Exception:
+                        photo_bytes = None
+            pdf_bytes = id_card_pdf(s, b, c, photo_bytes=photo_bytes)
+        except Exception as e:
+            raise HTTPException(500, f"ID card generation failed: {e}")
         filename = f"id-card-{s.get('enrollment_number') or s['student_no']}.pdf"
         return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 

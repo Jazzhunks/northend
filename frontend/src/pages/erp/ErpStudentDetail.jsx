@@ -34,7 +34,12 @@ export default function ErpStudentDetail() {
   };
 
   useEffect(() => { reload(); }, [id]);
-  
+
+  useEffect(() => {
+    const timer = setInterval(() => { reload(); }, 30000);
+    return () => clearInterval(timer);
+  }, [reload]);
+
   useEffect(() => {
     if (stmt?.student?.course_id) {
       api.get(`/courses/${stmt.student.course_id}`)

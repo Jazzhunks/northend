@@ -29,6 +29,11 @@ export default function ErpIdCards() {
   useEffect(() => { loadBranches(); }, [loadBranches]);
   useEffect(() => { loadQueue(); }, [loadQueue]);
 
+  useEffect(() => {
+    const id = setInterval(() => { loadQueue(); }, 30000);
+    return () => clearInterval(id);
+  }, [loadQueue]);
+
   const filteredQueue = queue.filter(s =>
     s.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     s.student_no?.toLowerCase().includes(searchQuery.toLowerCase()) ||

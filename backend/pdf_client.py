@@ -4,6 +4,7 @@ import re
 import logging
 import qrcode
 import httpx
+from datetime import datetime, timezone, timedelta
 from reportlab.lib.pagesizes import A5, A4
 from reportlab.lib.colors import HexColor
 from reportlab.lib.units import mm
@@ -583,7 +584,7 @@ def result_card_pdf(application_no, name, school, standard, target_exam,
     return buf.getvalue()
 
 
-def id_card_pdf(student: dict, branch: dict, course: dict) -> bytes:
+def id_card_pdf(student: dict, branch: dict, course: dict, photo_bytes: bytes | None = None) -> bytes:
     """Generate a double-sided ID card PDF with front and back panels."""
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=(95 * mm, 60 * mm))
@@ -594,7 +595,6 @@ def id_card_pdf(student: dict, branch: dict, course: dict) -> bytes:
     enrollment = student.get("enrollment_number") or student.get("student_no") or "—"
     luid = student.get("luid") or "—"
     branch_name = (branch.get("name") or "NORTHEND").upper()
-    photo_url = student.get("photo_url")
 
     c.setStrokeColor(PRIMARY)
     c.setLineWidth(1.2)
@@ -614,12 +614,10 @@ def id_card_pdf(student: dict, branch: dict, course: dict) -> bytes:
     c.setStrokeColor(LINE)
     c.setLineWidth(0.5)
     c.roundRect(photo_x, photo_y, photo_size, photo_size, 3, stroke=1, fill=1)
-    if photo_url:
+    if photo_bytes:
         try:
-            resp = httpx.get(photo_url, timeout=5)
-            if resp.status_code == 200:
-                img = ImageReader(io.BytesIO(resp.content))
-                c.drawImage(img, photo_x + 1 * mm, photo_y + 1 * mm, width=photo_size - 2 * mm, height=photo_size - 2 * mm, preserveAspectRatio=True, mask="auto")
+            img = ImageReader(io.BytesIO(photo_bytes))
+            c.drawImage(img, photo_x + 1 * mm, photo_y + 1 * mm, width=photo_size - 2 * mm, height=photo_size - 2 * mm, preserveAspectRatio=True, mask="auto")
         except Exception:
             pass
 

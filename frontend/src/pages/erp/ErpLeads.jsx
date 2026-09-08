@@ -38,6 +38,11 @@ export default function ErpLeads() {
   useEffect(() => { erp.listBranches().then(setBranches); }, []);
   useEffect(() => { reload(); }, [reload]);
 
+  useEffect(() => {
+    const id = setInterval(() => { reload(); }, 30000);
+    return () => clearInterval(id);
+  }, [reload]);
+
   const filteredItems = items.filter(l => 
     l.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     l.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
