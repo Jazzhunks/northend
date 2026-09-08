@@ -1,6 +1,8 @@
 """End-to-end ERP smoke test (idempotent — safe to re-run)."""
 import os
 import requests
+import jwt as pyjwt
+from datetime import timedelta
 
 API = "http://localhost:8001/api"
 
@@ -216,6 +218,77 @@ print(f"✓ Payments XLSX export: {len(r.content)} bytes")
 r = requests.get(f"{API}/erp/audit", headers=H(admin_t)).json()
 print(f"✓ Audit log: {len(r)} entries")
 assert len(r) > 10
+
+# 25. New lead fields (present_class, moving_to_class, address, remarks)
+r = requests.post(f"{API}/erp/leads", headers=H(cnsl_t), json={
+    "name": "Test Lead Fields", "phone": "9876500201", "present_class": "11th",
+    "moving_to_class": "NEET-26-B", "address": "Srinagar", "remarks": "Urgent",
+    "branch_id": srinagar["id"]
+})
+assert r.status_code == 200
+lead2 = r.json()
+assert lead2["present_class"] == "11th"
+assert lead2["moving_to_class"] == "NEET-26-B"
+print(f"✓ Lead created with new fields: {lead2['id']}")
+
+# 26. Lead conversion creates temporary student
+r = requests.patch(f"{API}/erp/leads/{lead2['id']}", headers=H(cnsl_t), json={"status": "converted"})
+assert r.status_code == 200
+converted = r.json()
+assert converted.get("converted_student") is not None
+student2 = converted["converted_student"]
+assert student2["status"] == "temporary"
+print(f"✓ Lead converted to temporary student: {student2['student_no']}")
+
+# 27. Manager can activate temporary student
+r = requests.patch(f"{API}/erp/students/{student2['id']}", headers=H(mgr_t), json={"status": "active"})
+assert r.status_code == 200
+assert r.json()["status"] == "active"
+print("✓ Manager activated temporary student")
+
+# 28. Set LUID and enrollment_number, queue ID card
+r = requests.patch(f"{API}/erp/students/{student2['id']}", headers=H(mgr_t), json={
+    "luid": "LUID-TEST-001", "enrollment_number": "ENR-TEST-001"
+})
+assert r.status_code == 200
+print("✓ LUID and enrollment_number set")
+
+r = requests.post(f"{API}/erp/students/{student2['id']}/queue-id-card", headers=H(mgr_t))
+assert r.status_code == 200
+print("✓ Student queued for ID card")
+
+r = requests.get(f"{API}/erp/id-cards/queue", headers=H(mgr_t)).json()
+queued = [s for s in r if s["id"] == student2["id"]]
+assert len(queued) == 1
+print("✓ ID card queue contains student")
+
+# 29. ID card PDF download
+r = requests.get(f"{API}/erp/students/{student2['id']}/id-card", headers=H(mgr_t))
+assert r.status_code == 200
+assert "application/pdf" in r.headers["content-type"]
+print(f"✓ ID card PDF downloaded: {len(r.content)} bytes")
+
+# 30. Clear queue
+r = requests.post(f"{API}/erp/id-cards/clear-queue", headers=H(mgr_t), json={"student_ids": [student2["id"]]})
+assert r.status_code == 200
+r = requests.get(f"{API}/erp/id-cards/queue", headers=H(mgr_t)).json()
+queued = [s for s in r if s["id"] == student2["id"]]
+assert len(queued) == 0
+print("✓ ID card queue cleared")
+
+# 31. Enrollment number uniqueness
+r = requests.patch(f"{API}/erp/students/{student2['id']}", headers=H(mgr_t), json={"enrollment_number": "ENR-DUP-001"})
+assert r.status_code == 200
+r = requests.patch(f"{API}/erp/students/{sid}", headers=H(mgr_t), json={"enrollment_number": "ENR-DUP-001"})
+assert r.status_code == 409
+print("✓ Enrollment number uniqueness enforced")
+
+# 32. Public student profile with temp token
+token = pyjwt.encode({"sub": student2["id"], "enrollment_number": "ENR-TEST-001", "type": "id_card_scan", "exp": __import__("datetime").datetime.now(__import__("datetime").timezone.utc) + timedelta(hours=24)}, "change-me-jwt-secret", algorithm="HS256")
+r = requests.get(f"{API}/erp/public/student-profile/ENR-TEST-001", params={"token": token})
+assert r.status_code == 200
+assert r.json()["full_name"] == student2["full_name"]
+print("✓ Public student profile with temp token works")
 
 print()
 print("=" * 50)

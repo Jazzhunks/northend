@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, useOutletContext } from "react-router-dom";
 import { toast } from "sonner";
 import { erp, isSuper, isFinance, fmtINR, fmtDate } from "@/lib/erpApi";
@@ -6,8 +6,10 @@ import { formatError } from "@/lib/api";
 import { api, API_BASE } from "@/lib/api";
 import { 
   ArrowLeft, Plus, FileDown, Receipt as ReceiptIcon, Edit3, 
-  X, Save, CheckCircle, Smartphone, Mail, MapPin, Milestone, User, Users, ClipboardList
+  X, Save, CheckCircle, Smartphone, Mail, MapPin, Milestone, User, Users, ClipboardList, Badge, Printer
 } from "lucide-react";
+import ReactCrop, { centerCrop, makeAspectCrop, convertToPixelCrop } from "react-image-crop";
+import "react-image-crop/dist/ReactCrop.css";
 
 export default function ErpStudentDetail() {
   const { id } = useParams();
@@ -18,6 +20,12 @@ export default function ErpStudentDetail() {
   const [course, setCourse] = useState(null);
   const [showPay, setShowPay] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [cropping, setCropping] = useState(false);
+  const [cropSrc, setCropSrc] = useState(null);
+  const [cropBlob, setCropBlob] = useState(null);
 
   const reload = () => {
     erp.studentStatement(id)
@@ -57,6 +65,61 @@ export default function ErpStudentDetail() {
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(txt)}`, "_blank");
   };
 
+  const queueIdCard = async () => {
+    if (!s.luid || !s.enrollment_number) {
+      toast.error("Student LUID and Enrollment Number are required before generating ID card");
+      return;
+    }
+    try {
+      await erp.updateStudent(s.id, { luid: s.luid, enrollment_number: s.enrollment_number });
+      await fetch(`${API_BASE}/erp/students/${encodeURIComponent(s.id)}/queue-id-card`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${localStorage.getItem("nw_token")}` },
+      });
+      toast.success("Sent to ID card generation queue");
+      nav("/erp/erpidcards");
+    } catch (e) {
+      toast.error(formatError(e.response?.data?.detail) || "Failed to queue ID card");
+    }
+  };
+
+  const handlePhotoSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropSrc(reader.result);
+      setCropping(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const confirmCropAndUpload = async () => {
+    if (!cropBlob || !s) return;
+    setUploadingPhoto(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", cropBlob, `photo-${s.id}.png`);
+      const { data } = await api.post(`/erp/students/${encodeURIComponent(s.id)}/photo`, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      toast.success("Photo uploaded successfully");
+      setShowEditProfile(false);
+      reload();
+    } catch (e) {
+      toast.error(formatError(e.response?.data?.detail) || "Photo upload failed");
+    } finally {
+      setUploadingPhoto(false);
+      setCropping(false);
+      setCropSrc(null);
+      setCropBlob(null);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fadeIn" data-testid="erp-student-detail">
       {/* Navigation Row */}
@@ -83,25 +146,58 @@ export default function ErpStudentDetail() {
         </div>
         
         <div className="flex justify-between items-start flex-wrap gap-3 relative z-10">
-          <div className="space-y-1">
-            <div className="text-xs uppercase tracking-[0.2em] font-bold text-accent font-mono">{s.student_no}</div>
-            <h1 className="font-display text-3xl font-medium tracking-tight text-foreground">{s.full_name}</h1>
-            <p className="text-muted-foreground text-sm flex items-center flex-wrap gap-x-2 divide-x divide-border/30">
-              <span>{course?.title || "Evaluating Syllabus Track..."}</span>
-              {s.batch && <span className="pl-2 font-mono">Batch: {s.batch}</span>}
-              <span className="pl-2">Admitted: {fmtDate(s.admission_date)}</span>
-            </p>
+          <div className="flex items-start gap-4">
+            <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-border bg-muted shrink-0">
+              {s.photo_url ? (
+                <img src={s.photo_url} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                  <User size={28} />
+                </div>
+              )}
+            </div>
+            <div className="space-y-1">
+              <div className="text-xs uppercase tracking-[0.2em] font-bold text-accent font-mono">{s.student_no}</div>
+              <h1 className="font-display text-3xl font-medium tracking-tight text-foreground">{s.full_name}</h1>
+              <p className="text-muted-foreground text-sm flex items-center flex-wrap gap-x-2 divide-x divide-border/30">
+                <span>{course?.title || "Evaluating Syllabus Track..."}</span>
+                {s.batch && <span className="pl-2 font-mono">Batch: {s.batch}</span>}
+                <span className="pl-2">Admitted: {fmtDate(s.admission_date)}</span>
+              </p>
+              <div className="flex flex-wrap gap-3 text-xs font-mono text-muted-foreground">
+                {s.luid && <span className="px-2 py-0.5 bg-muted/50 rounded border border-border">LUID: {s.luid}</span>}
+                {s.enrollment_number && <span className="px-2 py-0.5 bg-muted/50 rounded border border-border">ENROLL: {s.enrollment_number}</span>}
+              </div>
+            </div>
           </div>
-          <span 
-            className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${
-              s.status === "active" 
-                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" 
-                : "bg-muted/50 text-muted-foreground border-border"
-            }`} 
-            data-testid="student-status"
-          >
-            {s.status}
-          </span>
+          <div className="flex flex-col gap-2">
+            <span 
+              className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${
+                s.status === "active" 
+                  ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" 
+                  : s.status === "temporary"
+                  ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                  : "bg-muted/50 text-muted-foreground border-border"
+              }`} 
+              data-testid="student-status"
+            >
+              {s.status}
+            </span>
+            <button 
+              onClick={() => setShowEditProfile(true)} 
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-xl text-xs uppercase tracking-wider font-bold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition"
+            >
+              <Edit3 size={13}/> Modify Profile
+            </button>
+            {s.luid && s.enrollment_number && (
+              <button 
+                onClick={queueIdCard} 
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-xl text-xs uppercase tracking-wider font-bold text-primary hover:bg-primary/10 transition"
+              >
+                <Printer size={13}/> Generate ID Card
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6 pt-4 border-t border-border relative z-10">
@@ -230,6 +326,13 @@ export default function ErpStudentDetail() {
           onUpdated={() => { setShowEditProfile(false); reload(); }}
         />
       )}
+      {cropping && cropSrc && (
+        <CropModal
+          src={cropSrc}
+          onClose={() => { setCropping(false); setCropSrc(null); setCropBlob(null); }}
+          onConfirm={(blob) => { setCropBlob(blob); confirmCropAndUpload(); }}
+        />
+      )}
     </div>
   );
 }
@@ -266,6 +369,8 @@ function EditStudentProfileModal({ student, onClose, onUpdated }) {
     parent_phone: student.parent_phone || "",
     batch: student.batch || "",
     address: student.address || "",
+    luid: student.luid || "",
+    enrollment_number: student.enrollment_number || "",
     status: student.status || "active"
   });
   const [busy, setBusy] = useState(false);
@@ -303,7 +408,7 @@ function EditStudentProfileModal({ student, onClose, onUpdated }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground mb-1 block">Contact Phone *</label>
-              <input required type="text" value={form.contact_phone} onChange={e => setForm({...form, contact_phone: v})} className="w-full px-3 py-2 border border-border bg-background/50 rounded-xl text-sm font-mono focus:outline-none focus:border-accent" />
+              <input required type="text" value={form.contact_phone} onChange={e => setForm({...form, contact_phone: e.target.value})} className="w-full px-3 py-2 border border-border bg-background/50 rounded-xl text-sm font-mono focus:outline-none focus:border-accent" />
             </div>
             <div>
               <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground mb-1 block">Email Address</label>
@@ -330,12 +435,28 @@ function EditStudentProfileModal({ student, onClose, onUpdated }) {
               <select value={form.status} onChange={e => setForm({...form, status: e.target.value})} className="w-full px-3 py-2 border border-border bg-background rounded-xl text-sm text-foreground focus:outline-none">
                 <option value="active">ACTIVE</option>
                 <option value="inactive">INACTIVE</option>
+                <option value="temporary">TEMPORARY</option>
               </select>
             </div>
           </div>
           <div>
             <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground mb-1 block">Residential Address Mapping</label>
             <textarea value={form.address} onChange={e => setForm({...form, address: e.target.value})} rows={2} className="w-full px-3 py-2 border border-border bg-background/50 rounded-xl text-sm text-foreground focus:outline-none focus:border-accent resize-none" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground mb-1 block">Student LUID</label>
+              <input type="text" value={form.luid} onChange={e => setForm({...form, luid: e.target.value})} placeholder="Unique learner ID" className="w-full px-3 py-2 border border-border bg-background/50 rounded-xl text-sm font-mono focus:outline-none focus:border-accent" />
+            </div>
+            <div>
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground mb-1 block">Enrollment Number</label>
+              <input type="text" value={form.enrollment_number} onChange={e => setForm({...form, enrollment_number: e.target.value})} placeholder="Official enrollment no" className="w-full px-3 py-2 border border-border bg-background/50 rounded-xl text-sm font-mono focus:outline-none focus:border-accent" />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground mb-1 block">Profile Photo</label>
+            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhotoSelect} className="w-full px-3 py-2 border border-border bg-background/50 rounded-xl text-sm text-foreground focus:outline-none focus:border-accent" />
+            <p className="text-[10px] text-muted-foreground mt-1">You will crop the photo to a circle before uploading.</p>
           </div>
         </div>
 
@@ -434,6 +555,59 @@ function RecordPaymentModal({ studentId, pending, onClose, onCreated }) {
           <button type="button" onClick={onClose} className="px-4 py-3 border border-border rounded-xl text-xs uppercase tracking-wider font-bold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition">Cancel</button>
         </div>
       </form>
+    </div>
+  );
+}
+
+function centerAspectCrop(mediaWidth, mediaHeight, aspect) {
+  if (aspect > mediaWidth / mediaHeight) {
+    return { x: 0, y: (mediaHeight - mediaWidth / aspect) / 2, width: mediaWidth, height: mediaWidth / aspect };
+  }
+  return { x: (mediaWidth - mediaHeight * aspect) / 2, y: 0, width: mediaHeight * aspect, height: mediaHeight };
+}
+
+function getCroppedImg(image, pixelCrop) {
+  const canvas = document.createElement("canvas");
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(image, pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height, 0, 0, pixelCrop.width, pixelCrop.height);
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), "image/png");
+  });
+}
+
+function CropModal({ src, onClose, onConfirm }) {
+  const imgRef = useRef(null);
+  const [crop, setCrop] = useState({ unit: "%", x: 25, y: 25, width: 50, height: 50 });
+  const [completedCrop, setCompletedCrop] = useState(null);
+
+  const handleConfirm = async () => {
+    if (!imgRef.current || !completedCrop) return;
+    const blob = await getCroppedImg(imgRef.current, completedCrop);
+    onConfirm(blob);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 grid place-items-center p-4 backdrop-blur-sm" onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} className="bg-background border border-border rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+        <h3 className="font-display text-xl font-medium">Crop Photo for ID Card</h3>
+        <div className="flex justify-center bg-muted/20 rounded-xl overflow-hidden">
+          <ReactCrop
+            crop={crop}
+            onChange={(c) => setCrop(c)}
+            onComplete={(c) => setCompletedCrop(c)}
+            aspect={1}
+            circularCrop
+          >
+            <img ref={imgRef} src={src} alt="Crop" style={{ maxHeight: "60vh" }} />
+          </ReactCrop>
+        </div>
+        <div className="flex gap-3">
+          <button onClick={handleConfirm} className="flex-1 py-2 bg-primary text-primary-foreground rounded-xl font-bold text-xs uppercase tracking-wider">Confirm Crop</button>
+          <button onClick={onClose} className="px-4 py-2 border border-border rounded-xl text-xs uppercase tracking-wider font-bold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition">Cancel</button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -71,6 +71,8 @@ class StudentCreate(BaseModel):
     contact_email: Optional[EmailStr] = None
     address: Optional[str] = None
     photo_url: Optional[str] = None
+    luid: Optional[str] = None
+    enrollment_number: Optional[str] = None
     course_id: str
     batch: Optional[str] = None
     branch_id: str
@@ -98,6 +100,8 @@ class StudentUpdate(BaseModel):
     contact_email: Optional[EmailStr] = None
     address: Optional[str] = None
     photo_url: Optional[str] = None
+    luid: Optional[str] = None
+    enrollment_number: Optional[str] = None
     batch: Optional[str] = None
     counsellor_id: Optional[str] = None
     scholarship_percent: Optional[float] = None
@@ -105,7 +109,7 @@ class StudentUpdate(BaseModel):
     total_fee: Optional[float] = None
     documents: Optional[List[dict]] = None
     notes: Optional[str] = None
-    status: Optional[Literal["active", "inactive", "alumni"]] = None
+    status: Optional[Literal["active", "inactive", "alumni", "temporary"]] = None
 
 class PaymentCreate(BaseModel):
     student_id: str
@@ -132,28 +136,20 @@ class ExpenseDecision(BaseModel):
 class LeadCreate(BaseModel):
     name: str
     phone: str
-    email: Optional[EmailStr] = None
-    gender: Optional[str] = None
-    dob: Optional[str] = None
-    school_institute: Optional[str] = None
-    city: Optional[str] = None
-    target_exam: Optional[str] = None
-    preferred_batch: Optional[str] = None
-    source: Optional[str] = None
+    present_class: Optional[str] = None
+    moving_to_class: Optional[str] = None
+    address: Optional[str] = None
+    remarks: Optional[str] = None
     branch_id: str
     counsellor_id: Optional[str] = None
-    notes: Optional[str] = None
 
 class LeadUpdate(BaseModel):
     status: Optional[Literal["new", "contacted", "follow_up", "converted", "lost"]] = None
-    gender: Optional[str] = None
-    dob: Optional[str] = None
-    school_institute: Optional[str] = None
-    city: Optional[str] = None
-    preferred_batch: Optional[str] = None
-    source: Optional[str] = None
+    present_class: Optional[str] = None
+    moving_to_class: Optional[str] = None
+    address: Optional[str] = None
+    remarks: Optional[str] = None
     counsellor_id: Optional[str] = None
-    notes: Optional[str] = None
     next_followup_at: Optional[str] = None
 
 class AttendanceScanRequest(BaseModel):
@@ -784,9 +780,9 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
                 "branch_id": l["branch_id"]
             })
             if not existing_student:
-                # Find matching course for target_exam or select first course
-                target_exam = l.get("target_exam") or "NEET"
-                course = await db.courses.find_one({"category": target_exam}) or await db.courses.find_one({})
+                # Find matching course for moving_to_class or select first course
+                moving_to_class = l.get("moving_to_class") or "NEET"
+                course = await db.courses.find_one({"category": moving_to_class}) or await db.courses.find_one({})
                 course_id = course["id"] if course else "default"
                 total_fee = float(course.get("fee", 50000)) if course else 50000.0
 
@@ -805,14 +801,14 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
                     "emergency_phone": l.get("emergency_phone"),
                     "branch_id": l["branch_id"],
                     "course_id": course_id,
-                    "batch": l.get("preferred_batch"),
+                    "batch": l.get("moving_to_class") or l.get("preferred_batch"),
                     "counsellor_id": l.get("counsellor_id") or user["id"],
-                    "status": "active",
+                    "status": "temporary",
                     "total_fee": total_fee,
                     "scholarship_percent": 0.0,
                     "discount": 0.0,
                     "admission_date": now_iso()[:10],
-                    "notes": f"Auto-converted from lead (ID: {lead_id}). " + (l.get("notes") or ""),
+                    "notes": f"Auto-converted from lead (ID: {lead_id}). " + (l.get("remarks") or l.get("notes") or ""),
                     "created_at": now_iso(),
                     "created_by": user["id"],
                 }
@@ -1085,6 +1081,137 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
             "roles": list(ROLES_ALL),
         }
 
+    # ===== STUDENT PHOTO UPLOAD =====
+    @erp.post("/students/{student_id}/photo")
+    async def upload_student_photo(student_id: str, file: UploadFile = File(...), user: dict = Depends(require_erp)):
+        s = await db.erp_students.find_one({"id": student_id}, {"_id": 0})
+        if not s:
+            raise HTTPException(404, "Student not found")
+        if not can_view_branch(user, s["branch_id"]):
+            raise HTTPException(403, "Cross-branch denied")
+        if user["role"] == "counsellor":
+            raise HTTPException(403, "Counsellors cannot update student photos")
+        ctype = file.content_type or "application/octet-stream"
+        if ctype not in ("image/jpeg", "image/jpg", "image/png", "image/webp"):
+            raise HTTPException(415, "Only jpg/png/webp images are allowed")
+        data = await file.read()
+        if len(data) > 5 * 1024 * 1024:
+            raise HTTPException(413, "Image must be under 5 MB")
+        if len(data) == 0:
+            raise HTTPException(400, "Empty file")
+        ext = {"image/jpeg": "jpg", "image/jpg": "jpg", "image/png": "png", "image/webp": "webp"}[ctype]
+        path = f"{APP_NAME}/uploads/student-photos/{student_id}.{ext}"
+        try:
+            result = await put_object(path, data, ctype)
+        except Exception as e:
+            raise HTTPException(500, f"Upload failed: {e}")
+        photo_url = f"/api/files/{result.get('id', student_id)}"
+        await db.erp_students.update_one({"id": student_id}, {"$set": {"photo_url": photo_url}})
+        return {"photo_url": photo_url}
+
+    # ===== ID CARD QUEUE =====
+    @erp.post("/students/{student_id}/queue-id-card")
+    async def queue_id_card(student_id: str, user: dict = Depends(require_erp)):
+        s = await db.erp_students.find_one({"id": student_id}, {"_id": 0})
+        if not s:
+            raise HTTPException(404, "Student not found")
+        if not can_view_branch(user, s["branch_id"]):
+            raise HTTPException(403, "Cross-branch denied")
+        if not s.get("luid"):
+            raise HTTPException(400, "Student LUID is required before ID card generation")
+        if not s.get("enrollment_number"):
+            raise HTTPException(400, "Enrollment Number is required before ID card generation")
+        await db.erp_students.update_one({"id": student_id}, {"$set": {"id_card_queued": True}})
+        return {"ok": True, "message": "Student queued for ID card generation"}
+
+    @erp.get("/id-cards/queue")
+    async def get_id_card_queue(user: dict = Depends(require_erp)):
+        f = {}
+        if user["role"] != "super_admin":
+            f["branch_id"] = user.get("branch_id")
+        items = await db.erp_students.find({**f, "id_card_queued": True}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+        return items
+
+    @erp.post("/id-cards/clear-queue")
+    async def clear_id_card_queue(payload: Dict[str, Any], user: dict = Depends(require_erp)):
+        student_ids = payload.get("student_ids", [])
+        if not student_ids:
+            return {"ok": True}
+        f = {}
+        if user["role"] != "super_admin":
+            f["branch_id"] = user.get("branch_id")
+        await db.erp_students.update_many({"id": {"$in": student_ids}, **f}, {"$set": {"id_card_queued": False}})
+        return {"ok": True}
+
+    @erp.get("/students/{student_id}/id-card")
+    async def download_student_id_card(student_id: str, user: dict = Depends(require_erp)):
+        s = await db.erp_students.find_one({"id": student_id}, {"_id": 0})
+        if not s:
+            raise HTTPException(404, "Student not found")
+        if not can_view_branch(user, s["branch_id"]):
+            raise HTTPException(403, "Cross-branch denied")
+        b = await db.centers.find_one({"id": s["branch_id"]}, {"_id": 0}) or {}
+        c = await db.courses.find_one({"id": s.get("course_id")}, {"_id": 0}) or {}
+        from pdf_client import id_card_pdf
+        pdf_bytes = id_card_pdf(s, b, c)
+        filename = f"id-card-{s.get('enrollment_number') or s['student_no']}.pdf"
+        return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+    @erp.get("/students/by-enrollment/{enrollment_number}")
+    async def get_student_by_enrollment(enrollment_number: str, user: dict = Depends(require_erp)):
+        s = await db.erp_students.find_one({"enrollment_number": enrollment_number}, {"_id": 0})
+        if not s:
+            raise HTTPException(404, "Student not found")
+        if not can_view_branch(user, s["branch_id"]):
+            raise HTTPException(403, "Cross-branch denied")
+        return s
+
+    @erp.get("/id-cards/scan/{enrollment_number}")
+    async def scan_id_card(enrollment_number: str):
+        s = await db.erp_students.find_one({"enrollment_number": enrollment_number}, {"_id": 0})
+        if not s:
+            raise HTTPException(404, "Student not found")
+        from datetime import timedelta
+        from jose import jwt as jose_jwt
+        payload = {
+            "sub": s["id"],
+            "enrollment_number": enrollment_number,
+            "type": "id_card_scan",
+            "exp": datetime.now(timezone.utc) + timedelta(hours=24),
+        }
+        token = jose_jwt.encode(payload, os.environ.get("JWT_SECRET", "change-me-jwt-secret"), algorithm="HS256")
+        return {"token": token, "student_id": s["id"], "enrollment_number": enrollment_number}
+
+    @erp.get("/public/student-profile/{enrollment_number}")
+    async def public_student_profile(enrollment_number: str, request: Request):
+        token = request.query_params.get("token")
+        s = await db.erp_students.find_one({"enrollment_number": enrollment_number}, {"_id": 0})
+        if not s:
+            raise HTTPException(404, "Student not found")
+        if token:
+            try:
+                from jose import jwt as jose_jwt
+                jose_jwt.decode(token, os.environ.get("JWT_SECRET", "change-me-jwt-secret"), algorithms=["HS256"])
+            except Exception:
+                raise HTTPException(403, "Invalid or expired token")
+        branch = await db.centers.find_one({"id": s["branch_id"]}, {"_id": 0}) or {}
+        course = await db.courses.find_one({"id": s.get("course_id")}, {"_id": 0}) or {}
+        return {
+            "full_name": s.get("full_name"),
+            "student_no": s.get("student_no"),
+            "luid": s.get("luid"),
+            "enrollment_number": s.get("enrollment_number"),
+            "batch": s.get("batch"),
+            "contact_phone": s.get("contact_phone"),
+            "contact_email": s.get("contact_email"),
+            "address": s.get("address"),
+            "photo_url": s.get("photo_url"),
+            "status": s.get("status"),
+            "branch_name": branch.get("name"),
+            "course_title": course.get("title"),
+            "admission_date": s.get("admission_date"),
+        }
+
     return erp
 
 
@@ -1100,3 +1227,5 @@ async def erp_seed(db, hash_password):
     await db.erp_audit.create_index([("created_at", -1)])
     await db.erp_attendance.create_index([("branch_id", 1), ("scanned_at", -1)])
     await db.erp_attendance.create_index([("student_id", 1), ("scanned_at", -1)])
+    await db.erp_students.create_index("enrollment_number", unique=True, sparse=True)
+    await db.erp_students.create_index("luid", unique=True, sparse=True)

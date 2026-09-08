@@ -32,6 +32,7 @@ import Privacy from "@/pages/Privacy";
 import Gallery from "./pages/Gallery";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
+import PublicStudentProfile from "@/pages/PublicStudentProfile";
 
 // --- ERP Console Infrastructure Imports ---
 import ErpLayout from "@/pages/erp/ErpLayout";
@@ -145,6 +146,7 @@ export default function App() {
             
             {/* Universal Fallback Direct Catch */}
             <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="student-profile/:enrollment_number" element={<PublicStudentProfile />} />
           </Route>
         </Routes>
       </BrowserRouter>

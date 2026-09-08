@@ -312,7 +312,7 @@ function UpdateLeadModal({ lead, erpUser, onClose, onUpdated }) {
 // ============================================================================
 function CreateLeadModal({ erpUser, branches, onClose, onCreated }) {
   const [form, setForm] = useState({
-    name: "", phone: "", email: "", target_exam: "NEET", notes: "",
+    name: "", phone: "", present_class: "", moving_to_class: "", address: "", remarks: "",
     branch_id: isSuper(erpUser) ? "" : erpUser.branch_id,
   });
   const [busy, setBusy] = useState(false);
@@ -322,7 +322,6 @@ function CreateLeadModal({ erpUser, branches, onClose, onCreated }) {
     setBusy(true);
     try {
       const payload = { ...form };
-      if (!payload.email) delete payload.email;
       await erp.createLead(payload);
       onCreated();
     } catch (e) { 
@@ -363,7 +362,7 @@ function CreateLeadModal({ erpUser, branches, onClose, onCreated }) {
           )}
           
           <div>
-            <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground mb-1 block">Prospect Name *</label>
+            <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground mb-1 block">Name *</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50"><FileText size={14}/></span>
               <input type="text" required placeholder="Full Name" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full pl-9 pr-3 py-2 border border-border bg-background/50 rounded-xl text-sm text-foreground focus:outline-none focus:border-accent/40 transition" data-testid="cl-name"/>
@@ -371,30 +370,31 @@ function CreateLeadModal({ erpUser, branches, onClose, onCreated }) {
           </div>
           
           <div>
-            <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground mb-1 block">Primary Contact Mobile *</label>
+            <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground mb-1 block">Mobile No *</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50"><Smartphone size={14}/></span>
-              <input type="text" required placeholder="Phone String" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="w-full pl-9 pr-3 py-2 border border-border bg-background/50 rounded-xl text-sm font-mono text-foreground focus:outline-none focus:border-accent/40 transition" data-testid="cl-phone"/>
+              <input type="text" required placeholder="Mobile Number" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="w-full pl-9 pr-3 py-2 border border-border bg-background/50 rounded-xl text-sm font-mono text-foreground focus:outline-none focus:border-accent/40 transition" data-testid="cl-phone"/>
             </div>
           </div>
           
           <div>
-            <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground mb-1 block">Email Address (Optional)</label>
-            <input type="email" placeholder="name@domain.com" value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full px-3 py-2 border border-border bg-background/50 rounded-xl text-sm text-foreground focus:outline-none focus:border-accent/40 transition" data-testid="cl-email"/>
+            <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground mb-1 block">Present Class (Optional)</label>
+            <input type="text" placeholder="e.g. 10th, 12th" value={form.present_class} onChange={e => setForm({...form, present_class: e.target.value})} className="w-full px-3 py-2 border border-border bg-background/50 rounded-xl text-sm text-foreground focus:outline-none focus:border-accent/40 transition" data-testid="cl-present-class"/>
           </div>
           
           <div>
-            <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground mb-1 block">Course Syllabus Target Track *</label>
-            <div className="relative">
-              <select value={form.target_exam} onChange={e => setForm({...form, target_exam: e.target.value})} className="w-full px-3 py-2 border border-border bg-background rounded-xl text-sm text-foreground focus:outline-none focus:border-accent/40 transition" data-testid="cl-target">
-                {["NEET", "IIT-JEE", "Foundation", "CBSE", "JKBOSE"].map(x => <option key={x} value={x}>{x}</option>)}
-              </select>
-            </div>
+            <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground mb-1 block">Moving To Class *</label>
+            <input type="text" required placeholder="e.g. NEET-26-A" value={form.moving_to_class} onChange={e => setForm({...form, moving_to_class: e.target.value})} className="w-full px-3 py-2 border border-border bg-background/50 rounded-xl text-sm text-foreground focus:outline-none focus:border-accent/40 transition" data-testid="cl-moving-class"/>
           </div>
           
           <div>
-            <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground mb-1 block">Pipeline Context Notes</label>
-            <textarea placeholder="Log prospective interaction logs, previous student tracks, or onboarding milestones..." value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} rows={3} className="w-full px-3 py-2 border border-border bg-background/50 rounded-xl text-sm text-foreground focus:outline-none focus:border-accent/40 transition resize-none" data-testid="cl-notes"/>
+            <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground mb-1 block">Address (Optional)</label>
+            <textarea placeholder="Residential address" value={form.address} onChange={e => setForm({...form, address: e.target.value})} rows={2} className="w-full px-3 py-2 border border-border bg-background/50 rounded-xl text-sm text-foreground focus:outline-none focus:border-accent/40 transition resize-none" data-testid="cl-address"/>
+          </div>
+          
+          <div>
+            <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground mb-1 block">Remarks (Optional)</label>
+            <textarea placeholder="Any additional notes" value={form.remarks} onChange={e => setForm({...form, remarks: e.target.value})} rows={2} className="w-full px-3 py-2 border border-border bg-background/50 rounded-xl text-sm text-foreground focus:outline-none focus:border-accent/40 transition resize-none" data-testid="cl-remarks"/>
           </div>
         </div>
 

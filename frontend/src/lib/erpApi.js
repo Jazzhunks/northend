@@ -53,6 +53,7 @@ export const erp = {
   // --- Students (MULTIPART / FORM-DATA TRAFFIC COMPLIANT) ---
   listStudents: (params = {}) => api.get("/erp/students", { params }).then(resData),
   getStudent: (id) => api.get(`/erp/students/${encodeURIComponent(id)}`).then(resData),
+  idCardQueue: (params = {}) => api.get("/erp/id-cards/queue", { params }).then(resData),
   
   /**
    * Accepts both direct JSON payloads and standard binary payload objects seamlessly.

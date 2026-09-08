@@ -3,6 +3,7 @@ import io
 import re
 import logging
 import qrcode
+import httpx
 from reportlab.lib.pagesizes import A5, A4
 from reportlab.lib.colors import HexColor
 from reportlab.lib.units import mm
@@ -576,6 +577,104 @@ def result_card_pdf(application_no, name, school, standard, target_exam,
     c.setFont("Helvetica", 6.5)
     c.drawCentredString(W/2, 11 * mm, "This is a system-generated document. Verify authenticity by scanning the QR code.")
     c.drawCentredString(W/2, 7 * mm, "Unacademy Offline Centre · Kashmir · northendedu.com")
+
+    c.showPage()
+    c.save()
+    return buf.getvalue()
+
+
+def id_card_pdf(student: dict, branch: dict, course: dict) -> bytes:
+    """Generate a double-sided ID card PDF with front and back panels."""
+    buf = io.BytesIO()
+    c = canvas.Canvas(buf, pagesize=(95 * mm, 60 * mm))
+    W, H = 95 * mm, 60 * mm
+    LM = 6 * mm
+    name = (student.get("full_name") or "").upper()
+    batch = (student.get("batch") or course.get("title") or "COURSE").upper()
+    enrollment = student.get("enrollment_number") or student.get("student_no") or "—"
+    luid = student.get("luid") or "—"
+    branch_name = (branch.get("name") or "NORTHEND").upper()
+    photo_url = student.get("photo_url")
+
+    c.setStrokeColor(PRIMARY)
+    c.setLineWidth(1.2)
+    c.roundRect(4 * mm, 4 * mm, W - 8 * mm, H - 8 * mm, 4, stroke=1, fill=0)
+
+    c.setFillColor(PRIMARY)
+    c.rect(4 * mm, H - 16 * mm, W - 8 * mm, 12 * mm, stroke=0, fill=1)
+    c.setFillColor(WHITE)
+    c.setFont("Helvetica-Bold", 10)
+    c.drawCentredString(W / 2, H - 9 * mm, "UNACADEMY KASHMIR")
+    c.setFont("Helvetica", 6)
+    c.drawCentredString(W / 2, H - 13 * mm, "NORTHEND EDUCATIONAL WORLD")
+
+    photo_x = LM
+    photo_y = H - 46 * mm
+    photo_size = 20 * mm
+    c.setStrokeColor(LINE)
+    c.setLineWidth(0.5)
+    c.roundRect(photo_x, photo_y, photo_size, photo_size, 3, stroke=1, fill=1)
+    if photo_url:
+        try:
+            resp = httpx.get(photo_url, timeout=5)
+            if resp.status_code == 200:
+                img = ImageReader(io.BytesIO(resp.content))
+                c.drawImage(img, photo_x + 1 * mm, photo_y + 1 * mm, width=photo_size - 2 * mm, height=photo_size - 2 * mm, preserveAspectRatio=True, mask="auto")
+        except Exception:
+            pass
+
+    text_x = LM + photo_size + 4 * mm
+    text_y = H - 20 * mm
+    c.setFillColor(TEXT)
+    c.setFont("Helvetica-Bold", 9)
+    c.drawString(text_x, text_y, name[:28])
+    c.setFont("Helvetica", 7)
+    c.setFillColor(MUTED)
+    c.drawString(text_x, text_y - 5 * mm, f"CLASS : {batch[:20]}")
+    c.drawString(text_x, text_y - 10 * mm, f"ENROLL : {enrollment}")
+    c.drawString(text_x, text_y - 15 * mm, f"LUID : {luid}")
+
+    c.setFillColor(TEXT)
+    c.setFont("Helvetica-Bold", 6)
+    c.drawCentredString(W / 2, 10 * mm, f"BRANCH : {branch_name}")
+    c.setFont("Helvetica", 6)
+    c.drawCentredString(W / 2, 7 * mm, "ISSUED : " + datetime.now(timezone.utc).strftime("%d-%m-%Y"))
+    c.drawCentredString(W / 2, 4.5 * mm, "VALID TILL : " + (datetime.now(timezone.utc) + timedelta(days=365)).strftime("%d-%m-%Y"))
+
+    c.showPage()
+
+    c.setStrokeColor(PRIMARY)
+    c.setLineWidth(1.2)
+    c.roundRect(4 * mm, 4 * mm, W - 8 * mm, H - 8 * mm, 4, stroke=1, fill=0)
+    c.setFillColor(PRIMARY)
+    c.rect(4 * mm, H - 16 * mm, W - 8 * mm, 12 * mm, stroke=0, fill=1)
+    c.setFillColor(WHITE)
+    c.setFont("Helvetica-Bold", 9)
+    c.drawCentredString(W / 2, H - 9 * mm, "ATTENDANCE & IDENTITY")
+    c.setFont("Helvetica", 6)
+    c.drawCentredString(W / 2, H - 13 * mm, "SCAN QR FOR VERIFICATION")
+
+    qr_data = f"ENROLL:{enrollment}|LUID:{luid}|NAME:{name}"
+    qr_img = _qr_bytes(qr_data)
+    qr_size = 32 * mm
+    qr_x = (W - qr_size) / 2
+    qr_y = H - 50 * mm
+    c.drawImage(qr_img, qr_x, qr_y, width=qr_size, height=qr_size, preserveAspectRatio=True, mask="auto")
+
+    c.setFillColor(TEXT)
+    c.setFont("Helvetica-Bold", 7)
+    c.drawCentredString(W / 2, qr_y - 6 * mm, f"ENROLLMENT : {enrollment}")
+    c.setFont("Helvetica", 6)
+    c.setFillColor(MUTED)
+    c.drawCentredString(W / 2, qr_y - 11 * mm, "Accounts Scanner / Attendance Gate / Student Mobile")
+    c.drawCentredString(W / 2, qr_y - 15 * mm, "Scan to verify identity or view student profile")
+
+    c.setFillColor(TEXT)
+    c.setFont("Helvetica-Bold", 6)
+    c.drawCentredString(W / 2, 10 * mm, f"BRANCH : {branch_name}")
+    c.setFont("Helvetica", 6)
+    c.drawCentredString(W / 2, 7 * mm, "If found, please return to nearest Northend centre.")
+    c.drawCentredString(W / 2, 4.5 * mm, "This card is non-transferable and remains property of Northend Educational World.")
 
     c.showPage()
     c.save()
