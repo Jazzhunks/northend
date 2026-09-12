@@ -51,7 +51,11 @@
   ],
   "updated_files": [],
   "success_rate": { "backend": "100% (1/1 regression endpoint)", "frontend": "100% functional, 95% visual (3 minor visual deviations)" },
+<<<<<<< HEAD
   "test_credentials": "Super: admin@northend.edu / Admin@2025 (verified). Newly registered student during this run: test_<random>@example.com / Test@2025.",
+=======
+  "test_credentials": "Super: [REDACTED] / [REDACTED] (verified). Newly registered student during this run: test_<random>@example.com / Test@2025.",
+>>>>>>> f5d60c2be (chore: clean branch push)
   "seed_data_creation": "Created during this run: 1 student registration (test_<random>@example.com), 1 contact inquiry (POST /api/contact 200), 1 enrolment, 1 scholarship application (success state shown), 1 job application for 'DTP Operator' (Application Sent confirmation).",
   "retest_needed": false,
   "should_main_agent_self_test": true,

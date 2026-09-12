@@ -2,7 +2,11 @@ import { useEffect, useState, useCallback } from "react";
 import { useOutletContext } from "react-router-dom";
 import { toast } from "sonner";
 import { erp, isSuper } from "@/lib/erpApi";
+<<<<<<< HEAD
 import { formatError } from "@/lib/api";
+=======
+import { formatError, api } from "@/lib/api";
+>>>>>>> f5d60c2be (chore: clean branch push)
 import { Printer, Search, CheckSquare, Square, Contact2, X } from "lucide-react";
 
 export default function ErpIdCards() {
@@ -54,6 +58,7 @@ export default function ErpIdCards() {
 
   const downloadIdCard = async (student) => {
     try {
+<<<<<<< HEAD
       const token = localStorage.getItem("nw_token");
       const url = `/api/erp/students/${encodeURIComponent(student.id)}/id-card`;
       const res = await fetch(url, {
@@ -61,6 +66,11 @@ export default function ErpIdCards() {
       });
       if (!res.ok) throw new Error("Failed to download ID card");
       const blob = await res.blob();
+=======
+      const url = `/erp/students/${encodeURIComponent(student.id)}/id-card`;
+      const res = await api.get(url, { responseType: 'blob' });
+      const blob = res.data;
+>>>>>>> f5d60c2be (chore: clean branch push)
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = `id-card-${student.enrollment_number || student.student_no}.pdf`;
@@ -83,6 +93,7 @@ export default function ErpIdCards() {
       for (const student of selected) {
         await downloadIdCard(student);
       }
+<<<<<<< HEAD
       const token = localStorage.getItem("nw_token");
       await fetch("/api/erp/id-cards/clear-queue", {
         method: "POST",
@@ -91,6 +102,10 @@ export default function ErpIdCards() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ student_ids: Array.from(selectedIds) }),
+=======
+      await api.post("/erp/id-cards/clear-queue", {
+        student_ids: Array.from(selectedIds)
+>>>>>>> f5d60c2be (chore: clean branch push)
       });
       setSelectedIds(new Set());
       loadQueue();

@@ -34,6 +34,11 @@
     "@radix-ui/react-tooltip": "^1.2.4",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
+<<<<<<< HEAD
+=======
+    "@tanstack/react-query": "^5.102.8",
+    "@tanstack/react-query-devtools": "^5.102.8",
+>>>>>>> f5d60c2be (chore: clean branch push)
     "axios": "^1.8.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

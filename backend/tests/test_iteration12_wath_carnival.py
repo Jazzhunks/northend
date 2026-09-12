@@ -24,8 +24,14 @@ def _get_base_url():
             for line in f:
                 if line.startswith("REACT_APP_BACKEND_URL="):
                     return line.split("=", 1)[1].strip().rstrip("/")
+<<<<<<< HEAD
     except Exception:
         pass
+=======
+    except Exception as e:
+        import logging
+        logging.error(f"Error: {e}")
+>>>>>>> f5d60c2be (chore: clean branch push)
     return ""
 
 BASE_URL = _get_base_url()

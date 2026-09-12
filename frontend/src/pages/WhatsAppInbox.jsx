@@ -28,11 +28,17 @@ export default function WhatsAppInbox() {
   useEffect(() => {
     loadThreads();
 
+<<<<<<< HEAD
     const token = localStorage.getItem("nw_token");
     if (!token) return;
 
     const url = `/api/admin/notifications/stream?token=${encodeURIComponent(token)}`;
     const es = new EventSource(url);
+=======
+    const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
+    const url = `${BACKEND_URL}/api/admin/notifications/stream`;
+    const es = new EventSource(url, { withCredentials: true });
+>>>>>>> f5d60c2be (chore: clean branch push)
 
     es.onmessage = (event) => {
       try {

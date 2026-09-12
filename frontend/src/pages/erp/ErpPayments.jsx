@@ -6,6 +6,7 @@ import { Download, Search, Calendar, FileText, CreditCard, Banknote } from "luci
 
 export default function ErpPayments() {
   const { erpUser } = useOutletContext();
+<<<<<<< HEAD
   const [items, setItems] = useState([]);
   const [branches, setBranches] = useState([]);
   const [branchId, setBranchId] = useState("");
@@ -32,6 +33,44 @@ export default function ErpPayments() {
   );
 
   const total = filteredItems.reduce((s, p) => s + Number(p.amount || 0), 0);
+=======
+  const [q, setQ] = useState("");
+  const [search, setSearch] = useState("");
+  const [branchId, setBranchId] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
+  const [page, setPage] = useState(1);
+  const limit = 25;
+  const queryClient = useQueryClient();
+
+  const { data: branches = [] } = useQuery({
+    queryKey: ['erp-branches'],
+    queryFn: () => erp.listBranches()
+  });
+
+  const { data: paymentsData = { items: [], total: 0, pages: 1 }, isLoading } = useQuery({
+    queryKey: ['erp-payments', branchId, search, page],
+    queryFn: async () => {
+      const params = { skip: (page - 1) * limit, limit };
+      if (search) params.search = search;
+      if (branchId) params.branch_id = branchId;
+      return erp.listPayments(params);
+    },
+    keepPreviousData: true
+  });
+  
+  const items = paymentsData.items;
+
+  const handleSearch = (e) => {
+    setQ(e.target.value);
+    if (window.searchTimeout) clearTimeout(window.searchTimeout);
+    window.searchTimeout = setTimeout(() => {
+      setSearch(e.target.value);
+      setPage(1);
+    }, 500);
+  };
+
+  const reload = () => queryClient.invalidateQueries(['erp-payments']);
+>>>>>>> f5d60c2be (chore: clean branch push)
 
   return (
     <div className="space-y-6 h-[calc(100vh-120px)] flex flex-col min-h-0 animate-fadeIn" data-testid="erp-payments-page">

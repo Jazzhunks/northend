@@ -41,7 +41,11 @@
     "/app/backend/tests/test_iteration4.py (new — 22 tests covering category Literal, course array fields, centers/testimonials CRUD, results PUT, auth gating)"
   ],
   "success_rate": {"backend": "100% (74/74)", "frontend": "100%"},
+<<<<<<< HEAD
   "test_credentials": "admin@northend.edu / Admin@2025 (seeded). Student auto-registered per pid.",
+=======
+  "test_credentials": "[REDACTED] / [REDACTED] (seeded). Student auto-registered per pid.",
+>>>>>>> f5d60c2be (chore: clean branch push)
   "seed_data_creation": "Several TEST_-prefixed courses, centers, testimonials, results, scholarship/job applications were created during testing; cleanup deletes are best-effort. Test data is namespaced with TEST_ prefix.",
   "retest_needed": false,
   "should_main_agent_self_test": true,

@@ -618,8 +618,14 @@ def id_card_pdf(student: dict, branch: dict, course: dict, photo_bytes: bytes | 
         try:
             img = ImageReader(io.BytesIO(photo_bytes))
             c.drawImage(img, photo_x + 1 * mm, photo_y + 1 * mm, width=photo_size - 2 * mm, height=photo_size - 2 * mm, preserveAspectRatio=True, mask="auto")
+<<<<<<< HEAD
         except Exception:
             pass
+=======
+        except Exception as e:
+            import logging
+            logging.error(f"Error: {e}")
+>>>>>>> f5d60c2be (chore: clean branch push)
 
     text_x = LM + photo_size + 4 * mm
     text_y = H - 20 * mm

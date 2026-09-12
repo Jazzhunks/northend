@@ -250,8 +250,14 @@ async def try_reserve_slot(db, carnival_id: str, date: str, time: str) -> bool:
             [("carnival_id", 1), ("date", 1), ("time", 1)],
             unique=True, name="uniq_carnival_date_time"
         )
+<<<<<<< HEAD
     except Exception:
         pass
+=======
+    except Exception as e:
+        import logging
+        logging.error(f"Error: {e}")
+>>>>>>> f5d60c2be (chore: clean branch push)
 
     async def _increment_existing() -> bool:
         res = await db.wath_slot_counts.find_one_and_update(

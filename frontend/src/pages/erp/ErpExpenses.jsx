@@ -1,4 +1,9 @@
+<<<<<<< HEAD
 import { useEffect, useState } from "react";
+=======
+import { useState, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+>>>>>>> f5d60c2be (chore: clean branch push)
 import { useOutletContext } from "react-router-dom";
 import { toast } from "sonner";
 import { erp, isSuper, isManagerPlus, fmtINR, fmtDate } from "@/lib/erpApi";
@@ -10,6 +15,7 @@ const CATEGORIES = ["Salary", "Rent", "Electricity", "Internet", "Marketing", "M
 
 export default function ErpExpenses() {
   const { erpUser } = useOutletContext();
+<<<<<<< HEAD
   const [items, setItems] = useState([]);
   const [branches, setBranches] = useState([]);
   const [branchId, setBranchId] = useState("");
@@ -53,6 +59,46 @@ export default function ErpExpenses() {
   );
 
   const total = filteredItems.filter(e => e.status === "approved").reduce((s, e) => s + Number(e.amount || 0), 0);
+=======
+  const [q, setQ] = useState("");
+  const [search, setSearch] = useState("");
+  const [branchId, setBranchId] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
+  const [page, setPage] = useState(1);
+  const limit = 25;
+  const queryClient = useQueryClient();
+
+  const { data: branches = [] } = useQuery({
+    queryKey: ['erp-branches'],
+    queryFn: () => erp.listBranches()
+  });
+
+  const { data: expensesData = { items: [], total: 0, pages: 1 }, isLoading } = useQuery({
+    queryKey: ['erp-expenses', branchId, search, statusFilter, page],
+    queryFn: async () => {
+      const params = { skip: (page - 1) * limit, limit };
+      if (search) params.search = search;
+      if (branchId) params.branch_id = branchId;
+      if (statusFilter) params.status = statusFilter;
+      return erp.listExpenses(params);
+    },
+    keepPreviousData: true
+  });
+  
+  const items = expensesData.items;
+
+  const handleSearch = (e) => {
+    setQ(e.target.value);
+    if (window.searchTimeout) clearTimeout(window.searchTimeout);
+    window.searchTimeout = setTimeout(() => {
+      setSearch(e.target.value);
+      setPage(1);
+    }, 500);
+  };
+
+  const reload = () => queryClient.invalidateQueries(['erp-expenses']);
+>>>>>>> f5d60c2be (chore: clean branch push)
 
   return (
     <div className="space-y-6 h-[calc(100vh-120px)] flex flex-col min-h-0 animate-fadeIn" data-testid="erp-expenses-page">

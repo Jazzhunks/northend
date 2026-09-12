@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "name": "app-root",
   "version": "1.0.0",
   "scripts": {
@@ -12,5 +13,17 @@
     "concurrently": "^8.2.2",
     "react-snap": "^1.23.0",
     "sitemap": "^9.0.1"
+=======
+  "name": "northend-monorepo",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "concurrently -k -n \"BACKEND,FRONTEND\" -c \"blue,green\" \"npm run start:backend\" \"npm run start:frontend\"",
+    "start:backend": "cd backend && uvicorn server:app --reload --port 8001",
+    "start:frontend": "cd frontend && npm start",
+    "dev": "npm run start"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+>>>>>>> f5d60c2be (chore: clean branch push)
   }
 }

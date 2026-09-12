@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useEffect, useMemo, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Helmet } from "react-helmet-async";
@@ -842,6 +843,15 @@ export default function WATH() {
       .finally(() => { if (!silent) setLoading(false); });
   };
   useEffect(() => { load(); }, []);
+=======
+import { useWathPage } from "@/hooks/useWathPage";
+import WathDisabledMode from "./wath/WathDisabledMode";
+import WathExamMode from "./wath/WathExamMode";
+import WathCarnivalMode from "./wath/WathCarnivalMode";
+
+export default function WATH() {
+  const { pageState, loading, load } = useWathPage();
+>>>>>>> f5d60c2be (chore: clean branch push)
 
   const mode = pageState?.mode || "exam";
   const campaign = mode === "exam" ? pageState?.exam : null;
@@ -868,6 +878,7 @@ export default function WATH() {
       <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
 
       {mode === "disabled" ? (
+<<<<<<< HEAD
         <DisabledMode message={pageState?.disabled_message}/>
       ) : (
         <>
@@ -888,10 +899,28 @@ export default function WATH() {
           <FAQSection />
           <FinalCTA />
         </>
+=======
+        <WathDisabledMode message={pageState?.disabled_message}/>
+      ) : mode === "carnival" ? (
+        <WathCarnivalMode
+          carnival={carnival}
+          mode={mode}
+          loading={loading}
+          onRegistered={() => load(true)}
+        />
+      ) : (
+        <WathExamMode
+          campaign={campaign}
+          mode={mode}
+          loading={loading}
+          onRegistered={() => load(true)}
+        />
+>>>>>>> f5d60c2be (chore: clean branch push)
       )}
     </div>
   );
 }
+<<<<<<< HEAD
 
 function DisabledMode({ message }) {
   return (
@@ -1656,3 +1685,5 @@ function FinalCTA() {
     </section>
   );
 }
+=======
+>>>>>>> f5d60c2be (chore: clean branch push)

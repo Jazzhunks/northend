@@ -31,7 +31,10 @@ dist/
 dist
 
 # Environment files (comprehensive coverage)
+<<<<<<< HEAD
 
+=======
+>>>>>>> f5d60c2be (chore: clean branch push)
 *token.json*
 *credentials.json*
 
@@ -47,9 +50,17 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+<<<<<<< HEAD
 dump.rdb
 
 # System files
+=======
+*.log
+dump.rdb
+
+# System files
+**/.DS_Store
+>>>>>>> f5d60c2be (chore: clean branch push)
 .DS_Store
 *.pem
 
@@ -82,6 +93,7 @@ agenthub/agents/youtube/db
 
 # Build caches
 .cache/
+<<<<<<< HEAD
 
 memory/test_credentials.md
 
@@ -106,3 +118,15 @@ frontend/node_modules/.cache/default-development/19.pack
 frontend/node_modules/.cache/default-development/23.pack
 frontend/node_modules/.cache/default-development/22.pack
 frontend/node_modules/.cache/default-development/5.pack
+=======
+**/.cache/
+.pnpm-store/
+
+# Generated tree files (can be very large due to node_modules traversal)
+code_tree.txt
+
+# Credential-sensitive memory files
+memory/test_credentials.md
+
+# Mobile development artifacts (replaced with generic rule above)
+>>>>>>> f5d60c2be (chore: clean branch push)

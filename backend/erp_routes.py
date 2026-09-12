@@ -215,8 +215,14 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
                 "payload": payload or {},
                 "created_at": now_iso(),
             })
+<<<<<<< HEAD
         except Exception:
             pass
+=======
+        except Exception as e:
+            import logging
+            logging.error(f"Error: {e}")
+>>>>>>> f5d60c2be (chore: clean branch push)
 
     async def broadcast_attendance_event(branch_id: str, event_payload: dict):
         if branch_id in branch_broadcast_queues:
@@ -401,7 +407,11 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
     # ===== STAFF =====
     @erp.get("/staff")
     async def list_staff(branch_id: Optional[str] = None, user: dict = Depends(require_manager_plus)):
+<<<<<<< HEAD
         f: dict = {"role": {"$in": list(ROLES_BRANCH)}}
+=======
+        f: dict = {"role": {"$in": list(ROLES_BRANCH)}, "is_deleted": {"$ne": True}}
+>>>>>>> f5d60c2be (chore: clean branch push)
         if user["role"] == "super_admin":
             if branch_id:
                 f["branch_id"] = branch_id
@@ -753,7 +763,18 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
         return doc
 
     @erp.get("/leads")
+<<<<<<< HEAD
     async def list_leads(branch_id: Optional[str] = None, status: Optional[str] = None, user: dict = Depends(require_erp)):
+=======
+    async def list_leads(
+    branch_id: Optional[str] = None, 
+    status: Optional[str] = None, 
+    skip: int = Query(0, ge=0),
+    limit: int = Query(25, ge=1, le=100),
+    search: str = Query(None),
+    user: dict = Depends(require_erp)
+):
+>>>>>>> f5d60c2be (chore: clean branch push)
         f = scope_branch_filter(user, branch_id)
         if user["role"] == "counsellor":
             f["counsellor_id"] = user["id"]
@@ -1178,7 +1199,11 @@ def build_erp_router(db, get_current_user, hash_password, verify_password, requi
             raise HTTPException(404, "Temporary student not found")
         if not can_view_branch(user, s["branch_id"]):
             raise HTTPException(403, "Cross-branch denied")
+<<<<<<< HEAD
         await db.erp_students.delete_one({"id": student_id})
+=======
+        await db.erp_students.update_one({"id": student_id}, {"$set": {"is_deleted": True}})
+>>>>>>> f5d60c2be (chore: clean branch push)
         lead = await db.erp_leads.find_one({"converted_student_id": student_id}, {"_id": 0})
         if lead:
             await db.erp_leads.update_one({"id": lead["id"]}, {"$set": {"status": "lost"}})

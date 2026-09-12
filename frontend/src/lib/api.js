@@ -47,12 +47,15 @@ api.interceptors.request.use(
       delete config.headers.Authorization;
       return config;
     }
+<<<<<<< HEAD
     const token = localStorage.getItem("nw_token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     } else {
       delete config.headers.Authorization;
     }
+=======
+>>>>>>> f5d60c2be (chore: clean branch push)
     return config;
   },
   (error) => Promise.reject(error)
@@ -85,6 +88,7 @@ api.interceptors.response.use(
         return Promise.reject(error);
       }
 
+<<<<<<< HEAD
       if (!originalRequest.headers.Authorization) {
         return Promise.reject(error);
       }
@@ -100,6 +104,14 @@ api.interceptors.response.use(
           }
         } catch (refreshError) {
           localStorage.removeItem("nw_token");
+=======
+      if (!isRefreshing) {
+        isRefreshing = true;
+        try {
+          await api.post("/auth/refresh");
+          onTokenRefreshed();
+        } catch (refreshError) {
+>>>>>>> f5d60c2be (chore: clean branch push)
           onTokenRefreshFailed(refreshError);
           if (
             typeof window !== "undefined" &&
@@ -115,6 +127,7 @@ api.interceptors.response.use(
           isRefreshing = false;
         }
 
+<<<<<<< HEAD
         const token = localStorage.getItem("nw_token");
         if (token) {
           originalRequest.headers.Authorization = `Bearer ${token}`;
@@ -125,12 +138,22 @@ api.interceptors.response.use(
 
       return new Promise((resolve, reject) => {
         subscribeTokenRefresh((token, err) => {
+=======
+        return api(originalRequest);
+      }
+
+      return new Promise((resolve, reject) => {
+        subscribeTokenRefresh((_, err) => {
+>>>>>>> f5d60c2be (chore: clean branch push)
           if (err) {
             reject(err);
             return;
           }
           if (originalRequest) {
+<<<<<<< HEAD
             originalRequest.headers.Authorization = `Bearer ${token}`;
+=======
+>>>>>>> f5d60c2be (chore: clean branch push)
             resolve(api(originalRequest));
           } else {
             reject(error);

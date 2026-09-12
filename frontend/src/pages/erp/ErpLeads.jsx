@@ -1,4 +1,9 @@
+<<<<<<< HEAD
 import { useEffect, useState, useCallback } from "react";
+=======
+import { useState, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+>>>>>>> f5d60c2be (chore: clean branch push)
 import { useOutletContext } from "react-router-dom";
 import { toast } from "sonner";
 import { erp, isSuper, fmtDate } from "@/lib/erpApi";
@@ -18,6 +23,7 @@ const STATUS_STYLES = {
 
 export default function ErpLeads() {
   const { erpUser } = useOutletContext();
+<<<<<<< HEAD
   const [items, setItems] = useState([]);
   const [branches, setBranches] = useState([]);
   const [branchId, setBranchId] = useState("");
@@ -41,6 +47,48 @@ export default function ErpLeads() {
   useEffect(() => {
     const id = setInterval(() => { reload(); }, 30000);
     return () => clearInterval(id);
+=======
+  const [q, setQ] = useState("");
+  const [search, setSearch] = useState("");
+  const [branchId, setBranchId] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
+  const [page, setPage] = useState(1);
+  const limit = 25;
+  const queryClient = useQueryClient();
+
+  const { data: branches = [] } = useQuery({
+    queryKey: ['erp-branches'],
+    queryFn: () => erp.listBranches()
+  });
+
+  const { data: leadsData = { items: [], total: 0, pages: 1 }, isLoading } = useQuery({
+    queryKey: ['erp-leads', branchId, search, statusFilter, page],
+    queryFn: async () => {
+      const params = { skip: (page - 1) * limit, limit };
+      if (search) params.search = search;
+      if (branchId) params.branch_id = branchId;
+      if (statusFilter) params.status = statusFilter;
+      return erp.listLeads(params);
+    },
+    keepPreviousData: true
+  });
+  
+  const items = leadsData.items;
+
+  const handleSearch = (e) => {
+    setQ(e.target.value);
+    if (window.searchTimeout) clearTimeout(window.searchTimeout);
+    window.searchTimeout = setTimeout(() => {
+      setSearch(e.target.value);
+      setPage(1);
+    }, 500);
+  };
+
+  const reload = () => queryClient.invalidateQueries(['erp-leads']);
+
+  return () => clearInterval(id);
+>>>>>>> f5d60c2be (chore: clean branch push)
   }, [reload]);
 
   const filteredItems = items.filter(l => 
@@ -121,7 +169,11 @@ export default function ErpLeads() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border bg-background/20">
+<<<<<<< HEAD
               {leadsPage.pageItems.map(l => (
+=======
+              {items.map(l => (
+>>>>>>> f5d60c2be (chore: clean branch push)
                 <tr key={l.id} className="hover:bg-muted/50 transition-colors group" data-testid={`lead-row-${l.id}`}>
                   <td className="px-5 py-4 text-xs whitespace-nowrap text-muted-foreground font-mono">{fmtDate(l.created_at)}</td>
                   <td className="px-5 py-4 text-xs font-semibold text-foreground truncate">{l.name}</td>

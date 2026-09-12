@@ -77,10 +77,14 @@ export default function ErpStudentDetail() {
     }
     try {
       await erp.updateStudent(s.id, { luid: s.luid, enrollment_number: s.enrollment_number });
+<<<<<<< HEAD
       await fetch(`${API_BASE}/erp/students/${encodeURIComponent(s.id)}/queue-id-card`, {
         method: "POST",
         headers: { Authorization: `Bearer ${localStorage.getItem("nw_token")}` },
       });
+=======
+      await api.post(`/erp/students/${encodeURIComponent(s.id)}/queue-id-card`);
+>>>>>>> f5d60c2be (chore: clean branch push)
       toast.success("Sent to ID card generation queue");
       nav("/erp/erpidcards");
     } catch (e) {

@@ -144,10 +144,16 @@ export default function ErpAttendance() {
   );
 
   const buildExcelExportUrl = () => {
+<<<<<<< HEAD
   const queryToken = localStorage.getItem("nw_token") || "";
   let destinationUrl = `${API_BASE}/erp/erpattendance/exports/attendance_today.xlsx?token=${encodeURIComponent(queryToken)}`;
   if (branchId) {
     destinationUrl += `&branch_id=${encodeURIComponent(branchId)}`;
+=======
+  let destinationUrl = `${API_BASE}/erp/erpattendance/exports/attendance_today.xlsx`;
+  if (branchId) {
+    destinationUrl += `?branch_id=${encodeURIComponent(branchId)}`;
+>>>>>>> f5d60c2be (chore: clean branch push)
   }
   return destinationUrl;
 };

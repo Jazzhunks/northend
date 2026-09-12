@@ -30,7 +30,11 @@
     "/app/frontend/src/pages/erp/ErpLeads.jsx (same)"
   ],
   "success_rate": { "backend": "n/a (frontend-only run)", "frontend": "100% after fixes" },
+<<<<<<< HEAD
   "test_credentials": "Super: admin@northend.edu / Admin@2025 ; Manager: tariq.mgr@northend.edu / Mgr@2025 ; Accountant: acct.sgr@northend.edu / Pwd@2025 ; Counsellor: cnsl.sgr@northend.edu / Pwd@2025",
+=======
+  "test_credentials": "Super: [REDACTED] / [REDACTED] ; Manager: [REDACTED] / [REDACTED] ; Accountant: [REDACTED] / [REDACTED] ; Counsellor: [REDACTED] / [REDACTED]",
+>>>>>>> f5d60c2be (chore: clean branch push)
   "seed_data_creation": "Created during this run: 1 lead 'Test Lead Frontend' (status moved to contacted), 1 expense 'Frontend test expense' (₹12,000 Salary, auto-approved), 1 payment of ₹10,000 (cash + GST) against student Hamid Wani. Updated Srinagar branch GSTIN to 01ABCDE1234F1Z5. All persisted to MongoDB.",
   "retest_needed": false,
   "should_main_agent_self_test": true,

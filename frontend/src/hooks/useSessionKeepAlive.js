@@ -7,15 +7,21 @@ export function useSessionKeepAlive() {
   const timerRef = useRef(null);
 
   useEffect(() => {
+<<<<<<< HEAD
     const token = localStorage.getItem("nw_token");
     if (!token) return;
 
+=======
+>>>>>>> f5d60c2be (chore: clean branch push)
     const ping = async () => {
       try {
         await api.get("/auth/me");
       } catch (err) {
         if (err?.response?.status === 401) {
+<<<<<<< HEAD
           localStorage.removeItem("nw_token");
+=======
+>>>>>>> f5d60c2be (chore: clean branch push)
           window.location.href = "/login?session_expired=true";
         }
       }

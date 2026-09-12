@@ -29,7 +29,11 @@
     "/app/backend/tests/test_iteration11_whatsapp.py"
   ],
   "success_rate": {"backend": "100% (17/17)", "frontend": "100% (list + open + send flow verified)"},
+<<<<<<< HEAD
   "test_credentials": "admin@northend.edu / Admin@2025 (from /app/memory/test_credentials.md). student@test.com / Student@2025 for negative RBAC.",
+=======
+  "test_credentials": "[REDACTED] / [REDACTED] (from /app/memory/test_credentials.md). student@test.com / Student@2025 for negative RBAC.",
+>>>>>>> f5d60c2be (chore: clean branch push)
   "seed_data_creation": "Inbound webhook test injects a WhatsApp message from wa_id=9999900000 (WATH applicant phone). Creates wa_contacts + wa_threads + wa_messages rows. Idempotency test creates 1 additional message. Not cleaned up — persists in DB for UI visibility. WATH campaign id = 1ed94009-d949-4504-b291-68e3571a5a44.",
   "retest_needed": false,
   "main_agent_can_self_test": true,

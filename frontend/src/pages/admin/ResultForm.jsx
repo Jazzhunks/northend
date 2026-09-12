@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+import { useEffect } from "react";
+>>>>>>> f5d60c2be (chore: clean branch push)
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AdminForm, AdminInput, AdminSelect, AdminFileUpload, AdminTextarea } from "@/components/admin";
@@ -5,12 +9,18 @@ import { resultSchema } from "@/lib/schemas";
 
 const CATEGORIES = ["NEET", "IIT-JEE", "Foundation", "CBSE", "JKBOSE"];
 
+<<<<<<< HEAD
 export default function ResultForm({ onSubmit }) {
   const { register, handleSubmit, formState: { errors }, reset, watch, setValue } = useForm({
+=======
+export default function ResultForm({ onSubmit, initialData = null }) {
+  const { register, handleSubmit, reset, watch, setValue } = useForm({
+>>>>>>> f5d60c2be (chore: clean branch push)
     resolver: zodResolver(resultSchema),
     defaultValues: { student_name: "", exam: "", rank: "", year: new Date().getFullYear(), course: "NEET", photo_url: "", quote: "" },
   });
 
+<<<<<<< HEAD
   const submit = (data) => {
     onSubmit({ ...data, year: Number(data.year) });
     reset({ student_name: "", exam: "", rank: "", year: new Date().getFullYear(), course: "NEET", photo_url: "", quote: "" });
@@ -18,6 +28,31 @@ export default function ResultForm({ onSubmit }) {
 
   return (
     <AdminForm onSubmit={handleSubmit(submit)} submitLabel="Publish Honors Record" data-testid="result-form" title="New Honors Record">
+=======
+  useEffect(() => {
+    if (initialData) {
+      reset({
+        student_name: initialData.student_name || "",
+        exam: initialData.exam || "",
+        rank: initialData.rank || "",
+        year: initialData.year || new Date().getFullYear(),
+        course: initialData.course || "NEET",
+        photo_url: initialData.photo_url || "",
+        quote: initialData.quote || "",
+      });
+    }
+  }, [initialData, reset]);
+
+  const submit = (data) => {
+    onSubmit({ ...data, year: Number(data.year) });
+    if (!initialData) {
+      reset({ student_name: "", exam: "", rank: "", year: new Date().getFullYear(), course: "NEET", photo_url: "", quote: "" });
+    }
+  };
+
+  return (
+    <AdminForm onSubmit={handleSubmit(submit)} submitLabel={initialData ? "Update Honors Record" : "Publish Honors Record"} data-testid="result-form" title={initialData ? "Edit Honors Record" : "New Honors Record"}>
+>>>>>>> f5d60c2be (chore: clean branch push)
       <AdminInput label="Student Name" testId="nr-name" {...register("student_name")} required />
       <AdminInput label="Examination Scale" testId="nr-exam" {...register("exam")} required />
       <AdminInput label="Score Rank Metric (AIR/State)" testId="nr-rank" className="text-accent font-bold" {...register("rank")} required />
@@ -28,4 +63,7 @@ export default function ResultForm({ onSubmit }) {
     </AdminForm>
   );
 }
+<<<<<<< HEAD
 
+=======
+>>>>>>> f5d60c2be (chore: clean branch push)

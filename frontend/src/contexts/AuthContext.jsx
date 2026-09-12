@@ -14,6 +14,7 @@ export function AuthProvider({ children }) {
   // REFRESH / SESSION VALIDATION CORE LOGIC
   // ============================================================================
   const refresh = useCallback(async () => {
+<<<<<<< HEAD
     const token = localStorage.getItem("nw_token");
     // Supporting dual-mode parsing until backend switches fully to cookie sessions
     if (!token) {
@@ -22,18 +23,24 @@ export function AuthProvider({ children }) {
       return;
     }
 
+=======
+>>>>>>> f5d60c2be (chore: clean branch push)
     try {
       const { data } = await api.get("/auth/me");
       setUser(data);
     } catch (err) {
       console.error("Session verification fallback triggered:", err);
+<<<<<<< HEAD
       localStorage.removeItem("nw_token");
+=======
+>>>>>>> f5d60c2be (chore: clean branch push)
       setUser(null);
     } finally {
       setLoading(false);
     }
   }, []);
 
+<<<<<<< HEAD
   // --- CROSS-TAB BROADCAST SYNCHRONIZATION MATRIX ---
   useEffect(() => {
     refresh();
@@ -47,6 +54,10 @@ export function AuthProvider({ children }) {
 
     window.addEventListener("storage", handleStorageSync);
     return () => window.removeEventListener("storage", handleStorageSync);
+=======
+  useEffect(() => {
+    refresh();
+>>>>>>> f5d60c2be (chore: clean branch push)
   }, [refresh]);
 
   // ============================================================================
@@ -59,6 +70,7 @@ export function AuthProvider({ children }) {
         signal: options.signal // Wire upstream controller cancellation signals
       });
       
+<<<<<<< HEAD
       if (data?.access_token) {
         localStorage.setItem("nw_token", data.access_token);
       }
@@ -67,6 +79,11 @@ export function AuthProvider({ children }) {
       return data.user;
     } catch (err) {
       localStorage.removeItem("nw_token");
+=======
+      setUser(data.user);
+      return data.user;
+    } catch (err) {
+>>>>>>> f5d60c2be (chore: clean branch push)
       setUser(null);
       throw err;
     } finally {
@@ -79,6 +96,7 @@ export function AuthProvider({ children }) {
     try {
       const { data } = await api.post("/auth/register", payload);
       
+<<<<<<< HEAD
       if (data?.access_token) {
         localStorage.setItem("nw_token", data.access_token);
       }
@@ -87,6 +105,11 @@ export function AuthProvider({ children }) {
       return data.user;
     } catch (err) {
       localStorage.removeItem("nw_token");
+=======
+      setUser(data.user);
+      return data.user;
+    } catch (err) {
+>>>>>>> f5d60c2be (chore: clean branch push)
       setUser(null);
       throw err;
     } finally {
@@ -100,7 +123,10 @@ export function AuthProvider({ children }) {
     } catch (e) { 
       console.warn("Server-side token revocation fallback sequence logs:", e); 
     } finally {
+<<<<<<< HEAD
       localStorage.removeItem("nw_token");
+=======
+>>>>>>> f5d60c2be (chore: clean branch push)
       setUser(null);
     }
   };

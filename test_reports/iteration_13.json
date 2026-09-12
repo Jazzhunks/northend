@@ -23,7 +23,11 @@
     "/app/backend/tests/test_iteration13_overbook_regression.py"
   ],
   "success_rate": {"backend": "100% (5/5)", "frontend": "n/a (skipped per instructions)"},
+<<<<<<< HEAD
   "test_credentials": "admin@northend.edu / Admin@2025",
+=======
+  "test_credentials": "[REDACTED] / [REDACTED]",
+>>>>>>> f5d60c2be (chore: clean branch push)
   "seed_data_creation": "Tests create TEST_OVERBOOK_* carnivals and TEST_-prefixed applicants; every carnival is DELETEd in finally blocks. Applicants are removed transitively via DELETE carnival (wath_slot_counts cascade); however scholarship_applications rows with the TEST_ email prefix remain in the DB — harmless and easily purged by prefix filter.",
   "retest_needed": false,
   "should_main_agent_self_test": true,

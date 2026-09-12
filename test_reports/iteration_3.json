@@ -29,7 +29,11 @@
     "/app/backend/tests/test_iteration3.py (new)"
   ],
   "success_rate": {"backend": "100%", "frontend": "100%"},
+<<<<<<< HEAD
   "test_credentials": "admin@northend.edu / Admin@2025 (seeded). Student auto-registered per pid in tests.",
+=======
+  "test_credentials": "[REDACTED] / [REDACTED] (seeded). Student auto-registered per pid in tests.",
+>>>>>>> f5d60c2be (chore: clean branch push)
   "seed_data_creation": "Several TEST_-prefixed scholarship/enrollment/job applications and uploaded files were created during testing. Cleanup not performed but data is namespaced.",
   "retest_needed": false,
   "should_main_agent_self_test": true,

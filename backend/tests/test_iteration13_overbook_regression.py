@@ -92,8 +92,14 @@ def _create_carnival(admin_client, capacity: int) -> str:
 def _delete_carnival(admin_client, cid: str):
     try:
         admin_client.delete(f"{BASE_URL}/api/admin/wath/carnivals/{cid}")
+<<<<<<< HEAD
     except Exception:
         pass
+=======
+    except Exception as e:
+        import logging
+        logging.error(f"Error: {e}")
+>>>>>>> f5d60c2be (chore: clean branch push)
 
 
 def _make_applicant(i: int, tag: str):

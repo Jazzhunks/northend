@@ -31,7 +31,11 @@
   ],
   "updated_files": ["/app/backend/tests/backend_test.py"],
   "success_rate": {"backend": "100% (38/38)", "frontend": "~85% (home stats counter is the only visible bug; courses filter, login, admin dashboard all work)"},
+<<<<<<< HEAD
   "test_credentials": "Admin admin@northend.edu / Admin@2025 (seeded). Test student created per-run as student_test_<pid>@test.com / Student@2025.",
+=======
+  "test_credentials": "Admin [REDACTED] / [REDACTED] (seeded). Test student created per-run as student_test_<pid>@test.com / Student@2025.",
+>>>>>>> f5d60c2be (chore: clean branch push)
   "seed_data_creation": "Dropped the courses MongoDB collection once and restarted backend so seed re-inserted all 7 category courses. No manual data otherwise added.",
   "retest_needed": true,
   "main_agent_can_self_test": true,

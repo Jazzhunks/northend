@@ -35,9 +35,14 @@ export const erp = {
    * Guarantees an absolute protocol string path fallback to satisfy native browser handshakes.
    */
   getAttendanceStreamUrl: (branchId) => {
+<<<<<<< HEAD
     const token = localStorage.getItem("nw_token");
     const baseEndpoint = api.defaults.baseURL;
     return `${baseEndpoint}/erp/erpattendance/stream/${encodeURIComponent(branchId)}?token=${encodeURIComponent(token)}`;
+=======
+    const baseEndpoint = api.defaults.baseURL;
+    return `${baseEndpoint}/erp/erpattendance/stream/${encodeURIComponent(branchId)}`;
+>>>>>>> f5d60c2be (chore: clean branch push)
   },
 
   // --- Branches ---

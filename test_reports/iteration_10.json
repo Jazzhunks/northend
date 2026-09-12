@@ -24,7 +24,11 @@
     "/app/backend/tests/test_iteration10.py"
   ],
   "success_rate": {"backend": "100% (5/5)", "frontend": "100% (2/2 flows)"},
+<<<<<<< HEAD
   "test_credentials": "admin@northend.edu / Admin@2025 (from /app/memory/test_credentials.md)",
+=======
+  "test_credentials": "[REDACTED] / [REDACTED] (from /app/memory/test_credentials.md)",
+>>>>>>> f5d60c2be (chore: clean branch push)
   "seed_data_creation": "Each backend test creates unique TEST_ scholarship_applications rows with timestamp-based email/phone; not cleaned up (approved applications remain in DB for WATH). UI test also added 2 real approved applications.",
   "retest_needed": false,
   "main_agent_can_self_test": true,

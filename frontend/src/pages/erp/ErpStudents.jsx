@@ -1,4 +1,9 @@
+<<<<<<< HEAD
 import { useEffect, useState, useCallback } from "react";
+=======
+import { useState, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+>>>>>>> f5d60c2be (chore: clean branch push)
 import { useOutletContext, Link } from "react-router-dom";
 import { toast } from "sonner";
 import { erp, isSuper, fmtINR, fmtDate } from "@/lib/erpApi";
@@ -9,6 +14,7 @@ import { Search, Plus, Download, X, GraduationCap, Users, User, Mail, Smartphone
 
 export default function ErpStudents() {
   const { erpUser } = useOutletContext();
+<<<<<<< HEAD
   const [items, setItems] = useState([]);
   const [q, setQ] = useState("");
   const [branchId, setBranchId] = useState("");
@@ -31,6 +37,48 @@ export default function ErpStudents() {
   useEffect(() => {
     const id = setInterval(() => { reload(); }, 30000);
     return () => clearInterval(id);
+=======
+  const [q, setQ] = useState("");
+  const [search, setSearch] = useState("");
+  const [branchId, setBranchId] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
+  const [page, setPage] = useState(1);
+  const limit = 25;
+  const queryClient = useQueryClient();
+
+  const { data: branches = [] } = useQuery({
+    queryKey: ['erp-branches'],
+    queryFn: () => erp.listBranches()
+  });
+
+  const { data: studentsData = { items: [], total: 0, pages: 1 }, isLoading } = useQuery({
+    queryKey: ['erp-students', branchId, search, page],
+    queryFn: async () => {
+      const params = { skip: (page - 1) * limit, limit };
+      if (search) params.search = search;
+      if (branchId) params.branch_id = branchId;
+      return erp.listStudents(params);
+    },
+    keepPreviousData: true
+  });
+  
+  const items = studentsData.items;
+
+  // Debounce search manually for typing
+  const handleSearch = (e) => {
+    setQ(e.target.value);
+    // basic debounce
+    if (window.searchTimeout) clearTimeout(window.searchTimeout);
+    window.searchTimeout = setTimeout(() => {
+      setSearch(e.target.value);
+      setPage(1);
+    }, 500);
+  };
+
+  const reload = () => queryClient.invalidateQueries(['erp-students']);
+
+  return () => clearInterval(id);
+>>>>>>> f5d60c2be (chore: clean branch push)
   }, [reload]);
 
   return (
@@ -65,7 +113,11 @@ export default function ErpStudents() {
           <input 
             type="text"
             value={q} 
+<<<<<<< HEAD
             onChange={e => setQ(e.target.value)} 
+=======
+            onChange={handleSearch} 
+>>>>>>> f5d60c2be (chore: clean branch push)
             placeholder="Search active profiles by name, registration code, primary phone..." 
             className="w-full pl-9 pr-4 py-2 border border-border bg-background/50 rounded-xl text-sm focus:outline-none focus:border-accent/40 transition text-foreground" 
             data-testid="search-students-input"
@@ -100,7 +152,11 @@ export default function ErpStudents() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border bg-background/20">
+<<<<<<< HEAD
               {studentsPage.pageItems.map(s => {
+=======
+              {items.map(s => {
+>>>>>>> f5d60c2be (chore: clean branch push)
                 const baseTuition = Number(s.total_fee || 0);
                 const scholarshipExemption = (Number(s.scholarship_percent || 0) / 100) * baseTuition;
                 const dynamicFlatDiscount = Number(s.discount || 0);

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -15,14 +16,62 @@ export default function JobForm({ onSubmit }) {
     const payload = { ...data, requirements: data.requirements.length ? data.requirements : ["Graduate"] };
     onSubmit(payload);
     reset({ title: "", department: "", location: "", type: "Full-time", description: "", requirements: [], active: true });
+=======
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { AdminForm, AdminInput, AdminTextarea, AdminChipInput, AdminCheckbox } from "@/components/admin";
+import { jobSchema } from "@/lib/schemas";
+
+export default function JobForm({ onSubmit, initialData = null }) {
+  const { register, handleSubmit, reset, watch, setValue } = useForm({
+    resolver: zodResolver(jobSchema),
+    defaultValues: { 
+      title: "", 
+      department: "", 
+      location: "", 
+      type: "Full-time", 
+      description: "", 
+      requirements: [], 
+      active: true 
+    },
+  });
+
+  useEffect(() => {
+    if (initialData) {
+      reset({
+        title: initialData.title || "",
+        department: initialData.department || "",
+        location: initialData.location || "",
+        type: initialData.type || "Full-time",
+        description: initialData.description || "",
+        requirements: initialData.requirements || [],
+        active: initialData.active ?? true
+      });
+    }
+  }, [initialData, reset]);
+
+  const submit = (data) => {
+    const payload = { ...data, requirements: data.requirements.length ? data.requirements : ["Graduate"] };
+    onSubmit(payload);
+    if (!initialData) {
+      reset({ title: "", department: "", location: "", type: "Full-time", description: "", requirements: [], active: true });
+    }
+>>>>>>> f5d60c2be (chore: clean branch push)
   };
 
   return (
     <AdminForm
       onSubmit={handleSubmit(submit)}
+<<<<<<< HEAD
       submitLabel="Deploy Career Index"
       data-testid="job-form"
       title="New Job Opening"
+=======
+      submitLabel={initialData ? "Update Job Opening" : "Deploy Career Index"}
+      data-testid="job-form"
+      title={initialData ? "Edit Job Opening" : "New Job Opening"}
+>>>>>>> f5d60c2be (chore: clean branch push)
     >
       <AdminInput label="Job Title" testId="nj-title" {...register("title")} required />
       <AdminInput label="Department" testId="nj-dept" {...register("department")} required />
@@ -33,4 +82,7 @@ export default function JobForm({ onSubmit }) {
     </AdminForm>
   );
 }
+<<<<<<< HEAD
 
+=======
+>>>>>>> f5d60c2be (chore: clean branch push)

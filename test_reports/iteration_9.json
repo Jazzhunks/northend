@@ -28,7 +28,11 @@
     "/app/backend/tests/test_iteration9.py"
   ],
   "success_rate": {"backend": "100%", "frontend": "100% (critical flows)"},
+<<<<<<< HEAD
   "test_credentials": "admin@northend.edu / Admin@2025",
+=======
+  "test_credentials": "[REDACTED] / [REDACTED]",
+>>>>>>> f5d60c2be (chore: clean branch push)
   "seed_data_creation": "One TEST_ scholarship application created via POST /api/scholarship-applications during test (not cleaned up).",
   "retest_needed": false,
   "should_main_agent_self_test": false,

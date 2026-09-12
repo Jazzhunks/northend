@@ -883,12 +883,34 @@ async def set_featured(kind: str = Query(...), item_id: str = Query(...), _admin
 
 # ---------- Courses ----------
 @api.get("/courses")
+<<<<<<< HEAD
 async def list_courses(category: Optional[str] = None, featured: Optional[bool] = None):
     q = {}
     if category: q["category"] = category
     if featured is not None: q["featured"] = featured
     items = await db.courses.find(q, {"_id": 0}).sort("created_at", -1).to_list(200)
     return items
+=======
+async def list_courses(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(25, ge=1, le=100),
+    search: str = Query(None),
+    category: Optional[str] = None,
+    featured: Optional[bool] = None
+):
+    query = {}
+    if category: query["category"] = category
+    if featured is not None: query["featured"] = featured
+    if search:
+        query["$or"] = [
+            {"title": {"$regex": search, "$options": "i"}},
+            {"description": {"$regex": search, "$options": "i"}},
+        ]
+    query["is_deleted"] = {"$ne": True}
+    total = await db.courses.count_documents(query)
+    items = await db.courses.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(None)
+    return {"items": items, "total": total, "page": (skip // limit) + 1, "pages": (total + limit - 1) // limit}
+>>>>>>> f5d60c2be (chore: clean branch push)
 
 @api.get("/courses/{cid}")
 async def get_course(cid: str):
@@ -916,7 +938,11 @@ async def update_course(cid: str, payload: CourseIn, _admin = Depends(require_ad
 
 @api.delete("/courses/{cid}")
 async def delete_course(cid: str, _admin = Depends(require_admin)):
+<<<<<<< HEAD
     await db.courses.delete_one({"id": cid})
+=======
+    await db.courses.update_one({"id": cid}, {"$set": {"is_deleted": True}})
+>>>>>>> f5d60c2be (chore: clean branch push)
     return {"ok": True}
 
 # ---------- Scholarships ----------
@@ -938,8 +964,28 @@ async def list_scholarships(include_wath: bool = False, type: Optional[str] = Qu
     return items
 
 @api.get("/admin/scholarships")
+<<<<<<< HEAD
 async def list_scholarships_admin(_admin = Depends(require_admin)):
     return await db.scholarships.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+=======
+async def list_scholarships_admin(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(25, ge=1, le=100),
+    search: str = Query(None),
+    _admin = Depends(require_admin)
+):
+    query = {}
+    if search:
+        query["$or"] = [
+            {"title": {"$regex": search, "$options": "i"}},
+            {"description": {"$regex": search, "$options": "i"}},
+            {"slug": {"$regex": search, "$options": "i"}},
+        ]
+    query["is_deleted"] = {"$ne": True}
+    total = await db.scholarships.count_documents(query)
+    items = await db.scholarships.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(None)
+    return {"items": items, "total": total, "page": (skip // limit) + 1, "pages": (total + limit - 1) // limit}
+>>>>>>> f5d60c2be (chore: clean branch push)
 
 @api.get("/scholarships/{sid}")
 async def get_scholarship(sid: str):
@@ -992,7 +1038,11 @@ async def regenerate_examiner_token(sid: str, _admin = Depends(require_admin)):
 
 @api.delete("/scholarships/{sid}")
 async def delete_scholarship(sid: str, _admin = Depends(require_admin)):
+<<<<<<< HEAD
     await db.scholarships.delete_one({"id": sid})
+=======
+    await db.scholarships.update_one({"id": sid}, {"$set": {"is_deleted": True}})
+>>>>>>> f5d60c2be (chore: clean branch push)
     return {"ok": True}
 
 @api.post("/scholarship-applications")
@@ -1195,9 +1245,34 @@ async def update_scholarship_application(
     return updated_doc
 
 @api.get("/scholarship-applications")
+<<<<<<< HEAD
 async def list_scholarship_apps(_admin = Depends(require_admin)):
     # Limit removed so the frontend matrix counts represent the entire applicant pool
     return await db.scholarship_applications.find({}, {"_id": 0}).sort("created_at", -1).to_list(None)
+=======
+async def list_scholarship_apps(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(25, ge=1, le=100),
+    search: str = Query(None),
+    campaign_kind: str = Query(None),
+    _admin = Depends(require_admin)
+):
+    query = {}
+    if campaign_kind:
+        query["campaign_kind"] = campaign_kind
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"application_no": {"$regex": search, "$options": "i"}},
+            {"phone": {"$regex": search, "$options": "i"}},
+            {"city": {"$regex": search, "$options": "i"}},
+            {"school": {"$regex": search, "$options": "i"}}
+        ]
+    query["is_deleted"] = {"$ne": True}
+    total = await db.scholarship_applications.count_documents(query)
+    items = await db.scholarship_applications.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(None)
+    return {"items": items, "total": total, "page": (skip // limit) + 1, "pages": (total + limit - 1) // limit}
+>>>>>>> f5d60c2be (chore: clean branch push)
 
 @api.post("/admin/scholarships/{scholarship_id}/notify-applicants")
 async def notify_scholarship_applicants(
@@ -2314,8 +2389,32 @@ async def create_enrollment(payload: EnrollmentIn, request: Request, background:
     return doc
 
 @api.get("/enrollments")
+<<<<<<< HEAD
 async def list_enrollments(_admin = Depends(require_admin)):
     return await db.enrollments.find({}, {"_id": 0}).sort("created_at", -1).to_list(None)
+=======
+async def list_enrollments(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(25, ge=1, le=100),
+    search: str = Query(None),
+    status: str = Query(None),
+    _admin = Depends(require_admin)
+):
+    query = {}
+    if status:
+        query["status"] = status
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"receipt_no": {"$regex": search, "$options": "i"}},
+            {"phone": {"$regex": search, "$options": "i"}},
+            {"center": {"$regex": search, "$options": "i"}},
+        ]
+    query["is_deleted"] = {"$ne": True}
+    total = await db.enrollments.count_documents(query)
+    items = await db.enrollments.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(None)
+    return {"items": items, "total": total, "page": (skip // limit) + 1, "pages": (total + limit - 1) // limit}
+>>>>>>> f5d60c2be (chore: clean branch push)
 
 @api.get("/enrollments/mine")
 async def my_enrollments(user: dict = Depends(get_current_user)):
@@ -2334,8 +2433,29 @@ async def list_jobs():
     return await db.jobs.find({"active": True}, {"_id": 0}).sort("created_at", -1).to_list(None)
 
 @api.get("/jobs/all")
+<<<<<<< HEAD
 async def list_all_jobs(_admin = Depends(require_admin)):
     return await db.jobs.find({}, {"_id": 0}).sort("created_at", -1).to_list(None)
+=======
+async def list_all_jobs(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(25, ge=1, le=100),
+    search: str = Query(None),
+    _admin = Depends(require_admin)
+):
+    query = {}
+    if search:
+        query["$or"] = [
+            {"title": {"$regex": search, "$options": "i"}},
+            {"department": {"$regex": search, "$options": "i"}},
+            {"location": {"$regex": search, "$options": "i"}},
+            {"description": {"$regex": search, "$options": "i"}},
+        ]
+    query["is_deleted"] = {"$ne": True}
+    total = await db.jobs.count_documents(query)
+    items = await db.jobs.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(None)
+    return {"items": items, "total": total, "page": (skip // limit) + 1, "pages": (total + limit - 1) // limit}
+>>>>>>> f5d60c2be (chore: clean branch push)
 
 @api.post("/jobs")
 async def create_job(payload: JobIn, _admin = Depends(require_admin)):
@@ -2358,7 +2478,11 @@ async def update_job(jid: str, payload: JobIn, _admin = Depends(require_admin)):
 
 @api.delete("/jobs/{jid}")
 async def delete_job(jid: str, _admin = Depends(require_admin)):
+<<<<<<< HEAD
     await db.jobs.delete_one({"id": jid})
+=======
+    await db.jobs.update_one({"id": jid}, {"$set": {"is_deleted": True}})
+>>>>>>> f5d60c2be (chore: clean branch push)
     return {"ok": True}
 
 @api.post("/job-applications")
@@ -2386,8 +2510,30 @@ async def apply_job(payload: JobApplicationIn, background: BackgroundTasks):
     return doc
 
 @api.get("/job-applications")
+<<<<<<< HEAD
 async def list_job_apps(_admin = Depends(require_admin)):
     return await db.job_applications.find({}, {"_id": 0}).sort("created_at", -1).to_list(None)
+=======
+async def list_job_apps(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(25, ge=1, le=100),
+    search: str = Query(None),
+    _admin = Depends(require_admin)
+):
+    query = {}
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"email": {"$regex": search, "$options": "i"}},
+            {"phone": {"$regex": search, "$options": "i"}},
+            {"job_id": {"$regex": search, "$options": "i"}},
+            {"preferred_location": {"$regex": search, "$options": "i"}},
+        ]
+    query["is_deleted"] = {"$ne": True}
+    total = await db.job_applications.count_documents(query)
+    items = await db.job_applications.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(None)
+    return {"items": items, "total": total, "page": (skip // limit) + 1, "pages": (total + limit - 1) // limit}
+>>>>>>> f5d60c2be (chore: clean branch push)
 
 @api.put("/job-applications/{aid}/status")
 async def update_job_app_status(aid: str, status: str = Query(...), _admin = Depends(require_admin)):
@@ -2398,8 +2544,27 @@ async def update_job_app_status(aid: str, status: str = Query(...), _admin = Dep
 
 # ---------- Notices ----------
 @api.get("/notices")
+<<<<<<< HEAD
 async def list_notices():
     return await db.notices.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+=======
+async def list_notices(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(25, ge=1, le=100),
+    search: str = Query(None)
+):
+    query = {}
+    if search:
+        query["$or"] = [
+            {"title": {"$regex": search, "$options": "i"}},
+            {"content": {"$regex": search, "$options": "i"}},
+            {"category": {"$regex": search, "$options": "i"}},
+        ]
+    query["is_deleted"] = {"$ne": True}
+    total = await db.notices.count_documents(query)
+    items = await db.notices.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(None)
+    return {"items": items, "total": total, "page": (skip // limit) + 1, "pages": (total + limit - 1) // limit}
+>>>>>>> f5d60c2be (chore: clean branch push)
 
 @api.post("/notices")
 async def create_notice(payload: NoticeIn, _admin = Depends(require_admin)):
@@ -2428,13 +2593,37 @@ async def update_notice(nid: str, payload: NoticeIn, _admin = Depends(require_ad
 
 @api.delete("/notices/{nid}")
 async def delete_notice(nid: str, _admin = Depends(require_admin)):
+<<<<<<< HEAD
     await db.notices.delete_one({"id": nid})
+=======
+    await db.notices.update_one({"id": nid}, {"$set": {"is_deleted": True}})
+>>>>>>> f5d60c2be (chore: clean branch push)
     return {"ok": True}
 
 # ---------- Centers ----------
 @api.get("/centers")
+<<<<<<< HEAD
 async def list_centers():
     return await db.centers.find({}, {"_id": 0}).to_list(100)
+=======
+async def list_centers(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(25, ge=1, le=100),
+    search: str = Query(None)
+):
+    query = {}
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"city": {"$regex": search, "$options": "i"}},
+            {"address": {"$regex": search, "$options": "i"}},
+            {"phone": {"$regex": search, "$options": "i"}},
+        ]
+    query["is_deleted"] = {"$ne": True}
+    total = await db.centers.count_documents(query)
+    items = await db.centers.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(None)
+    return {"items": items, "total": total, "page": (skip // limit) + 1, "pages": (total + limit - 1) // limit}
+>>>>>>> f5d60c2be (chore: clean branch push)
 
 @api.post("/centers")
 async def create_center(payload: CenterIn, _admin = Depends(require_admin)):
@@ -2452,13 +2641,37 @@ async def update_center(cid: str, payload: CenterIn, _admin = Depends(require_ad
 
 @api.delete("/centers/{cid}")
 async def delete_center(cid: str, _admin = Depends(require_admin)):
+<<<<<<< HEAD
     await db.centers.delete_one({"id": cid})
+=======
+    await db.centers.update_one({"id": cid}, {"$set": {"is_deleted": True}})
+>>>>>>> f5d60c2be (chore: clean branch push)
     return {"ok": True}
 
 # ---------- Results ----------
 @api.get("/results")
+<<<<<<< HEAD
 async def list_results():
     return await db.results.find({}, {"_id": 0}).sort("year", -1).to_list(200)
+=======
+async def list_results(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(25, ge=1, le=100),
+    search: str = Query(None)
+):
+    query = {}
+    if search:
+        query["$or"] = [
+            {"student_name": {"$regex": search, "$options": "i"}},
+            {"exam": {"$regex": search, "$options": "i"}},
+            {"rank": {"$regex": search, "$options": "i"}},
+            {"course": {"$regex": search, "$options": "i"}},
+        ]
+    query["is_deleted"] = {"$ne": True}
+    total = await db.results.count_documents(query)
+    items = await db.results.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(None)
+    return {"items": items, "total": total, "page": (skip // limit) + 1, "pages": (total + limit - 1) // limit}
+>>>>>>> f5d60c2be (chore: clean branch push)
 
 @api.post("/results")
 async def create_result(payload: ResultIn, _admin = Depends(require_admin)):
@@ -2476,13 +2689,36 @@ async def update_result(rid: str, payload: ResultIn, _admin = Depends(require_ad
 
 @api.delete("/results/{rid}")
 async def delete_result(rid: str, _admin = Depends(require_admin)):
+<<<<<<< HEAD
     await db.results.delete_one({"id": rid})
+=======
+    await db.results.update_one({"id": rid}, {"$set": {"is_deleted": True}})
+>>>>>>> f5d60c2be (chore: clean branch push)
     return {"ok": True}
 
 # ---------- Testimonials ----------
 @api.get("/testimonials")
+<<<<<<< HEAD
 async def list_testimonials():
     return await db.testimonials.find({}, {"_id": 0}).to_list(50)
+=======
+async def list_testimonials(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(25, ge=1, le=100),
+    search: str = Query(None)
+):
+    query = {}
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"role": {"$regex": search, "$options": "i"}},
+            {"quote": {"$regex": search, "$options": "i"}},
+        ]
+    query["is_deleted"] = {"$ne": True}
+    total = await db.testimonials.count_documents(query)
+    items = await db.testimonials.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(None)
+    return {"items": items, "total": total, "page": (skip // limit) + 1, "pages": (total + limit - 1) // limit}
+>>>>>>> f5d60c2be (chore: clean branch push)
 
 @api.post("/testimonials")
 async def create_testimonial(payload: TestimonialIn, _admin = Depends(require_admin)):
@@ -2500,7 +2736,11 @@ async def update_testimonial(tid: str, payload: TestimonialIn, _admin = Depends(
 
 @api.delete("/testimonials/{tid}")
 async def delete_testimonial(tid: str, _admin = Depends(require_admin)):
+<<<<<<< HEAD
     await db.testimonials.delete_one({"id": tid})
+=======
+    await db.testimonials.update_one({"id": tid}, {"$set": {"is_deleted": True}})
+>>>>>>> f5d60c2be (chore: clean branch push)
     return {"ok": True}
 
 # ---------- Gallery ----------
@@ -2528,7 +2768,11 @@ async def update_gallery_item(gid: str, payload: GalleryItemIn, _admin = Depends
 
 @api.delete("/admin/gallery/{gid}")
 async def delete_gallery_item(gid: str, _admin = Depends(require_admin)):
+<<<<<<< HEAD
     await db.gallery.delete_one({"id": gid})
+=======
+    await db.gallery.update_one({"id": gid}, {"$set": {"is_deleted": True}})
+>>>>>>> f5d60c2be (chore: clean branch push)
     return {"ok": True}
 
 # ---------- Blog ----------
@@ -2582,7 +2826,11 @@ async def update_post(pid: str, payload: PostIn, _admin = Depends(require_admin)
 
 @api.delete("/admin/posts/{pid}")
 async def delete_post(pid: str, _admin = Depends(require_admin)):
+<<<<<<< HEAD
     await db.posts.delete_one({"id": pid})
+=======
+    await db.posts.update_one({"id": pid}, {"$set": {"is_deleted": True}})
+>>>>>>> f5d60c2be (chore: clean branch push)
     return {"ok": True}
 
 # ---------- Contact ----------
@@ -2627,6 +2875,151 @@ async def send_push_notification(payload: PushNotificationIn, _admin = Depends(r
     return {"ok": True, "result": result}
 
 # ---------- Admin Dashboard summary ----------
+<<<<<<< HEAD
+=======
+
+
+@api.get("/admin/crm/search")
+async def crm_search(q: str = Query(...), _admin = Depends(require_admin)):
+    regex = {"$regex": q, "$options": "i"}
+    query = {"$or": [{"name": regex}, {"email": regex}, {"phone": regex}], "is_deleted": {"$ne": True}}
+
+    # Search across collections
+    enrollments = await db.enrollments.find(query, {"_id": 0}).to_list(100)
+    scholarships = await db.scholarship_applications.find(query, {"_id": 0}).to_list(100)
+    inquiries = await db.inquiries.find(query, {"_id": 0}).to_list(100)
+    jobs = await db.job_applications.find(query, {"_id": 0}).to_list(100)
+
+    # Compile a unified list of unique people based on email or phone
+    people_map = {}
+
+    def add_person(record, source_type):
+        key = record.get("email") or record.get("phone") or record.get("name")
+        if not key: return
+        key = key.lower().strip()
+        
+        if key not in people_map:
+            people_map[key] = {
+                "name": record.get("name"),
+                "email": record.get("email"),
+                "phone": record.get("phone"),
+                "history": []
+            }
+            
+        people_map[key]["history"].append({
+            "type": source_type,
+            "date": record.get("created_at"),
+            "details": record
+        })
+
+    for e in enrollments: add_person(e, "Enrollment")
+    for s in scholarships: add_person(s, "Scholarship App")
+    for i in inquiries: add_person(i, "Inquiry")
+    for j in jobs: add_person(j, "Job App")
+
+    # Sort history by date descending
+    for person in people_map.values():
+        person["history"].sort(key=lambda x: x["date"] or "", reverse=True)
+
+    return {"results": list(people_map.values())}
+
+
+@api.get("/admin/calendar")
+async def get_calendar_events(_admin = Depends(require_admin)):
+    events = []
+    
+    # 1. Scholarships (Deadlines and Exam Dates)
+    scholarships = await db.scholarships.find({"is_deleted": {"$ne": True}}).to_list(None)
+    for s in scholarships:
+        if s.get("deadline"):
+            events.append({
+                "id": f"sch-dl-{s['id']}",
+                "title": f"Deadline: {s.get('title')}",
+                "date": s.get("deadline"),
+                "type": "deadline",
+                "link": f"/admin/campaigns/{s['id']}/edit"
+            })
+        if s.get("exam_date"):
+            events.append({
+                "id": f"sch-ex-{s['id']}",
+                "title": f"Exam: {s.get('title')} {s.get('exam_time', '')}",
+                "date": s.get("exam_date"),
+                "type": "exam",
+                "link": f"/admin/campaigns/{s['id']}/edit"
+            })
+            
+    # 2. Notices
+    notices = await db.notices.find({"is_deleted": {"$ne": True}}).to_list(None)
+    for n in notices:
+        if n.get("date"):
+            events.append({
+                "id": f"not-{n['id']}",
+                "title": f"Notice: {n.get('title')}",
+                "date": n.get("date"),
+                "type": "notice",
+                "link": "/admin/notices"
+            })
+            
+    # 3. Blog Posts
+    posts = await db.posts.find({"is_deleted": {"$ne": True}}).to_list(None)
+    for p in posts:
+        if p.get("published_at"):
+            events.append({
+                "id": f"post-{p['id']}",
+                "title": f"Published: {p.get('title')}",
+                "date": p.get("published_at").split('T')[0] if 'T' in p.get("published_at") else p.get("published_at"),
+                "type": "post",
+                "link": "/admin/blog"
+            })
+
+    return {"events": events}
+
+@api.get("/admin/analytics")
+async def get_admin_analytics(_admin = Depends(require_admin)):
+    # 1. Enrollment Trends (last 6 months approximation by taking all and grouping by YYYY-MM)
+    enrollment_pipeline = [
+        {"$match": {"is_deleted": {"$ne": True}}},
+        {"$project": {"month": {"$substr": ["$created_at", 0, 7]}}},
+        {"$group": {"_id": "$month", "count": {"$sum": 1}}},
+        {"$sort": {"_id": 1}},
+        {"$limit": 12}
+    ]
+    enrollment_data = await db.enrollments.aggregate(enrollment_pipeline).to_list(None)
+    
+    # 2. Scholarship Trends
+    scholarship_pipeline = [
+        {"$match": {"is_deleted": {"$ne": True}}},
+        {"$project": {"month": {"$substr": ["$created_at", 0, 7]}}},
+        {"$group": {"_id": "$month", "count": {"$sum": 1}}},
+        {"$sort": {"_id": 1}},
+        {"$limit": 12}
+    ]
+    scholarship_data = await db.scholarship_applications.aggregate(scholarship_pipeline).to_list(None)
+
+    # 3. Top Courses
+    courses_pipeline = [
+        {"$match": {"is_deleted": {"$ne": True}}},
+        {"$group": {"_id": "$course_id", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 5}
+    ]
+    top_courses_data = await db.enrollments.aggregate(courses_pipeline).to_list(None)
+
+    # 4. Scholarship Status Distribution
+    status_pipeline = [
+        {"$match": {"is_deleted": {"$ne": True}}},
+        {"$group": {"_id": "$status", "count": {"$sum": 1}}}
+    ]
+    status_data = await db.scholarship_applications.aggregate(status_pipeline).to_list(None)
+
+    return {
+        "enrollments_by_month": [{"month": d["_id"], "count": d["count"]} for d in enrollment_data if d["_id"]],
+        "scholarships_by_month": [{"month": d["_id"], "count": d["count"]} for d in scholarship_data if d["_id"]],
+        "top_courses": [{"course_id": d["_id"], "count": d["count"]} for d in top_courses_data if d["_id"]],
+        "scholarship_statuses": [{"status": d["_id"] or "pending", "count": d["count"]} for d in status_data]
+    }
+
+>>>>>>> f5d60c2be (chore: clean branch push)
 @api.get("/admin/summary")
 async def admin_summary(_admin = Depends(require_admin)):
     return {
@@ -3318,7 +3711,11 @@ async def wa_update_quick_reply(qr_id: str, payload: Dict[str, Any], _admin = De
 
 @api.delete("/whatsapp/quick-replies/{qr_id}")
 async def wa_delete_quick_reply(qr_id: str, _admin = Depends(require_admin)):
+<<<<<<< HEAD
     await db.wa_quick_replies.delete_one({"id": qr_id})
+=======
+    await db.wa_quick_replies.update_one({"id": qr_id}, {"$set": {"is_deleted": True}})
+>>>>>>> f5d60c2be (chore: clean branch push)
     return {"ok": True}
 
 

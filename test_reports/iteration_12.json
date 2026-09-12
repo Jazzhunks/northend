@@ -35,7 +35,11 @@
     "/app/backend/tests/test_iteration12_wath_carnival.py"
   ],
   "success_rate": {"backend": "93% (13/14)", "frontend": "100% (spot-checked flows)"},
+<<<<<<< HEAD
   "test_credentials": "admin@northend.edu / Admin@2025; student@test.com / Student@2025",
+=======
+  "test_credentials": "[REDACTED] / [REDACTED]; student@test.com / Student@2025",
+>>>>>>> f5d60c2be (chore: clean branch push)
   "seed_data_creation": "Test file creates and cleans up temporary TEST_ carnivals for over-book / duplicate / registrations tests. No permanent DB pollution.",
   "retest_needed": true,
   "should_main_agent_self_test": false,
