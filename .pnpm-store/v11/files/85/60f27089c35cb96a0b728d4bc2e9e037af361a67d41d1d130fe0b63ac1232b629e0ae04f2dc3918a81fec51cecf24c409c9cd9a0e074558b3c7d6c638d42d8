@@ -1,0 +1,51 @@
+import type { HttpMethod } from '@scalar/helpers/http/http-methods';
+import type { AvailableClients } from '@scalar/snippetz';
+import type { WorkspaceStore } from '@scalar/workspace-store/client';
+import type { SecuritySchemeObjectSecret } from '@scalar/workspace-store/request-example';
+import type { ServerObject } from '@scalar/workspace-store/schemas/v3.1/strict/openapi-document';
+export type CreateCodeExampleOptions = {
+    /** Workspace store that holds the OpenAPI document(s) to render from. */
+    store: WorkspaceStore;
+    /** Path of the operation to render, e.g. '/users/{id}'. */
+    path: string;
+    /** HTTP method of the operation to render. */
+    method: HttpMethod;
+    /** Pre-selected client ID, e.g. 'shell/curl'. */
+    selectedClient?: AvailableClients[number];
+    /**
+     * Server object override used to build the example request.
+     *
+     * When omitted, the server is derived from the active document (operation,
+     * then path item, then document level), mirroring the API reference. Pass
+     * `null` to force "no server".
+     */
+    selectedServer?: ServerObject | null;
+    /**
+     * Pre-selected example key for parameters and the request body.
+     *
+     * The store is the source of truth once an example is picked, so
+     * `x-scalar-default-example` wins over this initial seed and the selection
+     * round-trips through the store like the client selection does.
+     */
+    selectedExample?: string;
+    /** Security schemes applicable to the operation. */
+    securitySchemes?: SecuritySchemeObjectSecret[];
+    /**
+     * Force a color mode on the rendered block.
+     *
+     * When omitted, the block inherits the ambient theme of the host page.
+     * Pass `true` for dark mode or `false` for light mode.
+     */
+    darkMode?: boolean;
+};
+/**
+ * Mount the CodeExample block to a DOM element without Vue.
+ *
+ * The consumer creates and controls their own workspace store,
+ * then passes it in along with the path and method to render.
+ */
+export declare const createCodeExample: (el: HTMLElement | string, options: CreateCodeExampleOptions) => {
+    app: import("vue").App<Element>;
+    destroy: () => void;
+};
+//# sourceMappingURL=mount.d.ts.map

@@ -1,0 +1,45 @@
+import ScalarToggleSlider_default from "./ScalarToggleSlider.vue.js";
+import { createBlock, defineComponent, mergeModels, normalizeClass, openBlock, useModel } from "vue";
+var ScalarToggle_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	__name: "ScalarToggle",
+	props: /* @__PURE__ */ mergeModels({
+		disabled: { type: Boolean },
+		label: {}
+	}, {
+		"modelValue": {
+			type: Boolean,
+			default: false
+		},
+		"modelModifiers": {}
+	}),
+	emits: ["update:modelValue"],
+	setup(__props) {
+		const props = __props;
+		const model = useModel(__props, "modelValue");
+		function toggle() {
+			if (props.disabled) return;
+			model.value = !model.value;
+		}
+		return (_ctx, _cache) => {
+			return openBlock(), createBlock(ScalarToggleSlider_default, {
+				"aria-checked": model.value,
+				class: normalizeClass(model.value ? "bg-c-accent" : ""),
+				disabled: __props.disabled,
+				label: __props.label,
+				role: "switch",
+				thumb: model.value ? "end" : "start",
+				onClick: toggle
+			}, null, 8, [
+				"aria-checked",
+				"class",
+				"disabled",
+				"label",
+				"thumb"
+			]);
+		};
+	}
+});
+//#endregion
+export { ScalarToggle_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=ScalarToggle.vue.script.js.map

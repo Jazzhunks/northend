@@ -1,0 +1,110 @@
+import { objectEntries } from '@scalar/helpers/object/object-entries';
+import { objectKeys } from '@scalar/helpers/object/object-keys';
+import { getResolvedRef } from '../helpers/get-resolved-ref.js';
+import { normalizeProtocol } from './build-connection-url.js';
+import { resolveOperationChannel } from './resolve-operation-channel.js';
+import { getChannelServerNames } from './servers.js';
+/** Sentinel used by the protocol and server pickers to mean "don't filter". */
+export const ALL = 'all';
+/**
+ * Returns the protocol of every named server, keyed by server name.
+ * References are resolved so a `$ref`-only server still contributes its protocol.
+ */
+const getServerProtocols = (document) => {
+    const protocols = new Map();
+    for (const [name, serverNode] of objectEntries(document.servers ?? {})) {
+        const protocol = normalizeProtocol(getResolvedRef(serverNode).protocol);
+        if (protocol) {
+            protocols.set(name, protocol);
+        }
+    }
+    return protocols;
+};
+/**
+ * Builds the protocol options for the picker from a document's servers.
+ *
+ * Always prepends an "All protocols" entry so the picker can clear the filter,
+ * matching how the document picker always offers every document. Protocols are
+ * de-duplicated and sorted alphabetically for a stable order.
+ */
+export const getAsyncApiProtocols = (document) => {
+    const unique = new Set(getServerProtocols(document).values());
+    const options = [...unique]
+        .sort((a, b) => a.localeCompare(b))
+        .map((protocol) => ({ id: protocol, label: protocol.toUpperCase() }));
+    return [{ id: ALL, label: 'All protocols' }, ...options];
+};
+/**
+ * Builds the server options for the picker from a document's servers.
+ *
+ * Like {@link getAsyncApiProtocols}, always prepends an "All servers" entry so the
+ * filter can be cleared. Each option is labelled with the server name and its
+ * protocol so the picker reads as `mqtt-prod (mqtt)`.
+ */
+export const getAsyncApiServerOptions = (document) => {
+    const options = objectEntries(document.servers ?? {}).map(([name, serverNode]) => {
+        const protocol = normalizeProtocol(getResolvedRef(serverNode).protocol);
+        return { id: name, label: protocol ? `${name} (${protocol})` : name };
+    });
+    return [{ id: ALL, label: 'All servers' }, ...options];
+};
+/** Precomputes the document-level data shared across every operation in a filter pass. */
+export const createReachabilityContext = (document) => ({
+    serverProtocols: getServerProtocols(document),
+    allServerNames: new Set(objectKeys(document.servers ?? {})),
+});
+/**
+ * Resolves the servers and protocols a single operation is reachable over.
+ *
+ * Resolves the operation's channel once, then intersects the channel's servers
+ * (or all servers, when the channel pins none) with the document's servers. The
+ * shared {@link AsyncApiReachabilityContext} is built once per filter pass; a fresh
+ * one is created when called standalone.
+ */
+export const getOperationReachability = (document, operation, context = createReachabilityContext(document)) => {
+    const channel = resolveOperationChannel(document, operation)?.channel ?? null;
+    const channelServerNames = getChannelServerNames(document, channel);
+    // A channel without declared servers is reachable on every server.
+    const serverNames = channelServerNames
+        ? new Set([...channelServerNames].filter((name) => context.allServerNames.has(name)))
+        : new Set(context.allServerNames);
+    const protocols = new Set();
+    for (const [name, protocol] of context.serverProtocols) {
+        if (serverNames.has(name)) {
+            protocols.add(protocol);
+        }
+    }
+    return { serverNames, protocols };
+};
+/**
+ * Returns the set of protocols an operation is reachable over.
+ */
+export const getOperationProtocols = (document, operation, context) => getOperationReachability(document, operation, context).protocols;
+/**
+ * Returns the names of the servers an operation is reachable through.
+ */
+export const getOperationServerNames = (document, operation, context) => getOperationReachability(document, operation, context).serverNames;
+/**
+ * Whether an operation should be shown for the currently selected protocol.
+ *
+ * Selecting {@link ALL} (or nothing) matches every operation; otherwise the
+ * operation is kept only when one of its channel's servers uses that protocol.
+ */
+export const operationMatchesProtocol = (document, operation, protocol, context) => {
+    if (!protocol || protocol === ALL) {
+        return true;
+    }
+    return getOperationProtocols(document, operation, context).has(protocol);
+};
+/**
+ * Whether an operation should be shown for the currently selected server.
+ *
+ * Selecting {@link ALL} (or nothing) matches every operation; otherwise the
+ * operation is kept only when its channel is reachable through that server.
+ */
+export const operationMatchesServer = (document, operation, serverName, context) => {
+    if (!serverName || serverName === ALL) {
+        return true;
+    }
+    return getOperationServerNames(document, operation, context).has(serverName);
+};

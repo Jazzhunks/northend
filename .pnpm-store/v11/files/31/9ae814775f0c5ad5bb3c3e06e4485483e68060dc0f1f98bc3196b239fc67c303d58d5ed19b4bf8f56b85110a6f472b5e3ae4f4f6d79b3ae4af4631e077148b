@@ -1,0 +1,26 @@
+import { type Component } from 'vue';
+/**
+ * Scalar Color Mode Toggle Icon component
+ *
+ * An icon that toggles between a sun and moon.
+ *
+ * If you need a toggle that is aware of and sets color mode,
+ * you want {@link ScalarColorModeToggle} instead.
+ *
+ * @example
+ *   <ScalarColorModeToggleIcon v-model="isDarkMode" />
+ */
+declare const _default: typeof __VLS_export;
+export default _default;
+declare const __VLS_export: import("vue").DefineComponent<{
+    /** The element or component this component should render as. */
+    is?: string | Component;
+    /** Whether the toggle is a sun or moon icon */
+    mode?: "light" | "dark";
+}, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").PublicProps, Readonly<{
+    /** The element or component this component should render as. */
+    is?: string | Component;
+    /** Whether the toggle is a sun or moon icon */
+    mode?: "light" | "dark";
+}> & Readonly<{}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;
+//# sourceMappingURL=ScalarColorModeToggleIcon.vue.d.ts.map

@@ -1,0 +1,21 @@
+{
+  "name": "syncpack-linux-arm64",
+  "description": "Rust Binary for linux arm64",
+  "version": "15.3.2",
+  "author": "Jamie Mason <jamie@foldleft.io> (https://github.com/JamieMason)",
+  "bugs": "https://github.com/JamieMason/syncpack/issues",
+  "funding": "https://github.com/sponsors/JamieMason",
+  "homepage": "https://github.com/JamieMason/syncpack#readme",
+  "license": "MIT",
+  "packageManager": "pnpm@10.33.4",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JamieMason/syncpack.git"
+  },
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "arm64"
+  ]
+}

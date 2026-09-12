@@ -1,0 +1,15 @@
+import type { AsyncApiDocument, AsyncApiOperationObject, AsyncApiServerObject } from '@scalar/types/asyncapi/3.1';
+import type { SecurityRequirementObject } from '../schemas/v3.1/strict/security-requirement.js';
+/**
+ * Converts AsyncAPI security arrays (operation, traits, server) into OpenAPI-style requirement objects.
+ */
+export declare const getAsyncApiSecurityRequirements: (document: AsyncApiDocument, operation?: AsyncApiOperationObject | null, server?: AsyncApiServerObject | null) => SecurityRequirementObject[];
+/**
+ * Document-wide security requirements for an AsyncAPI document.
+ *
+ * AsyncAPI has no root-level `security`; the closest document-wide scope is the union of every
+ * server's security (a server applies to the whole connection). Operation-level security is
+ * intentionally excluded here — that is per-channel and handled separately.
+ */
+export declare const getAsyncApiDocumentSecurityRequirements: (document: AsyncApiDocument) => SecurityRequirementObject[];
+//# sourceMappingURL=get-asyncapi-security-requirements.d.ts.map

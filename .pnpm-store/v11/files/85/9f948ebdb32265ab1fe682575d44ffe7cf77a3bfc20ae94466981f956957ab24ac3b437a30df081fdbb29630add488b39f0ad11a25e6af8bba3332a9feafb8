@@ -1,0 +1,206 @@
+import { normalizeMethod, reduceQueryParams } from '../../../libs/http.js';
+/**
+ * Escapes a string so it stays a valid EDN string literal. Backslashes are
+ * escaped first, then double quotes, so the two passes do not interfere.
+ */
+const escapeEdnString = (value) => value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+/**
+ * A Clojure keyword (e.g. `:json`) rendered verbatim in EDN.
+ */
+class Keyword {
+    name;
+    constructor(name) {
+        this.name = name;
+    }
+    toString() {
+        return `:${this.name}`;
+    }
+}
+/**
+ * A reference to a file on disk, rendered as a `clojure.java.io/file` call.
+ */
+class File {
+    path;
+    constructor(path) {
+        this.path = path;
+    }
+    toString() {
+        return `(clojure.java.io/file "${escapeEdnString(this.path)}")`;
+    }
+}
+/** True when the value is a plain object with no own keys. */
+const isEmptyObject = (input) => typeof input === 'object' &&
+    input !== null &&
+    !Array.isArray(input) &&
+    !(input instanceof Keyword) &&
+    !(input instanceof File) &&
+    Object.keys(input).length === 0;
+/**
+ * Drops keys whose values are empty objects so we do not emit things like
+ * `:headers {}` for a request without headers.
+ */
+const filterEmpty = (input) => {
+    for (const key of Object.keys(input)) {
+        if (isEmptyObject(input[key])) {
+            delete input[key];
+        }
+    }
+    return input;
+};
+/** Indents every line after the first by `padSize` spaces. */
+const padBlock = (padSize, input) => input.replace(/\n/g, `\n${' '.repeat(padSize)}`);
+/**
+ * Renders a JavaScript value as an EDN literal, matching clj-http conventions:
+ * maps are laid out vertically and vectors horizontally.
+ */
+const jsToEdn = (value) => {
+    if (value === null || value === undefined) {
+        return 'nil';
+    }
+    if (value instanceof Keyword || value instanceof File) {
+        return value.toString();
+    }
+    if (typeof value === 'string') {
+        return `"${escapeEdnString(value)}"`;
+    }
+    if (Array.isArray(value)) {
+        // Simple horizontal format.
+        const body = value.reduce((accumulator, item) => `${accumulator} ${jsToEdn(item)}`, '').trim();
+        return `[${padBlock(1, body)}]`;
+    }
+    if (typeof value === 'object') {
+        // Simple vertical format, one key per line.
+        const body = Object.keys(value)
+            .reduce((accumulator, key) => {
+            const rendered = padBlock(key.length + 2, jsToEdn(value[key]));
+            return `${accumulator}:${key} ${rendered}\n `;
+        }, '')
+            .trim();
+        return `{${padBlock(1, body)}}`;
+    }
+    // number, boolean
+    return String(value);
+};
+/** Case-insensitive lookup of a header name as it was originally cased. */
+const findHeaderName = (headers, name) => Object.keys(headers).find((header) => header.toLowerCase() === name.toLowerCase());
+/** Removes a header (case-insensitive) from the headers map, if present. */
+const deleteHeader = (headers, name) => {
+    const header = findHeaderName(headers, name);
+    if (header) {
+        delete headers[header];
+    }
+};
+const SUPPORTED_METHODS = ['get', 'post', 'put', 'delete', 'patch', 'head', 'options'];
+/**
+ * clojure/clj_http
+ */
+export const clojureCljhttp = {
+    target: 'clojure',
+    client: 'clj_http',
+    title: 'clj-http',
+    generate(request, configuration) {
+        const method = normalizeMethod(request?.method).toLowerCase();
+        if (!SUPPORTED_METHODS.includes(method)) {
+            return 'Method not supported';
+        }
+        // Parse the URL so we can lift any query string into `:query-params`.
+        const urlObject = new URL(request?.url ?? '');
+        let url = urlObject.pathname === '/' ? urlObject.origin : urlObject.toString();
+        // Collect query parameters from both the URL and the explicit list.
+        const queryObj = reduceQueryParams([
+            ...Array.from(urlObject.searchParams.entries()).map(([name, value]) => ({ name, value })),
+            ...(request?.queryString ?? []),
+        ]);
+        if (Object.keys(queryObj).length > 0) {
+            // clj-http takes care of encoding the query string for us.
+            url = url.split('?')[0] ?? url;
+        }
+        // Reduce headers into a plain object (last value wins for duplicates).
+        const headers = (request?.headers ?? []).reduce((accumulator, header) => {
+            accumulator[header.name] = header.value ?? '';
+            return accumulator;
+        }, {});
+        // clj-http has no dedicated cookie option, so fold cookies into a single
+        // Cookie header, mirroring what the request would send on the wire.
+        if (request?.cookies?.length) {
+            headers.Cookie = request.cookies
+                .map((cookie) => `${encodeURIComponent(cookie.name)}=${encodeURIComponent(cookie.value)}`)
+                .join('; ');
+        }
+        const params = {
+            'headers': headers,
+            'query-params': queryObj,
+        };
+        // Basic authentication maps to clj-http's `:basic-auth ["user" "pass"]`.
+        if (configuration?.auth?.username && configuration?.auth?.password) {
+            params['basic-auth'] = [configuration.auth.username, configuration.auth.password];
+        }
+        const postData = request?.postData;
+        switch (postData?.mimeType) {
+            case 'application/json': {
+                params['content-type'] = new Keyword('json');
+                if (postData.text) {
+                    try {
+                        params['form-params'] = JSON.parse(postData.text);
+                    }
+                    catch {
+                        // Preserve the original payload as a raw body when it is not valid JSON.
+                        params.body = postData.text;
+                    }
+                }
+                deleteHeader(headers, 'content-type');
+                break;
+            }
+            case 'application/x-www-form-urlencoded': {
+                params['form-params'] = (postData.params ?? []).reduce((accumulator, param) => {
+                    if (param.name && param.value !== undefined) {
+                        accumulator[param.name] = param.value;
+                    }
+                    return accumulator;
+                }, {});
+                deleteHeader(headers, 'content-type');
+                break;
+            }
+            case 'multipart/form-data': {
+                if (postData.params) {
+                    params.multipart = postData.params.map((param) => 
+                    // Reference a file when there is a string fileName and no inline
+                    // body. A part carrying an actual value (a common HAR file part
+                    // with body bytes) keeps that value as the content, while an
+                    // empty or null value still references the file path.
+                    typeof param.fileName === 'string' && !param.value
+                        ? { name: param.name, content: new File(param.fileName) }
+                        : { name: param.name, content: param.value });
+                }
+                deleteHeader(headers, 'content-type');
+                break;
+            }
+            default: {
+                // Everything else (text/plain, octet-stream, …) goes through as a raw body.
+                if (postData?.text) {
+                    params.body = postData.text;
+                    deleteHeader(headers, 'content-type');
+                }
+            }
+        }
+        // clj-http exposes `:accept :json` instead of an Accept header for JSON.
+        const acceptHeader = findHeaderName(headers, 'accept');
+        if (acceptHeader && headers[acceptHeader] === 'application/json') {
+            params.accept = new Keyword('json');
+            delete headers[acceptHeader];
+        }
+        const filteredParams = filterEmpty(params);
+        const require = "(require '[clj-http.client :as client])\n";
+        // Escape the URL like every other EDN string so backslashes or quotes
+        // cannot break out of the literal.
+        const escapedUrl = escapeEdnString(url);
+        if (isEmptyObject(filteredParams)) {
+            return `${require}\n(client/${method} "${escapedUrl}")`;
+        }
+        // Align the option map under the opening of the call. The padding uses the
+        // escaped URL length so the columns line up with what is actually rendered.
+        const padding = 11 + method.length + escapedUrl.length;
+        const formattedParams = padBlock(padding, jsToEdn(filteredParams));
+        return `${require}\n(client/${method} "${escapedUrl}" ${formattedParams})`;
+    },
+};

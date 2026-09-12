@@ -1,0 +1,28 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_stream_1 = require("node:stream");
+class BufferWritable extends node_stream_1.Writable {
+    #buf;
+    constructor(options) {
+        super(options);
+        this.#buf = [];
+    }
+    _write(chunk, encoding, callback = () => null) {
+        this.#buf.push(chunk);
+        callback();
+    }
+    _writev(chunks, callback = () => null) {
+        for (const { chunk } of chunks) {
+            this.#buf.push(chunk);
+        }
+        callback();
+    }
+    _final(callback = () => null) {
+        callback();
+    }
+    getBuffer() {
+        return Buffer.concat(this.#buf) || Buffer.alloc(0);
+    }
+}
+exports.default = BufferWritable;
+//# sourceMappingURL=buffer-writable.js.map

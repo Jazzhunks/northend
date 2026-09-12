@@ -1,0 +1,34 @@
+{
+    "name": "@types/node-red__util",
+    "version": "1.3.8",
+    "description": "TypeScript definitions for @node-red/util",
+    "homepage": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node-red__util",
+    "license": "MIT",
+    "contributors": [
+        {
+            "name": "Alex Kaul",
+            "githubUsername": "alexk111",
+            "url": "https://github.com/alexk111"
+        },
+        {
+            "name": "Tadeusz Wyrzykowski",
+            "githubUsername": "Shaquu",
+            "url": "https://github.com/Shaquu"
+        }
+    ],
+    "main": "",
+    "types": "index.d.ts",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
+        "directory": "types/node-red__util"
+    },
+    "scripts": {},
+    "dependencies": {
+        "@types/node-red__registry": "*",
+        "@types/node-red__runtime": "*",
+        "jsonata": "2.0.5"
+    },
+    "typesPublisherContentHash": "e9ea31f09e7657b69272c54249baecd9b2d5492ffac9258d09d169f5af2e0b33",
+    "typeScriptVersion": "4.8"
+}

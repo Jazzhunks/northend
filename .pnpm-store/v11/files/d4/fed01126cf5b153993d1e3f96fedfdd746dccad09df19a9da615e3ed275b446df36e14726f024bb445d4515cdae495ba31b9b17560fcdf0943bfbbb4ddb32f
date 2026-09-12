@@ -1,0 +1,33 @@
+import { getExample, isParamDisabled } from "@scalar/workspace-store/request-example";
+import { getResolvedRef } from "@scalar/workspace-store/helpers/get-resolved-ref";
+//#region src/v2/blocks/operation-block/helpers/validate-path-parameters.ts
+/** Treats undefined, null, and blank/whitespace strings as empty. */
+var isEmptyParamValue = (value) => {
+	if (value === void 0 || value === null) return true;
+	if (typeof value === "string") return value.trim() === "";
+	return false;
+};
+/**
+* Validates that all required path parameters have non-empty values.
+*
+* Path parameters are always required per the OpenAPI specification.
+* Returns the names of any path parameters that are missing values.
+*/
+var validatePathParameters = (parameters = [], exampleKey = "default") => {
+	const invalidParams = [];
+	for (const referencedParam of parameters) {
+		const param = getResolvedRef(referencedParam);
+		if (param.in !== "path") continue;
+		const example = getExample(param, exampleKey, void 0);
+		if (isParamDisabled(param, example)) continue;
+		if (isEmptyParamValue(example?.value)) invalidParams.push(param.name);
+	}
+	return invalidParams.length > 0 ? {
+		ok: false,
+		invalidParams
+	} : { ok: true };
+};
+//#endregion
+export { validatePathParameters };
+
+//# sourceMappingURL=validate-path-parameters.js.map

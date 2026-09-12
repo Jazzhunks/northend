@@ -1,0 +1,50 @@
+import { Duplex } from 'node:stream';
+import { ZSTDOpts, PoolOpts, CreateDictionaryOpts } from './types';
+export type { ZSTDOpts, PoolOpts, CompressOpts, DecompressOpts, DictionaryObject, CreateDictionaryOpts, } from './types';
+/**
+ * Clear the dictionary cache and cleanup all temporary files
+ * This is useful for testing or manual cache management
+ * @returns Promise that resolves when all cleanups are complete
+ */
+export declare function clearDictionaryCache(): Promise<void>;
+export declare function compress(compLevel: number, opts?: ZSTDOpts): Promise<Duplex>;
+export declare function compressBuffer(buffer: Buffer, compLevel: number, opts?: ZSTDOpts): Promise<Buffer>;
+export declare function decompress(opts?: ZSTDOpts): Promise<Duplex>;
+export declare function decompressBuffer(buffer: Buffer, opts?: ZSTDOpts): Promise<Buffer>;
+export declare function createDictionary(opts: CreateDictionaryOpts): Promise<Buffer>;
+export declare class SimpleZSTD {
+    #private;
+    private constructor();
+    /**
+     * Create a new SimpleZSTD instance with process pooling
+     * @param poolOptions - Configuration for compression and decompression process pools
+     * @returns Promise resolving to initialized SimpleZSTD instance
+     */
+    static create(poolOptions?: PoolOpts): Promise<SimpleZSTD>;
+    get queueStats(): {
+        compress: {
+            hits: number;
+            misses: number;
+        };
+        decompress: {
+            hits: number;
+            misses: number;
+        };
+    };
+    destroy(): Promise<void>;
+    /**
+     * Get a compression stream from the pool, or create a one-off stream with custom compression level
+     * @param compLevel - Optional compression level (1-22). If provided, creates a new stream instead of using the pool
+     * @returns Promise resolving to a Duplex compression stream
+     */
+    compress(compLevel?: number): Promise<Duplex>;
+    /**
+     * Compress a buffer using the pool, or with a custom compression level
+     * @param buffer - Buffer to compress
+     * @param compLevel - Optional compression level (1-22). If provided, uses this level instead of pool default
+     * @returns Promise resolving to compressed buffer
+     */
+    compressBuffer(buffer: Buffer, compLevel?: number): Promise<Buffer>;
+    decompress(): Promise<Duplex>;
+    decompressBuffer(buffer: Buffer): Promise<Buffer>;
+}

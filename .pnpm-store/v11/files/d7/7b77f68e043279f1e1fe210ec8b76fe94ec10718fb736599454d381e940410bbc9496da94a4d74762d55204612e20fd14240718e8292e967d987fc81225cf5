@@ -1,0 +1,24 @@
+import { t as createMdxLoader } from "../mdx-Bcb4tkWn.js";
+import { t as createCore } from "../core-BPlsDtvN.js";
+import { n as toNode, o as createStandaloneConfigLoader } from "../adapter-DvWJNDHu.js";
+import { t as createMetaLoader } from "../meta-DWvKGgBH.js";
+import { r as metaLoaderGlob, t as mdxLoaderGlob } from "../loaders-DWC_Uwqq.js";
+//#region src/node/loader.ts
+const configLoader = createStandaloneConfigLoader({
+	core: createCore({ environment: "node" }),
+	buildConfig: true,
+	mode: "production"
+});
+const mdxLoader = toNode(mdxLoaderGlob, createMdxLoader(configLoader));
+const metaLoader = toNode(metaLoaderGlob, createMetaLoader(configLoader));
+/**
+* @deprecated use the `register()` function from `fumadocs-mdx/node` instead.
+*/
+const load = (url, context, nextLoad) => {
+	return mdxLoader(url, context, (v, ctx) => metaLoader(v, {
+		...context,
+		...ctx
+	}, nextLoad));
+};
+//#endregion
+export { load };

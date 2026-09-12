@@ -1,0 +1,7 @@
+import ScalarIconAlignCenterVerticalSimple_vue_vue_type_script_setup_true_lang_default from "./ScalarIconAlignCenterVerticalSimple.vue.script.js";
+//#region src/components/ScalarIconAlignCenterVerticalSimple.vue
+var ScalarIconAlignCenterVerticalSimple_default = ScalarIconAlignCenterVerticalSimple_vue_vue_type_script_setup_true_lang_default;
+//#endregion
+export { ScalarIconAlignCenterVerticalSimple_default as default };
+
+//# sourceMappingURL=ScalarIconAlignCenterVerticalSimple.js.map

@@ -1,0 +1,42 @@
+import type { WorkspaceEventBus } from '@scalar/workspace-store/events';
+import type { XScalarEnvironment } from '@scalar/workspace-store/schemas/extensions/document/x-scalar-environments';
+import type { TableRow } from './RequestTableRow.vue.js';
+type __VLS_Props = {
+    rows: TableRow[];
+    exampleKey: string;
+    title: string;
+    label?: string;
+    invalidParams?: Set<string>;
+    globalRoute?: string;
+    showAddRowPlaceholder?: boolean;
+    environment: XScalarEnvironment;
+    eventBus: WorkspaceEventBus;
+};
+declare const __VLS_export: import("vue").DefineComponent<__VLS_Props, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {} & {
+    delete: (payload: {
+        index: number;
+    }) => any;
+    upsert: (index: number, payload: {
+        name: string;
+        value: string | Record<string, unknown>;
+        isDisabled: boolean;
+    } & {
+        shouldRenameExpandedRow?: boolean;
+    }) => any;
+    deleteAll: () => any;
+}, string, import("vue").PublicProps, Readonly<__VLS_Props> & Readonly<{
+    onDelete?: ((payload: {
+        index: number;
+    }) => any) | undefined;
+    onUpsert?: ((index: number, payload: {
+        name: string;
+        value: string | Record<string, unknown>;
+        isDisabled: boolean;
+    } & {
+        shouldRenameExpandedRow?: boolean;
+    }) => any) | undefined;
+    onDeleteAll?: (() => any) | undefined;
+}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;
+declare const _default: typeof __VLS_export;
+export default _default;
+//# sourceMappingURL=RequestParams.vue.d.ts.map

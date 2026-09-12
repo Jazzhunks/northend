@@ -1,0 +1,20 @@
+import { AVAILABLE_CLIENTS as e } from "@scalar/snippetz";
+//#region src/code-example/helpers/find-client.ts
+var t = "shell/curl", n = (t) => e.includes(t), r = (e) => n(e) || typeof e == "string" && e.startsWith("custom/"), i = (e, t) => {
+	let n = (t) => {
+		for (let n of e) {
+			let e = n.options.find((e) => e.id === t);
+			if (e) return e;
+		}
+	}, r = e.find((e) => e.key === "custom")?.options[0];
+	if (t?.startsWith("custom")) return n(t) ?? r ?? n("shell/curl") ?? e[0]?.options[0];
+	if (t) {
+		let e = n(t);
+		if (e) return e;
+	}
+	return r || (n("shell/curl") ?? e[0]?.options[0]);
+};
+//#endregion
+export { t as DEFAULT_CLIENT, i as findClient, n as isClient, r as isSelectedClient };
+
+//# sourceMappingURL=find-client.js.map

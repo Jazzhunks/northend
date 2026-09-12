@@ -1,0 +1,156 @@
+{
+  "name": "@scalar/api-reference",
+  "description": "Generate beautiful API references from OpenAPI documents",
+  "license": "MIT",
+  "author": "Scalar (https://github.com/scalar)",
+  "homepage": "https://github.com/scalar/scalar",
+  "bugs": "https://github.com/scalar/scalar/issues/new/choose",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/scalar/scalar.git",
+    "directory": "packages/api-reference"
+  },
+  "keywords": [
+    "component",
+    "documentation",
+    "openapi",
+    "reference",
+    "spec",
+    "swagger",
+    "vue",
+    "vue3"
+  ],
+  "version": "1.63.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./components": {
+      "import": "./dist/components/index.js",
+      "types": "./dist/components/index.d.ts",
+      "default": "./dist/components/index.js"
+    },
+    "./blocks": {
+      "import": "./dist/blocks/index.js",
+      "types": "./dist/blocks/index.d.ts",
+      "default": "./dist/blocks/index.js"
+    },
+    "./hooks": {
+      "import": "./dist/hooks/index.js",
+      "types": "./dist/hooks/index.d.ts",
+      "default": "./dist/hooks/index.js"
+    },
+    "./plugins": {
+      "import": "./dist/plugins/index.js",
+      "types": "./dist/plugins/index.d.ts",
+      "default": "./dist/plugins/index.js"
+    },
+    "./plugins/posthog": {
+      "import": "./dist/plugins/posthog/index.js",
+      "types": "./dist/plugins/posthog/index.d.ts",
+      "default": "./dist/plugins/posthog/index.js"
+    },
+    "./features": {
+      "import": "./dist/features/index.js",
+      "types": "./dist/features/index.d.ts",
+      "default": "./dist/features/index.js"
+    },
+    "./helpers": {
+      "import": "./dist/helpers/index.js",
+      "types": "./dist/helpers/index.d.ts",
+      "default": "./dist/helpers/index.js"
+    },
+    "./style.css": "./dist/style.css",
+    "./tailwind.config.css": "./dist/styles/tailwind.config.css",
+    "./vue-styles.css": "./dist/vue-styles.css"
+  },
+  "files": [
+    "dist",
+    "!dist/browser/webpack-stats.json",
+    "!dist/browser/webpack-stats.esm.json",
+    "!dist/examples",
+    "!dist/browser/examples",
+    "CHANGELOG.md"
+  ],
+  "browser": "./dist/browser/standalone.js",
+  "esm.sh": {
+    "bundle": true
+  },
+  "dependencies": {
+    "@headlessui/vue": "1.7.23",
+    "@unhead/vue": "^2.1.4",
+    "@vueuse/core": "13.9.0",
+    "fuse.js": "^7.1.0",
+    "microdiff": "^1.5.0",
+    "nanoid": "^5.1.6",
+    "vue": "^3.5.30",
+    "yaml": "^2.8.3",
+    "@scalar/agent-chat": "0.12.22",
+    "@scalar/blocks": "0.1.8",
+    "@scalar/api-client": "3.13.7",
+    "@scalar/code-highlight": "0.4.3",
+    "@scalar/helpers": "0.9.2",
+    "@scalar/components": "0.27.9",
+    "@scalar/icons": "0.7.5",
+    "@scalar/oas-utils": "0.19.8",
+    "@scalar/schemas": "0.7.4",
+    "@scalar/sidebar": "0.9.33",
+    "@scalar/snippetz": "0.9.23",
+    "@scalar/themes": "0.17.1",
+    "@scalar/types": "0.16.4",
+    "@scalar/use-toasts": "0.10.4",
+    "@scalar/use-hooks": "0.4.9",
+    "@scalar/validation": "0.6.2",
+    "@scalar/workspace-store": "0.55.6"
+  },
+  "devDependencies": {
+    "@hono/node-server": "^1.19.10",
+    "@playwright/test": "1.59.1",
+    "@tailwindcss/cli": "^4.2.4",
+    "@tailwindcss/vite": "^4.2.0",
+    "@vitejs/plugin-vue": "^6.0.3",
+    "@vue/server-renderer": "^3.5.30",
+    "@vue/test-utils": "2.4.6",
+    "hono": "^4.12.7",
+    "jsdom": "27.4.0",
+    "posthog-js": "1.363.2",
+    "rollup-plugin-webpack-stats": "^0.2.5",
+    "tailwindcss": "^4.1.18",
+    "vite": "8.0.0",
+    "vite-plugin-banner": "^0.8.1",
+    "vite-plugin-css-injected-by-js": "^5.0.0",
+    "vitest": "4.1.0",
+    "@scalar/core": "0.5.25",
+    "@scalar/galaxy": "0.6.11"
+  },
+  "scripts": {
+    "build": "pnpm build:default && pnpm build:styles && pnpm build:standalone && pnpm build:standalone:esm && vue-tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
+    "build:default": "vite build",
+    "build:standalone": "vite build -c vite.standalone.config.ts",
+    "build:standalone:esm": "vite build -c vite.standalone.esm.config.ts",
+    "build:styles": "shx cp -r src/styles dist && tailwindcss --optimize -i src/style.css -o dist/style.css && cat dist/vue-styles.css >> dist/style.css",
+    "dev": "vite",
+    "dev:standalone": "vite -c vite.standalone.config.ts",
+    "playground:esm": "vite ./playground/esm -c ./playground/esm/vite.config.ts",
+    "preview": "vite preview",
+    "test": "vitest --run",
+    "test:benchmark": "vitest bench",
+    "test:benchmark:compare": "vitest bench --compare test-results/test-benchmark.json",
+    "test:benchmark:save": "vitest bench --outputJson test-results/test-benchmark.json",
+    "test:e2e": "PW_TEST_CONNECT_WS_ENDPOINT=ws://127.0.0.1:5001/ playwright test",
+    "test:e2e:cdn": "PW_TEST_CONNECT_WS_ENDPOINT=ws://127.0.0.1:5001/ TEST_MODE=CDN playwright test",
+    "test:e2e:cdn:ci": "TEST_MODE=CDN playwright test",
+    "test:e2e:ci": "playwright test",
+    "test:e2e:update-snapshots": "pnpm test:e2e --update-snapshots",
+    "types:check": "vue-tsc --noEmit"
+  }
+}

@@ -1,0 +1,9 @@
+import type { ServerObject } from '../schemas/v3.1/strict/openapi-document.js';
+/**
+ * Iterate through all available servers and pick the first one
+ *
+ * @example
+ * getFirstServer(operation.servers, pathItem.servers, document.servers)
+ */
+export declare const getFirstServer: (...availableServers: (ServerObject[] | ServerObject | null)[]) => ServerObject | null;
+//# sourceMappingURL=get-first-server.d.ts.map

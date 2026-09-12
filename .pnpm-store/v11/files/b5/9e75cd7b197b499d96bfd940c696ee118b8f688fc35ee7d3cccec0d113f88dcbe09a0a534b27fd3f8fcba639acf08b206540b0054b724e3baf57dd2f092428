@@ -1,0 +1,21 @@
+import { r as CoreOptions } from "../core-BmvJhZxm.js";
+import { n as ResolvedMacroOptions, t as MacroPluginOption } from "../options-aB6xV-d7.js";
+import { BunPlugin } from "bun";
+//#region src/bun/index.d.ts
+interface MdxPluginOptions extends Pick<CoreOptions, 'configPath' | 'outDir' | 'plugins'> {
+  /**
+   * Configure the macro API (`fumadocs-mdx/macro`), or `false` to disable it.
+   */
+  macro?: MacroPluginOption;
+  /**
+   * Skip meta file transformation step
+   */
+  disableMetaFile?: boolean;
+}
+/**
+ * @internal
+ */
+declare function macroFilter(root: string, { include, exclude }: ResolvedMacroOptions): RegExp;
+declare function createMdxPlugin(options?: MdxPluginOptions): BunPlugin;
+//#endregion
+export { MdxPluginOptions, createMdxPlugin, macroFilter };

@@ -1,0 +1,18 @@
+//#region src/v2/components/code-input/helpers/lookup-variable-value.ts
+/**
+* Resolve a variable name to its value in the given environment, if any.
+*
+* Variable values can be a plain string or a structured object with a
+* `default` field (and optional metadata such as `description`); both shapes
+* are flattened to a single string here. Returns `undefined` when the
+* environment is missing or does not declare the variable.
+*/
+var lookupVariableValue = (environment, name) => {
+	const variable = environment?.variables?.find((entry) => entry.name === name);
+	if (!variable) return;
+	return typeof variable.value === "string" ? variable.value : variable.value?.default;
+};
+//#endregion
+export { lookupVariableValue };
+
+//# sourceMappingURL=lookup-variable-value.js.map

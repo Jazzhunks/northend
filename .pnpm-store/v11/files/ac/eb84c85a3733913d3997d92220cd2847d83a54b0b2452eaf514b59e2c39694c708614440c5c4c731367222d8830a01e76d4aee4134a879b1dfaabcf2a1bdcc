@@ -1,0 +1,397 @@
+import DataTableRow_default from "../../../components/data-table/DataTableRow.vue.js";
+import OAuthScopesInput_default from "./OAuthScopesInput.vue.js";
+import { authorizeOauth2, refreshOauth2Token } from "../helpers/oauth.js";
+import { resolveDefaultOAuth2RedirectUri } from "../helpers/resolve-default-oauth2-redirect-url.js";
+import RequestAuthDataTableInput_default from "./RequestAuthDataTableInput.vue.js";
+import { Fragment, computed, createBlock, createCommentVNode, createElementBlock, createElementVNode, createTextVNode, createVNode, defineComponent, openBlock, ref, unref, watch, withCtx } from "vue";
+import { ScalarButton } from "@scalar/components/button";
+import { getEnvironmentVariables } from "@scalar/workspace-store/request-example";
+import { useToasts } from "@scalar/use-toasts";
+import { useLoadingState } from "@scalar/components/loading";
+import { pkceOptions } from "@scalar/types/entities";
+//#region src/v2/blocks/scalar-auth-selector-block/components/OAuth2.vue?vue&type=script&setup=true&lang.ts
+var _hoisted_1 = { class: "flex h-8 items-center justify-end gap-2 border-t" };
+var _hoisted_2 = { class: "flex h-8 w-full items-center justify-end border-t" };
+var OAuth2_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	__name: "OAuth2",
+	props: {
+		environment: {},
+		flows: {},
+		type: {},
+		selectedScopes: {},
+		scheme: {},
+		server: {},
+		proxyUrl: {},
+		name: {},
+		eventBus: {},
+		options: { default: () => ({}) }
+	},
+	emits: [
+		"update:selectedScopes",
+		"upsert:scope",
+		"delete:scope"
+	],
+	setup(__props, { emit: __emit }) {
+		const emits = __emit;
+		const loader = useLoadingState();
+		const { toast } = useToasts();
+		/** The current OAuth flow based on the selected type */
+		const flow = computed(() => __props.flows[__props.type]);
+		const selectedScopes = computed(() => {
+			const definedScopes = flow.value.scopes;
+			if (!definedScopes) return [];
+			return __props.selectedScopes.filter((scope) => Object.hasOwn(definedScopes, scope));
+		});
+		/**
+		* PKCE public clients do not use a client_secret. Hide the field when the
+		* document enables PKCE so readers are not prompted for an unused secret.
+		*/
+		const showClientSecret = computed(() => {
+			if (!("x-scalar-secret-client-secret" in flow.value)) return false;
+			const pkceMode = "x-usePkce" in flow.value ? flow.value["x-usePkce"] : void 0;
+			return pkceMode !== "SHA-256" && pkceMode !== "plain";
+		});
+		const clientSecretValue = computed(() => {
+			return flow.value["x-scalar-secret-client-secret"] ?? "";
+		});
+		/** Updates the security scheme base */
+		const handleOauth2Update = (payload) => {
+			if (__props.scheme.type === "openIdConnect") return handleOauth2SecretsUpdate(payload);
+			__props.eventBus.emit("auth:update:security-scheme", {
+				payload: {
+					type: __props.scheme.type,
+					flows: { [__props.type]: payload }
+				},
+				name: __props.name
+			});
+		};
+		/** Updates the flow secrets */
+		const handleOauth2SecretsUpdate = (payload) => __props.eventBus.emit("auth:update:security-scheme-secrets", {
+			payload: {
+				type: __props.scheme.type,
+				[__props.type]: payload
+			},
+			name: __props.name
+		});
+		/** Clears the flow secrets */
+		const clearOauth2Secrets = () => {
+			if (loader.isLoading) return;
+			__props.eventBus.emit("auth:clear:security-scheme-secrets", { name: __props.name });
+		};
+		/** Clears stored access and refresh tokens (authorized state) */
+		const handleClearAccessTokens = () => {
+			if (loader.isLoading) return;
+			handleOauth2SecretsUpdate({
+				"x-scalar-secret-token": "",
+				"x-scalar-secret-refresh-token": ""
+			});
+		};
+		/** Track redirect URI prefill per flow instance to support document switching */
+		const prefilledFlowIdentity = ref(null);
+		const hasHandledRedirectPrefill = ref(false);
+		const resolveFlowIdentity = (currentFlow) => JSON.stringify({
+			type: __props.type,
+			authorizationUrl: currentFlow && "authorizationUrl" in currentFlow ? currentFlow.authorizationUrl : "",
+			tokenUrl: currentFlow && "tokenUrl" in currentFlow ? currentFlow.tokenUrl : "",
+			refreshUrl: currentFlow?.refreshUrl ?? "",
+			scopes: Object.keys(currentFlow?.scopes ?? {})
+		});
+		/** Default the redirect-uri to the current origin if we have access to window */
+		watch(() => flow.value, (currentFlow) => {
+			if (!currentFlow || !("x-scalar-secret-redirect-uri" in currentFlow)) return;
+			const flowIdentity = resolveFlowIdentity(currentFlow);
+			if (prefilledFlowIdentity.value !== flowIdentity) {
+				prefilledFlowIdentity.value = flowIdentity;
+				hasHandledRedirectPrefill.value = false;
+			}
+			if (hasHandledRedirectPrefill.value) return;
+			const newRedirectUri = currentFlow["x-scalar-secret-redirect-uri"];
+			const defaultRedirectUri = resolveDefaultOAuth2RedirectUri(__props.options);
+			hasHandledRedirectPrefill.value = true;
+			if (newRedirectUri || !defaultRedirectUri || __props.options.captureOAuth2Callback) return;
+			handleOauth2SecretsUpdate({ "x-scalar-secret-redirect-uri": defaultRedirectUri });
+		}, { immediate: true });
+		/**
+		* Authorizes the user using the specified OAuth flow.
+		* Opens the appropriate OAuth dialog and/or performs the token exchange.
+		*/
+		const handleAuthorize = async () => {
+			if (loader.isLoading) return;
+			loader.start();
+			const [error, tokens] = await authorizeOauth2(__props.flows, __props.type, selectedScopes.value, __props.server, __props.proxyUrl, getEnvironmentVariables(__props.environment), __props.options.customFetch, __props.options.captureOAuth2Callback);
+			await loader.clear();
+			if (tokens?.accessToken) handleOauth2SecretsUpdate({
+				"x-scalar-secret-token": tokens.accessToken,
+				...tokens.refreshToken ? { "x-scalar-secret-refresh-token": tokens.refreshToken } : {}
+			});
+			else {
+				console.error(error);
+				toast(error?.message ?? "Failed to authorize", "error");
+			}
+		};
+		/** Whether the current flow supports refreshing the access token */
+		const supportsRefreshToken = computed(() => __props.type !== "implicit");
+		/**
+		* Refresh URL placeholder, shows tokenUrl as hint if refreshUrl is not specified.
+		* This helps users understand that tokenUrl will be used as fallback.
+		*/
+		const refreshUrlPlaceholder = computed(() => {
+			if ("tokenUrl" in flow.value && flow.value.tokenUrl) return flow.value.tokenUrl;
+			return "https://galaxy.scalar.com/oauth/refresh";
+		});
+		/**
+		* Uses the stored refresh token to obtain a new access token
+		* via grant_type=refresh_token.
+		*/
+		const handleRefresh = async () => {
+			if (loader.isLoading || __props.type === "implicit") return;
+			loader.start();
+			const [error, tokens] = await refreshOauth2Token(__props.flows, __props.type, __props.proxyUrl, __props.server, getEnvironmentVariables(__props.environment), __props.options.customFetch);
+			await loader.clear();
+			if (tokens?.accessToken) handleOauth2SecretsUpdate({
+				"x-scalar-secret-token": tokens.accessToken,
+				...tokens.refreshToken ? { "x-scalar-secret-refresh-token": tokens.refreshToken } : {}
+			});
+			else {
+				console.error(error);
+				toast(error?.message ?? "Failed to refresh token", "error");
+			}
+		};
+		/** Updates the secret location */
+		const handleSecretLocationUpdate = (value) => {
+			const credentialsLocation = value === "body" ? "body" : "header";
+			if (__props.scheme.type !== "openIdConnect") handleOauth2Update({ "x-scalar-credentials-location": credentialsLocation });
+			handleOauth2SecretsUpdate({ "x-scalar-credentials-location": credentialsLocation });
+		};
+		return (_ctx, _cache) => {
+			return Boolean(flow.value["x-scalar-secret-token"]) ? (openBlock(), createElementBlock(Fragment, { key: 0 }, [
+				createVNode(unref(DataTableRow_default), null, {
+					default: withCtx(() => [createVNode(RequestAuthDataTableInput_default, {
+						class: "border-r-transparent",
+						environment: __props.environment,
+						modelValue: flow.value["x-scalar-secret-token"],
+						placeholder: "QUxMIFlPVVIgQkFTRSBBUkUgQkVMT05HIFRPIFVT",
+						type: "password",
+						"onUpdate:modelValue": _cache[0] || (_cache[0] = (v) => handleOauth2SecretsUpdate({ "x-scalar-secret-token": v }))
+					}, {
+						default: withCtx(() => [..._cache[14] || (_cache[14] = [createTextVNode(" Access Token ", -1)])]),
+						_: 1
+					}, 8, ["environment", "modelValue"])]),
+					_: 1
+				}),
+				supportsRefreshToken.value ? (openBlock(), createBlock(unref(DataTableRow_default), { key: 0 }, {
+					default: withCtx(() => [createVNode(RequestAuthDataTableInput_default, {
+						class: "border-r-transparent",
+						environment: __props.environment,
+						modelValue: flow.value.refreshUrl ?? "",
+						placeholder: refreshUrlPlaceholder.value,
+						"onUpdate:modelValue": _cache[1] || (_cache[1] = (v) => handleOauth2Update({ refreshUrl: v }))
+					}, {
+						default: withCtx(() => [..._cache[15] || (_cache[15] = [createTextVNode(" Refresh URL ", -1)])]),
+						_: 1
+					}, 8, [
+						"environment",
+						"modelValue",
+						"placeholder"
+					])]),
+					_: 1
+				})) : createCommentVNode("", true),
+				createVNode(unref(DataTableRow_default), { class: "min-w-full" }, {
+					default: withCtx(() => [createElementVNode("div", _hoisted_1, [supportsRefreshToken.value ? (openBlock(), createBlock(unref(ScalarButton), {
+						key: 0,
+						class: "p-0 px-2 py-0.5",
+						loader: unref(loader),
+						size: "sm",
+						variant: "outlined",
+						onClick: handleRefresh
+					}, {
+						default: withCtx(() => [..._cache[16] || (_cache[16] = [createTextVNode(" Refresh ", -1)])]),
+						_: 1
+					}, 8, ["loader"])) : createCommentVNode("", true), createVNode(unref(ScalarButton), {
+						class: "mr-1 p-0 px-2 py-0.5",
+						disabled: unref(loader).isLoading,
+						size: "sm",
+						variant: "outlined",
+						onClick: handleClearAccessTokens
+					}, {
+						default: withCtx(() => [..._cache[17] || (_cache[17] = [createTextVNode(" Clear ", -1)])]),
+						_: 1
+					}, 8, ["disabled"])])]),
+					_: 1
+				})
+			], 64)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [
+				createVNode(unref(DataTableRow_default), null, {
+					default: withCtx(() => ["authorizationUrl" in flow.value ? (openBlock(), createBlock(RequestAuthDataTableInput_default, {
+						key: 0,
+						containerClass: "border-r-0",
+						environment: __props.environment,
+						modelValue: flow.value["x-scalar-secret-auth-url"] ?? "",
+						placeholder: "https://galaxy.scalar.com/authorize",
+						"onUpdate:modelValue": _cache[2] || (_cache[2] = (v) => {
+							handleOauth2SecretsUpdate({ "x-scalar-secret-auth-url": v });
+							handleOauth2Update({ authorizationUrl: v });
+						})
+					}, {
+						default: withCtx(() => [..._cache[18] || (_cache[18] = [createTextVNode(" Auth URL ", -1)])]),
+						_: 1
+					}, 8, ["environment", "modelValue"])) : createCommentVNode("", true), "tokenUrl" in flow.value ? (openBlock(), createBlock(RequestAuthDataTableInput_default, {
+						key: 1,
+						environment: __props.environment,
+						modelValue: flow.value["x-scalar-secret-token-url"] ?? "",
+						placeholder: "https://galaxy.scalar.com/token",
+						"onUpdate:modelValue": _cache[3] || (_cache[3] = (v) => {
+							handleOauth2SecretsUpdate({ "x-scalar-secret-token-url": v });
+							handleOauth2Update({ tokenUrl: v });
+						})
+					}, {
+						default: withCtx(() => [..._cache[19] || (_cache[19] = [createTextVNode(" Token URL ", -1)])]),
+						_: 1
+					}, 8, ["environment", "modelValue"])) : createCommentVNode("", true)]),
+					_: 1
+				}),
+				"x-scalar-secret-redirect-uri" in flow.value ? (openBlock(), createBlock(unref(DataTableRow_default), { key: 0 }, {
+					default: withCtx(() => [createVNode(RequestAuthDataTableInput_default, {
+						environment: __props.environment,
+						modelValue: flow.value["x-scalar-secret-redirect-uri"],
+						placeholder: __props.options.captureOAuth2Callback ? `${unref(resolveDefaultOAuth2RedirectUri)(__props.options) || "http://127.0.0.1"} (handled automatically)` : "Optional redirect URL",
+						"onUpdate:modelValue": _cache[4] || (_cache[4] = (v) => {
+							hasHandledRedirectPrefill.value = true;
+							handleOauth2SecretsUpdate({ "x-scalar-secret-redirect-uri": v });
+						})
+					}, {
+						default: withCtx(() => [..._cache[20] || (_cache[20] = [createTextVNode(" Redirect URL ", -1)])]),
+						_: 1
+					}, 8, [
+						"environment",
+						"modelValue",
+						"placeholder"
+					])]),
+					_: 1
+				})) : createCommentVNode("", true),
+				"x-scalar-secret-username" in flow.value && "x-scalar-secret-password" in flow.value ? (openBlock(), createElementBlock(Fragment, { key: 1 }, [createVNode(unref(DataTableRow_default), null, {
+					default: withCtx(() => [createVNode(RequestAuthDataTableInput_default, {
+						class: "text-c-2",
+						environment: __props.environment,
+						modelValue: flow.value["x-scalar-secret-username"],
+						placeholder: "janedoe",
+						"onUpdate:modelValue": _cache[5] || (_cache[5] = (v) => handleOauth2SecretsUpdate({ "x-scalar-secret-username": v }))
+					}, {
+						default: withCtx(() => [..._cache[21] || (_cache[21] = [createTextVNode(" Username ", -1)])]),
+						_: 1
+					}, 8, ["environment", "modelValue"])]),
+					_: 1
+				}), createVNode(unref(DataTableRow_default), null, {
+					default: withCtx(() => [createVNode(RequestAuthDataTableInput_default, {
+						environment: __props.environment,
+						modelValue: flow.value["x-scalar-secret-password"],
+						placeholder: "********",
+						type: "password",
+						"onUpdate:modelValue": _cache[6] || (_cache[6] = (v) => handleOauth2SecretsUpdate({ "x-scalar-secret-password": v }))
+					}, {
+						default: withCtx(() => [..._cache[22] || (_cache[22] = [createTextVNode(" Password ", -1)])]),
+						_: 1
+					}, 8, ["environment", "modelValue"])]),
+					_: 1
+				})], 64)) : createCommentVNode("", true),
+				createVNode(unref(DataTableRow_default), null, {
+					default: withCtx(() => [createVNode(RequestAuthDataTableInput_default, {
+						environment: __props.environment,
+						modelValue: flow.value["x-scalar-secret-client-id"],
+						placeholder: "12345",
+						"onUpdate:modelValue": _cache[7] || (_cache[7] = (v) => handleOauth2SecretsUpdate({ "x-scalar-secret-client-id": v }))
+					}, {
+						default: withCtx(() => [..._cache[23] || (_cache[23] = [createTextVNode(" Client ID ", -1)])]),
+						_: 1
+					}, 8, ["environment", "modelValue"])]),
+					_: 1
+				}),
+				showClientSecret.value ? (openBlock(), createBlock(unref(DataTableRow_default), { key: 2 }, {
+					default: withCtx(() => [createVNode(RequestAuthDataTableInput_default, {
+						environment: __props.environment,
+						modelValue: clientSecretValue.value,
+						placeholder: "XYZ123",
+						type: "password",
+						"onUpdate:modelValue": _cache[8] || (_cache[8] = (v) => handleOauth2SecretsUpdate({ "x-scalar-secret-client-secret": v }))
+					}, {
+						default: withCtx(() => [..._cache[24] || (_cache[24] = [createTextVNode(" Client Secret ", -1)])]),
+						_: 1
+					}, 8, ["environment", "modelValue"])]),
+					_: 1
+				})) : createCommentVNode("", true),
+				"x-usePkce" in flow.value ? (openBlock(), createBlock(unref(DataTableRow_default), { key: 3 }, {
+					default: withCtx(() => [createVNode(RequestAuthDataTableInput_default, {
+						enum: unref(pkceOptions),
+						environment: __props.environment,
+						modelValue: flow.value["x-usePkce"],
+						readOnly: "",
+						"onUpdate:modelValue": _cache[9] || (_cache[9] = (v) => handleOauth2Update({ "x-usePkce": v }))
+					}, {
+						default: withCtx(() => [..._cache[25] || (_cache[25] = [createTextVNode(" Use PKCE ", -1)])]),
+						_: 1
+					}, 8, [
+						"enum",
+						"environment",
+						"modelValue"
+					])]),
+					_: 1
+				})) : createCommentVNode("", true),
+				__props.type !== "implicit" ? (openBlock(), createBlock(unref(DataTableRow_default), { key: 4 }, {
+					default: withCtx(() => [createVNode(RequestAuthDataTableInput_default, {
+						enum: ["header", "body"],
+						environment: __props.environment,
+						modelValue: flow.value["x-scalar-credentials-location"] || "header",
+						placeholder: "header",
+						readOnly: "",
+						"onUpdate:modelValue": _cache[10] || (_cache[10] = (v) => handleSecretLocationUpdate(v))
+					}, {
+						default: withCtx(() => [..._cache[26] || (_cache[26] = [createTextVNode(" Credentials Location ", -1)])]),
+						_: 1
+					}, 8, ["environment", "modelValue"])]),
+					_: 1
+				})) : createCommentVNode("", true),
+				createVNode(unref(DataTableRow_default), null, {
+					default: withCtx(() => [createVNode(OAuthScopesInput_default, {
+						flow: flow.value,
+						flowType: __props.type,
+						selectedScopes: selectedScopes.value,
+						"onUpdate:selectedScopes": _cache[11] || (_cache[11] = (v) => emits("update:selectedScopes", v)),
+						"onUpsert:scope": _cache[12] || (_cache[12] = (v) => emits("upsert:scope", v)),
+						"onDelete:scope": _cache[13] || (_cache[13] = (v) => emits("delete:scope", v))
+					}, null, 8, [
+						"flow",
+						"flowType",
+						"selectedScopes"
+					])]),
+					_: 1
+				}),
+				createVNode(unref(DataTableRow_default), { class: "min-w-full" }, {
+					default: withCtx(() => [createElementVNode("div", _hoisted_2, [__props.scheme.type === "openIdConnect" ? (openBlock(), createBlock(unref(ScalarButton), {
+						key: 0,
+						class: "mr-1 p-0 px-2 py-0.5",
+						disabled: unref(loader).isLoading,
+						size: "sm",
+						variant: "outlined",
+						onClick: clearOauth2Secrets
+					}, {
+						default: withCtx(() => [..._cache[27] || (_cache[27] = [createTextVNode(" Clear ", -1)])]),
+						_: 1
+					}, 8, ["disabled"])) : createCommentVNode("", true), createVNode(unref(ScalarButton), {
+						class: "mr-0.75 p-0 px-2 py-0.5",
+						loader: unref(loader),
+						size: "sm",
+						variant: "outlined",
+						onClick: handleAuthorize
+					}, {
+						default: withCtx(() => [..._cache[28] || (_cache[28] = [createTextVNode(" Authorize ", -1)])]),
+						_: 1
+					}, 8, ["loader"])])]),
+					_: 1
+				})
+			], 64));
+		};
+	}
+});
+//#endregion
+export { OAuth2_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=OAuth2.vue.script.js.map

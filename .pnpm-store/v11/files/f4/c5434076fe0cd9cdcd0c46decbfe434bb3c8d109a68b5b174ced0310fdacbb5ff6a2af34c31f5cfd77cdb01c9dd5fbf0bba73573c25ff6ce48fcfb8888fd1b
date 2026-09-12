@@ -1,0 +1,7 @@
+import e from "./HttpMethod.vue.script.js";
+//#region src/code-example/components/HttpMethod.vue
+var t = e;
+//#endregion
+export { t as default };
+
+//# sourceMappingURL=HttpMethod.vue.js.map

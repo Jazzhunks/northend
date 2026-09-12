@@ -1,0 +1,175 @@
+{
+  "name": "@scalar/workspace-store",
+  "description": "Store interface for openapi documents",
+  "license": "MIT",
+  "author": "Scalar (https://github.com/scalar)",
+  "homepage": "https://github.com/scalar/scalar",
+  "bugs": "https://github.com/scalar/scalar/issues/new/choose",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/scalar/scalar.git",
+    "directory": "packages/workspace-store"
+  },
+  "keywords": [
+    "workspace",
+    "store",
+    "openapi",
+    "scalar"
+  ],
+  "version": "0.55.6",
+  "engines": {
+    "node": ">=22"
+  },
+  "type": "module",
+  "exports": {
+    "./channel-example": {
+      "import": "./dist/channel-example/index.js",
+      "types": "./dist/channel-example/index.d.ts",
+      "default": "./dist/channel-example/index.js"
+    },
+    "./client": {
+      "import": "./dist/client.js",
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
+    },
+    "./entities/auth": {
+      "import": "./dist/entities/auth/index.js",
+      "types": "./dist/entities/auth/index.d.ts",
+      "default": "./dist/entities/auth/index.js"
+    },
+    "./entities/history/*": {
+      "import": "./dist/entities/history/*.js",
+      "types": "./dist/entities/history/*.d.ts",
+      "default": "./dist/entities/history/*.js"
+    },
+    "./events": {
+      "import": "./dist/events/index.js",
+      "types": "./dist/events/index.d.ts",
+      "default": "./dist/events/index.js"
+    },
+    "./helpers/*": {
+      "import": "./dist/helpers/*.js",
+      "types": "./dist/helpers/*.d.ts",
+      "default": "./dist/helpers/*.js"
+    },
+    "./mutators": {
+      "import": "./dist/mutators/index.js",
+      "types": "./dist/mutators/index.d.ts",
+      "default": "./dist/mutators/index.js"
+    },
+    "./navigation": {
+      "import": "./dist/navigation/index.js",
+      "types": "./dist/navigation/index.d.ts",
+      "default": "./dist/navigation/index.js"
+    },
+    "./persistence": {
+      "import": "./dist/persistence/index.js",
+      "types": "./dist/persistence/index.d.ts",
+      "default": "./dist/persistence/index.js"
+    },
+    "./plugins/bundler": {
+      "import": "./dist/plugins/bundler/index.js",
+      "types": "./dist/plugins/bundler/index.d.ts",
+      "default": "./dist/plugins/bundler/index.js"
+    },
+    "./plugins/client": {
+      "import": "./dist/plugins/client/index.js",
+      "types": "./dist/plugins/client/index.d.ts",
+      "default": "./dist/plugins/client/index.js"
+    },
+    "./request-example": {
+      "import": "./dist/request-example/index.js",
+      "types": "./dist/request-example/index.d.ts",
+      "default": "./dist/request-example/index.js"
+    },
+    "./resolve": {
+      "import": "./dist/resolve.js",
+      "types": "./dist/resolve.d.ts",
+      "default": "./dist/resolve.js"
+    },
+    "./schemas": {
+      "import": "./dist/schemas.js",
+      "types": "./dist/schemas.d.ts",
+      "default": "./dist/schemas.js"
+    },
+    "./schemas/*": {
+      "import": "./dist/schemas/*.js",
+      "types": "./dist/schemas/*.d.ts",
+      "default": "./dist/schemas/*.js"
+    },
+    "./schemas/extensions/operation": {
+      "import": "./dist/schemas/extensions/operation/index.js",
+      "types": "./dist/schemas/extensions/operation/index.d.ts",
+      "default": "./dist/schemas/extensions/operation/index.js"
+    },
+    "./schemas/extensions/security": {
+      "import": "./dist/schemas/extensions/security/index.js",
+      "types": "./dist/schemas/extensions/security/index.d.ts",
+      "default": "./dist/schemas/extensions/security/index.js"
+    },
+    "./schemas/extensions/tag": {
+      "import": "./dist/schemas/extensions/tag/index.js",
+      "types": "./dist/schemas/extensions/tag/index.d.ts",
+      "default": "./dist/schemas/extensions/tag/index.js"
+    },
+    "./schemas/extensions/workspace": {
+      "import": "./dist/schemas/extensions/workspace/index.js",
+      "types": "./dist/schemas/extensions/workspace/index.d.ts",
+      "default": "./dist/schemas/extensions/workspace/index.js"
+    },
+    "./schemas/v3.1/strict/openapi-document": {
+      "import": "./dist/schemas/v3.1/strict/openapi-document.js",
+      "types": "./dist/schemas/v3.1/strict/openapi-document.d.ts",
+      "default": "./dist/schemas/v3.1/strict/openapi-document.js"
+    },
+    "./schemas/v3.1/strict/type-guards": {
+      "import": "./dist/schemas/v3.1/strict/type-guards.js",
+      "types": "./dist/schemas/v3.1/strict/type-guards.d.ts",
+      "default": "./dist/schemas/v3.1/strict/type-guards.js"
+    },
+    "./server": {
+      "import": "./dist/server.js",
+      "types": "./dist/server.d.ts",
+      "default": "./dist/server.js"
+    },
+    "./workspace-plugin": {
+      "import": "./dist/workspace-plugin.js",
+      "types": "./dist/workspace-plugin.d.ts",
+      "default": "./dist/workspace-plugin.js"
+    }
+  },
+  "files": [
+    "dist",
+    "CHANGELOG.md"
+  ],
+  "dependencies": {
+    "@scalar/typebox": "0.1.3",
+    "js-base64": "^3.7.8",
+    "type-fest": "^5.3.1",
+    "vue": "^3.5.30",
+    "yaml": "^2.8.3",
+    "@scalar/asyncapi-upgrader": "0.1.4",
+    "@scalar/helpers": "0.9.2",
+    "@scalar/json-magic": "0.12.19",
+    "@scalar/schemas": "0.7.4",
+    "@scalar/openapi-upgrader": "0.2.11",
+    "@scalar/types": "0.16.4",
+    "@scalar/validation": "0.6.2",
+    "@scalar/snippetz": "0.9.23"
+  },
+  "devDependencies": {
+    "@google-cloud/storage": "7.16.0",
+    "fake-indexeddb": "6.2.3",
+    "fastify": "^5.8.1",
+    "vite": "8.0.0",
+    "vitest": "4.1.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
+    "generate-json-schemas": "tsx ./scripts/generate-json-schemas.ts",
+    "generate-openapi-types": "tsx ./scripts/generate-openapi-types.ts",
+    "test": "vitest --run",
+    "test:watch": "vitest",
+    "types:check": "tsgo --noEmit"
+  }
+}

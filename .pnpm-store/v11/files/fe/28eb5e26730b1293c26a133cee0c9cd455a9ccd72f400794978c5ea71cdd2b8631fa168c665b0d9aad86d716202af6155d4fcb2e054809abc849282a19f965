@@ -1,0 +1,9 @@
+import type { SecurityRequirementObject } from '../schemas/v3.1/strict/security-requirement.js';
+/**
+ * Remove duplicate security requirements, comparing by their JSON shape.
+ *
+ * Shared by the channel-connection and document-wide requirement builders, which both union
+ * requirements from several sources (servers, operations) and need to collapse identical entries.
+ */
+export declare const dedupeRequirements: (requirements: SecurityRequirementObject[]) => SecurityRequirementObject[];
+//# sourceMappingURL=dedupe-requirements.d.ts.map

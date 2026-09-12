@@ -1,0 +1,1 @@
+{"version":3,"file":"constants.js","names":[],"sources":["../../../src/entities/error/constants.ts"],"sourcesContent":["export type AgentChatError<T extends string = string, D = unknown> = {\n  code: T\n  detail: D\n}\n\nexport const AgentErrorCodes = {\n  LIMIT_REACHED: 'LIMIT_REACHED',\n} as const\n"],"mappings":";AAKA,IAAa,kBAAkB,EAC7B,eAAe,iBAChB"}

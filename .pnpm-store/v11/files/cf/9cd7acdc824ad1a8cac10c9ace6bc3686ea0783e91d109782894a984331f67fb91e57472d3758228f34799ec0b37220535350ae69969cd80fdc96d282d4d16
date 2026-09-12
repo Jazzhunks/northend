@@ -1,0 +1,40 @@
+import HttpMethod_default from "./HttpMethod.vue.js";
+import { createBlock, createCommentVNode, createElementVNode, defineComponent, normalizeClass, normalizeStyle, openBlock, renderSlot, toDisplayString, unref, withCtx } from "vue";
+import { getHttpMethodInfo } from "@scalar/helpers/http/http-info";
+import { ScalarIconWebhooksLogo } from "@scalar/icons";
+//#region src/components/SidebarHttpBadge.vue?vue&type=script&setup=true&lang.ts
+var _hoisted_1 = { class: "sr-only" };
+var SidebarHttpBadge_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	__name: "SidebarHttpBadge",
+	props: {
+		method: {},
+		active: { type: Boolean },
+		label: {},
+		webhook: { type: Boolean }
+	},
+	setup(__props) {
+		return (_ctx, _cache) => {
+			return openBlock(), createBlock(HttpMethod_default, {
+				class: normalizeClass([
+					"sidebar-heading-type",
+					`sidebar-heading-type--${__props.method.toLowerCase()}`,
+					{ "sidebar-heading-type-active": __props.active }
+				]),
+				method: __props.method,
+				property: "--method-color",
+				short: ""
+			}, {
+				default: withCtx(() => [createElementVNode("span", _hoisted_1, toDisplayString(__props.label ?? "HTTP Method") + ":\xA0", 1), renderSlot(_ctx.$slots, "default", {}, () => [__props.webhook ? (openBlock(), createBlock(unref(ScalarIconWebhooksLogo), {
+					key: 0,
+					style: normalizeStyle({ color: unref(getHttpMethodInfo)(__props.method).colorVar }),
+					weight: "bold"
+				}, null, 8, ["style"])) : createCommentVNode("", true)], true)]),
+				_: 3
+			}, 8, ["class", "method"]);
+		};
+	}
+});
+//#endregion
+export { SidebarHttpBadge_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=SidebarHttpBadge.vue.script.js.map

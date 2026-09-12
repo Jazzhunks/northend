@@ -1,0 +1,59 @@
+import { encode as e } from "js-base64";
+//#region src/code-example/helpers/operation-to-har/process-security-schemes.ts
+var t = (t) => {
+	let n = {
+		headers: [],
+		queryString: [],
+		cookies: []
+	};
+	for (let r of t) {
+		if (r.type === "apiKey") {
+			let e = r["x-scalar-secret-token"] || "YOUR_SECRET_TOKEN";
+			if (!r.name) continue;
+			let t = {
+				name: r.name,
+				value: e
+			};
+			switch (r.in) {
+				case "header":
+					n.headers.push(t);
+					break;
+				case "query":
+					n.queryString.push(t);
+					break;
+				case "cookie":
+					n.cookies.push(t);
+					break;
+			}
+			continue;
+		}
+		if (r.type === "http") {
+			if (r.scheme === "basic") {
+				let t = `${r["x-scalar-secret-username"] || ""}:${r["x-scalar-secret-password"] || ""}`, i = t === ":" ? "username:password" : e(t);
+				n.headers.push({
+					name: "Authorization",
+					value: `Basic ${i}`
+				});
+			} else if (r.scheme === "bearer") {
+				let e = r["x-scalar-secret-token"] || "YOUR_SECRET_TOKEN";
+				n.headers.push({
+					name: "Authorization",
+					value: `Bearer ${e}`
+				});
+			}
+			continue;
+		}
+		if (r.type === "oauth2" && r.flows) {
+			let e = Object.values(r.flows).find((e) => e["x-scalar-secret-token"])?.["x-scalar-secret-token"] || "YOUR_SECRET_TOKEN";
+			n.headers.push({
+				name: "Authorization",
+				value: `Bearer ${e}`
+			});
+		}
+	}
+	return n;
+};
+//#endregion
+export { t as processSecuritySchemes };
+
+//# sourceMappingURL=process-security-schemes.js.map

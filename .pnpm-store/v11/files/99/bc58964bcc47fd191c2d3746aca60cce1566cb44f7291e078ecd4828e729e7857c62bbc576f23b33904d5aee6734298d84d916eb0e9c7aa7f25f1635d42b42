@@ -1,0 +1,31 @@
+type UsePathMaskingOptions = {
+    /**
+     * Watched for becoming truthy before any masking fires. Typically a getter
+     * for the editor instance (e.g. the CodeMirror view) so we do not try to
+     * mask before the input is ready to accept focus and content updates.
+     */
+    isReady: () => unknown;
+    /**
+     * Key that changes whenever navigation switches to a different operation
+     * or example. The masking re-runs every time this value changes.
+     */
+    operationKey: () => unknown;
+    /**
+     * Predicate evaluated on every trigger. Returning `true` performs the mask.
+     */
+    shouldMask: () => boolean;
+    /**
+     * Callback invoked when a mask should happen. Typically focuses the input
+     * and clears its visible text.
+     */
+    onMask: () => void;
+};
+/**
+ * Masks placeholder paths in an editable input (e.g. the address bar).
+ *
+ * Fires on the initial ready state and on every `operationKey` change. The
+ * consumer owns any content-aware guard needed before clearing visible text.
+ */
+export declare const usePathMasking: ({ isReady, operationKey, shouldMask, onMask }: UsePathMaskingOptions) => void;
+export {};
+//# sourceMappingURL=use-path-masking.d.ts.map

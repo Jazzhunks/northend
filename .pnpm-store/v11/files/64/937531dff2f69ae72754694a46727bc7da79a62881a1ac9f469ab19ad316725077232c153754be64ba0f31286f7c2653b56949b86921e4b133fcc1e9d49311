@@ -1,0 +1,20 @@
+import type { ParameterObject, ParameterWithSchemaObject } from '@scalar/workspace-store/schemas/v3.1/strict/openapi-document';
+/**
+ * Coerces a parameter example from the UI (always a string from CodeInput) into a value
+ * request building can serialize. Only structured types are parsed; primitives stay as strings.
+ */
+export declare const deSerializeParameter: (example: unknown, param: ParameterObject) => any;
+/**
+ * Coerces a single schema-typed value from the request editor (always a string from CodeInput)
+ * back into the structure its schema describes.
+ *
+ * Primitives (`string`, `integer`, `number`, `boolean`, `null`) are left as the typed string.
+ * Only `array` and `object` values are parsed so OpenAPI style serialization can expand them.
+ *
+ * Exposed on its own (not just through {@link deSerializeParameter}) so callers that reassemble an
+ * expanded object parameter from individual rows — e.g. a `deepObject` query parameter edited row by
+ * row in the API client — can coerce each leaf against its property schema. Otherwise an edited array
+ * leaf stays the comma-joined display string and collapses back into a single `key=1,2` entry.
+ */
+export declare const deSerializeSchemaValue: (example: unknown, schema: ParameterWithSchemaObject["schema"]) => any;
+//# sourceMappingURL=de-serialize-parameter.d.ts.map

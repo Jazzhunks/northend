@@ -1,0 +1,60 @@
+import ScalarToggleSlider_default from "./ScalarToggleSlider.vue.js";
+import { computed, createBlock, defineComponent, mergeModels, mergeProps, openBlock, useModel } from "vue";
+var ScalarTristateToggle_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	__name: "ScalarTristateToggle",
+	props: /* @__PURE__ */ mergeModels({
+		disabled: { type: Boolean },
+		label: {}
+	}, {
+		"modelValue": { type: Boolean },
+		"modelModifiers": {}
+	}),
+	emits: ["update:modelValue"],
+	setup(__props) {
+		const props = __props;
+		const model = useModel(__props, "modelValue");
+		/** The current tristate value, derived from the boolean | undefined model. */
+		const state = computed(() => {
+			if (model.value === void 0) return "unset";
+			return model.value ? "on" : "off";
+		});
+		/** Slider appearance for each tristate value. */
+		const SLIDER_PROPS = {
+			unset: {
+				class: "",
+				thumb: "center"
+			},
+			on: {
+				class: "bg-green",
+				thumb: "end"
+			},
+			off: {
+				class: "bg-c-danger",
+				thumb: "start"
+			}
+		};
+		/** Cycles unset -> on -> off -> unset. */
+		function toggle() {
+			if (props.disabled) return;
+			if (model.value === void 0) model.value = true;
+			else if (model.value === true) model.value = false;
+			else model.value = void 0;
+		}
+		return (_ctx, _cache) => {
+			return openBlock(), createBlock(ScalarToggleSlider_default, mergeProps({
+				"aria-checked": state.value === "unset" ? "mixed" : model.value,
+				disabled: __props.disabled,
+				label: __props.label,
+				role: "checkbox"
+			}, SLIDER_PROPS[state.value], { onClick: toggle }), null, 16, [
+				"aria-checked",
+				"disabled",
+				"label"
+			]);
+		};
+	}
+});
+//#endregion
+export { ScalarTristateToggle_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=ScalarTristateToggle.vue.script.js.map

@@ -1,0 +1,21 @@
+import { getResolvedRef } from '@scalar/workspace-store/helpers/get-resolved-ref';
+/** Combine pathItem and operation parameters into a single, dereferenced parameter array */
+export const combineParams = (pathParams = [], operationParams = []) => {
+    const operationKeys = operationParams.flatMap((unresolvedParam) => {
+        const param = getResolvedRef(unresolvedParam);
+        if (!param) {
+            return [];
+        }
+        return `${param.in}:${param.name}`;
+    });
+    const operationSet = new Set(operationKeys);
+    /** We must ensure we do not include any path params which exist in the operation */
+    const filteredPathParams = pathParams.filter((unresolvedParam) => {
+        const param = getResolvedRef(unresolvedParam);
+        if (!param) {
+            return false;
+        }
+        return !operationSet.has(`${param.in}:${param.name}`);
+    });
+    return [...filteredPathParams, ...operationParams];
+};

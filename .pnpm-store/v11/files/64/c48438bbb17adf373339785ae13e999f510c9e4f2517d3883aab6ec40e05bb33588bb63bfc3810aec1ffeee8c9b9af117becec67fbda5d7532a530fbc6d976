@@ -1,0 +1,23 @@
+import { ComponentProps } from "react";
+import * as Primitive from "@radix-ui/react-tabs";
+//#region src/components/ui/tabs.d.ts
+interface TabsProps extends ComponentProps<typeof Primitive.Tabs> {
+  /**
+   * Identifier for Sharing value of tabs
+   */
+  groupId?: string;
+  /**
+   * Enable persistent
+   */
+  persist?: boolean;
+  /**
+   * If true, updates the URL hash based on the tab's id
+   */
+  updateAnchor?: boolean;
+}
+declare const TabsList: import("react").ForwardRefExoticComponent<Primitive.TabsListProps & import("react").RefAttributes<HTMLDivElement>>;
+declare const TabsTrigger: import("react").ForwardRefExoticComponent<Primitive.TabsTriggerProps & import("react").RefAttributes<HTMLButtonElement>>;
+declare function Tabs({ ref, groupId, persist, updateAnchor, defaultValue, value: _value, onValueChange: _onValueChange, ...props }: TabsProps): import("react").JSX.Element;
+declare function TabsContent({ value, ...props }: ComponentProps<typeof Primitive.TabsContent>): import("react").JSX.Element;
+//#endregion
+export { Tabs, TabsContent, TabsList, TabsProps, TabsTrigger };

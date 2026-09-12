@@ -1,0 +1,77 @@
+import { objectEntries } from '@scalar/helpers/object/object-entries';
+import { buildAsyncApiServerBaseUrl, buildConnectionUrl, isWebSocketProtocol, } from '../channel-example/build-connection-url.js';
+import { getNameFromRef } from '../helpers/get-name-from-ref.js';
+import { getResolvedRef } from '../helpers/get-resolved-ref.js';
+import { isAsyncApiDocument } from '../schemas/type-guards.js';
+const resolveServer = (server) => getResolvedRef(server);
+const getServerNameFromRef = (ref) => getNameFromRef(ref, ['servers']);
+/**
+ * Collects the names of `document.servers` entries that the channel is restricted to.
+ *
+ * Returns `undefined` when the channel does not declare `servers`, signaling that every
+ * top-level server is allowed.
+ */
+export const getChannelServerNames = (document, channel) => {
+    if (!channel?.servers) {
+        return undefined;
+    }
+    const names = new Set();
+    for (const serverRef of channel.servers) {
+        const name = getServerNameFromRef(serverRef.$ref);
+        if (name && document.servers?.[name]) {
+            names.add(name);
+        }
+    }
+    return names;
+};
+/**
+ * Returns a normalized list of AsyncAPI servers with computed base `url` and optional `connectionUrl`.
+ */
+export const getAsyncApiServers = (document, options = {}) => {
+    const { channel = null, operation = null, pathParameters = {}, queryParameters = {}, environmentVariables, webSocketOnly = true, } = options;
+    const servers = document.servers ?? {};
+    const channelServerNames = getChannelServerNames(document, channel);
+    return objectEntries(servers)
+        .filter(([name]) => channelServerNames?.has(name) ?? true)
+        .map(([name, serverRef]) => {
+        const server = resolveServer(serverRef);
+        const protocol = server.protocol.trim().toLowerCase();
+        const isWebSocket = isWebSocketProtocol(protocol);
+        const url = buildAsyncApiServerBaseUrl(server, environmentVariables);
+        const entry = {
+            name,
+            server,
+            host: server.host,
+            protocol,
+            description: server.description,
+            title: server.title,
+            url,
+            isWebSocket,
+        };
+        if (channel) {
+            entry.connectionUrl = buildConnectionUrl({
+                server,
+                channel,
+                operation,
+                pathParameters,
+                queryParameters,
+                environmentVariables,
+            });
+        }
+        return entry;
+    })
+        .filter((entry) => (webSocketOnly ? entry.isWebSocket : true));
+};
+/**
+ * Returns the selected AsyncAPI server entry, using `x-scalar-selected-asyncapi-server` on the document.
+ */
+export const getSelectedAsyncApiServer = (document, servers, _operation) => {
+    if (!isAsyncApiDocument(document)) {
+        return servers[0] ?? null;
+    }
+    const selectedName = document['x-scalar-selected-server'];
+    if (selectedName == null) {
+        return servers[0] ?? null;
+    }
+    return servers.find(({ name }) => name === selectedName) ?? servers[0] ?? null;
+};

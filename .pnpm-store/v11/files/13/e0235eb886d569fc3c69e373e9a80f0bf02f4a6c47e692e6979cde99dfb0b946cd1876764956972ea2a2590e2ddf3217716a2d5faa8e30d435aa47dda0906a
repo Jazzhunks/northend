@@ -1,0 +1,30 @@
+import { getCustomClientIds as e } from "./generate-client-options.js";
+import { getSnippet as t } from "./get-snippet.js";
+import { operationToHar as n } from "./operation-to-har/operation-to-har.js";
+//#region src/code-example/helpers/generate-code-snippet.ts
+var r = ({ clientId: r, customCodeSamples: i, includeDefaultHeaders: a = !1, operation: o, method: s, path: c, example: l, contentType: u, server: d, securitySchemes: f, globalCookies: p, requestBodyCompositionSelection: m, defaultDisabledParameters: h }) => {
+	try {
+		if (!r) return "";
+		if (r.startsWith("custom")) return i[e(i).indexOf(r)]?.source ?? "Custom example not found";
+		let g = n({
+			operation: o,
+			contentType: u,
+			method: s,
+			path: c,
+			server: d,
+			securitySchemes: f,
+			example: l,
+			globalCookies: p,
+			includeDefaultHeaders: a,
+			requestBodyCompositionSelection: m,
+			defaultDisabledParameters: h
+		}), [_, v] = r.split("/"), [y, b] = t(_, v, g);
+		return y ? (console.error("[generateCodeSnippet]", y), y.message ?? "Error generating code snippet") : b;
+	} catch (e) {
+		return console.error("[generateCodeSnippet]", e), "Error generating code snippet";
+	}
+};
+//#endregion
+export { r as generateCodeSnippet };
+
+//# sourceMappingURL=generate-code-snippet.js.map

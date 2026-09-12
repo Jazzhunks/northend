@@ -1,0 +1,69 @@
+import type { WorkspaceEventBus } from '@scalar/workspace-store/events';
+import type { MergedSecuritySchemes } from '@scalar/workspace-store/request-example';
+import type { XScalarEnvironment } from '@scalar/workspace-store/schemas/extensions/document/x-scalar-environments';
+import type { SecurityRequirementObject, ServerObject } from '@scalar/workspace-store/schemas/v3.1/strict/openapi-document';
+import { type OAuth2Options } from './OAuth2.vue.js';
+type __VLS_Props = {
+    /** Current environment configuration */
+    environment: XScalarEnvironment;
+    /** Controls the display of certain borders which are used when we are non-collapsible */
+    isStatic: boolean;
+    /** Proxy URL */
+    proxyUrl: string;
+    /** Selected security schemes*/
+    selectedSecuritySchemas: SecurityRequirementObject;
+    /** Merged security schemes from the document and the config together with the auth store secrets */
+    securitySchemes: MergedSecuritySchemes;
+    /** Current server configuration */
+    server: ServerObject | null;
+    /** Event bus for authentication updates */
+    eventBus: WorkspaceEventBus;
+    /**  Any config options required for the OAuth2 flow */
+    options?: OAuth2Options;
+    /** Type of the document the schemes belong to, used to label the missing-type warning */
+    documentType?: 'openapi' | 'asyncapi';
+};
+declare const __VLS_export: import("vue").DefineComponent<__VLS_Props, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {} & {
+    "update:selectedScopes": (payload: Omit<{
+        id: string[];
+        name: string;
+        scopes: string[];
+        meta: import("@scalar/workspace-store/events").AuthMeta;
+    }, "meta">) => any;
+    "upsert:scope": (payload: {
+        name: string;
+        flowType: keyof import("@scalar/workspace-store/schemas/v3.1/strict/oauthflows").OAuthFlowsObject;
+        scope: string;
+        description: string;
+        oldScope?: string;
+        enable?: boolean;
+    }) => any;
+    "delete:scope": (payload: {
+        name: string;
+        flowType: keyof import("@scalar/workspace-store/schemas/v3.1/strict/oauthflows").OAuthFlowsObject;
+        scope: string;
+    }) => any;
+}, string, import("vue").PublicProps, Readonly<__VLS_Props> & Readonly<{
+    "onUpdate:selectedScopes"?: ((payload: Omit<{
+        id: string[];
+        name: string;
+        scopes: string[];
+        meta: import("@scalar/workspace-store/events").AuthMeta;
+    }, "meta">) => any) | undefined;
+    "onUpsert:scope"?: ((payload: {
+        name: string;
+        flowType: keyof import("@scalar/workspace-store/schemas/v3.1/strict/oauthflows").OAuthFlowsObject;
+        scope: string;
+        description: string;
+        oldScope?: string;
+        enable?: boolean;
+    }) => any) | undefined;
+    "onDelete:scope"?: ((payload: {
+        name: string;
+        flowType: keyof import("@scalar/workspace-store/schemas/v3.1/strict/oauthflows").OAuthFlowsObject;
+        scope: string;
+    }) => any) | undefined;
+}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;
+declare const _default: typeof __VLS_export;
+export default _default;
+//# sourceMappingURL=RequestAuthTab.vue.d.ts.map

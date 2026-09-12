@@ -1,0 +1,1 @@
+{"version":3,"file":"Text.vue.d.ts","sourceRoot":"","sources":["../../../../src/views/Chat/Messages/Text.vue"],"names":[],"mappings":"AAiBA,OAAO,EAAE,KAAK,UAAU,EAAE,MAAM,IAAI,CAAA;AACpC,OAAO,EAAE,KAAK,GAAG,EAAE,MAAM,KAAK,CAAA;AAE9B,KAAK,WAAW,GAAG;IACjB,WAAW,EAAE,GAAG,CAAC,UAAU,CAAC,CAAA;CAC7B,CAAC;AAmCF,QAAA,MAAM,YAAY,kSAEhB,CAAC;wBACkB,OAAO,YAAY;AAAxC,wBAAyC"}

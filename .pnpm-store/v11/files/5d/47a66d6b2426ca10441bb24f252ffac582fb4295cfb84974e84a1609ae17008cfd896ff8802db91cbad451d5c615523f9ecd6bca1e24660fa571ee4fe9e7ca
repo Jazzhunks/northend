@@ -1,0 +1,132 @@
+import Resize_default from "../resize/Resize.vue.js";
+import { useSearchIndex } from "../../features/search/hooks/use-search-index.js";
+import SidebarMenu_default from "./SidebarMenu.vue.js";
+import { Fragment, computed, createBlock, createCommentVNode, createElementBlock, createElementVNode, createSlots, createVNode, defineComponent, guardReactiveProps, isRef, mergeModels, normalizeClass, normalizeProps, openBlock, ref, renderSlot, unref, useModel, useSlots, withCtx } from "vue";
+import { ScalarIconFileDashed, ScalarIconMagnifyingGlass } from "@scalar/icons";
+import { ScalarIconButton } from "@scalar/components/icon-button";
+import { isOpenApiDocument } from "@scalar/workspace-store/schemas/type-guards";
+import { ScalarSidebarSearchInput } from "@scalar/components/sidebar";
+import { ScalarSidebar } from "@scalar/sidebar";
+//#region src/v2/components/sidebar/Sidebar.vue?vue&type=script&setup=true&lang.ts
+var _hoisted_1 = { key: 1 };
+var Sidebar_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	__name: "Sidebar",
+	props: /* @__PURE__ */ mergeModels({
+		sidebarState: {},
+		layout: {},
+		activeWorkspace: {},
+		workspaces: {},
+		documents: {},
+		isDroppable: { type: [Boolean, Function] }
+	}, {
+		"sidebarWidth": {
+			required: true,
+			default: 288
+		},
+		"sidebarWidthModifiers": {}
+	}),
+	emits: /* @__PURE__ */ mergeModels([
+		"selectItem",
+		"select:workspace",
+		"create:workspace",
+		"reorder",
+		"navigate:to:settings"
+	], ["update:sidebarWidth"]),
+	setup(__props, { emit: __emit }) {
+		const emit = __emit;
+		const slots = useSlots();
+		/** Controls the visibility of the search input */
+		const isSearchVisible = ref(false);
+		/** Controls the width of the sidebar */
+		const sidebarWidth = useModel(__props, "sidebarWidth");
+		const isDraft = (item) => {
+			return item.type === "example" && item.title === "draft";
+		};
+		/** We handle search results out here so we can show them in the sidebar */
+		const { query, results } = useSearchIndex(() => __props.documents.filter(isOpenApiDocument));
+		/** We show either the search results or the sidebar items */
+		const items = computed(() => results.value ?? __props.sidebarState.items.value);
+		/** Select an item and clear the search query */
+		const handleSelectItem = (id) => {
+			emit("selectItem", id);
+			query.value = "";
+			isSearchVisible.value = false;
+		};
+		return (_ctx, _cache) => {
+			return openBlock(), createBlock(unref(Resize_default), {
+				width: sidebarWidth.value,
+				"onUpdate:width": _cache[6] || (_cache[6] = ($event) => sidebarWidth.value = $event),
+				class: "flex flex-col"
+			}, {
+				default: withCtx(() => [createVNode(unref(ScalarSidebar), {
+					class: "flex w-auto flex-1",
+					indent: 20,
+					isDraggable: __props.layout !== "modal",
+					isDroppable: __props.isDroppable,
+					isExpanded: __props.sidebarState.isExpanded,
+					isSelected: __props.sidebarState.isSelected,
+					items: items.value,
+					layout: "client",
+					options: { hideOperationDefaultExamples: __props.layout === "modal" },
+					onReorder: _cache[5] || (_cache[5] = (draggingItem, hoveredItem) => emit("reorder", draggingItem, hoveredItem)),
+					onSelectItem: handleSelectItem
+				}, createSlots({
+					header: withCtx(() => [_cache[7] || (_cache[7] = createElementVNode("div", { class: "mac:h-12 mac:app-drag-region h-2" }, null, -1)), createElementVNode("div", { class: normalizeClass(["bg-sidebar-b-1 z-1 flex flex-col gap-1.5 px-3 pb-1.5", {
+						"max-md:pt-12": __props.layout === "desktop",
+						"max-md:pt-2 max-md:pl-4!": __props.layout === "modal",
+						"pt-1 max-md:pt-2 max-md:pl-14": __props.layout === "web"
+					}]) }, [__props.layout !== "web" ? (openBlock(), createElementBlock("div", {
+						key: 0,
+						class: normalizeClass(["flex items-center justify-between", { "max-md:pl-10": __props.layout === "desktop" }])
+					}, [__props.layout !== "modal" ? (openBlock(), createBlock(SidebarMenu_default, {
+						key: 0,
+						activeWorkspace: __props.activeWorkspace,
+						workspaces: __props.workspaces,
+						"onCreate:workspace": _cache[0] || (_cache[0] = ($event) => emit("create:workspace")),
+						"onNavigate:to:settings": _cache[1] || (_cache[1] = ($event) => emit("navigate:to:settings")),
+						"onSelect:workspace": _cache[2] || (_cache[2] = (id) => emit("select:workspace", id))
+					}, {
+						sidebarMenuActions: withCtx(() => [renderSlot(_ctx.$slots, "sidebarMenuActions")]),
+						_: 3
+					}, 8, ["activeWorkspace", "workspaces"])) : __props.layout === "modal" ? (openBlock(), createElementBlock("div", _hoisted_1)) : createCommentVNode("", true), createVNode(unref(ScalarIconButton), {
+						class: "hover:bg-b-2 active:text-c-1 size-8 rounded p-2",
+						icon: unref(ScalarIconMagnifyingGlass),
+						label: "Search",
+						size: "sm",
+						onClick: _cache[3] || (_cache[3] = ($event) => isSearchVisible.value = !isSearchVisible.value)
+					}, null, 8, ["icon"])], 2)) : createCommentVNode("", true), isSearchVisible.value || __props.layout === "web" ? (openBlock(), createBlock(unref(ScalarSidebarSearchInput), {
+						key: 1,
+						modelValue: unref(query),
+						"onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => isRef(query) ? query.value = $event : null),
+						autofocus: __props.layout !== "web"
+					}, null, 8, ["modelValue", "autofocus"])) : createCommentVNode("", true)], 2)]),
+					spacer: withCtx(() => [_cache[8] || (_cache[8] = createElementVNode("div", { class: "flex-1" }, null, -1))]),
+					icon: withCtx((iconProps) => [slots.icon || isDraft(iconProps.item) ? (openBlock(), createElementBlock(Fragment, { key: 0 }, [isDraft(iconProps.item) ? (openBlock(), createBlock(unref(ScalarIconFileDashed), { key: 0 })) : createCommentVNode("", true), renderSlot(_ctx.$slots, "icon", normalizeProps(guardReactiveProps(iconProps)))], 64)) : createCommentVNode("", true)]),
+					before: withCtx(() => [renderSlot(_ctx.$slots, "workspaceButton")]),
+					footer: withCtx(() => [renderSlot(_ctx.$slots, "footer")]),
+					_: 2
+				}, [slots.decorator ? {
+					name: "decorator",
+					fn: withCtx((decoratorProps) => [renderSlot(_ctx.$slots, "decorator", normalizeProps(guardReactiveProps(decoratorProps)))]),
+					key: "0"
+				} : void 0, slots.empty ? {
+					name: "empty",
+					fn: withCtx((emptyProps) => [renderSlot(_ctx.$slots, "empty", normalizeProps(guardReactiveProps(emptyProps)))]),
+					key: "1"
+				} : void 0]), 1032, [
+					"isDraggable",
+					"isDroppable",
+					"isExpanded",
+					"isSelected",
+					"items",
+					"options"
+				])]),
+				_: 3
+			}, 8, ["width"]);
+		};
+	}
+});
+//#endregion
+export { Sidebar_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=Sidebar.vue.script.js.map

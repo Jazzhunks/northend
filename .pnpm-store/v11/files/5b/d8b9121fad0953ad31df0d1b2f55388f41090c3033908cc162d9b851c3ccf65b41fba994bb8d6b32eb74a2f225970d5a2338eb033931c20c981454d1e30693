@@ -1,0 +1,12 @@
+import { encode as e } from "js-base64";
+//#region src/code-example/helpers/get-secrets.ts
+var t = (t) => t.flatMap((t) => t.type === "apiKey" ? t["x-scalar-secret-token"] : t?.type === "http" ? [
+	t["x-scalar-secret-token"],
+	t["x-scalar-secret-username"],
+	t["x-scalar-secret-password"],
+	e(`${t["x-scalar-secret-username"]}:${t["x-scalar-secret-password"]}`)
+] : t.type === "oauth2" ? Object.values(t.flows).map((e) => e["x-scalar-secret-token"]) : []).filter(Boolean);
+//#endregion
+export { t as getSecrets };
+
+//# sourceMappingURL=get-secrets.js.map

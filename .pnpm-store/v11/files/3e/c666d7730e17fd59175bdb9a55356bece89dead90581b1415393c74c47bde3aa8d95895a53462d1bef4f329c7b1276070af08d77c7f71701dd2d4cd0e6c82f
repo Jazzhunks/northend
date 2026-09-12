@@ -1,0 +1,220 @@
+import { getParameterSchema } from "./get-parameter-schema.js";
+import { getValueAtPath } from "@scalar/helpers/object/get-value-at-path";
+import { deSerializeParameter, getExample, isParamDisabled } from "@scalar/workspace-store/request-example";
+import { getResolvedRef } from "@scalar/workspace-store/helpers/get-resolved-ref";
+import { isObject } from "@scalar/helpers/object/is-object";
+import { isArraySchema, isObjectSchema } from "@scalar/workspace-store/schemas/v3.1/strict/type-guards";
+//#region src/v2/blocks/request-block/helpers/create-parameter-rows.ts
+var isParameterWithSchema = (parameter) => "schema" in parameter && parameter.schema !== void 0;
+var resolveSchema = (schema) => {
+	return getResolvedRef(schema);
+};
+/**
+* Resolves the OpenAPI serialization style and explode flag for a parameter, falling back to the
+* spec defaults (style: 'form', explode: true when style is 'form').
+*/
+var getParameterStyleAndExplode = (parameter) => {
+	const style = "style" in parameter && parameter.style ? parameter.style : "form";
+	return {
+		style,
+		explode: "explode" in parameter && parameter.explode !== void 0 ? parameter.explode : style === "form"
+	};
+};
+/**
+* Decides whether an object-typed query parameter should be expanded into one row per property,
+* and which expansion mode to use. Returns null when the parameter should stay as a single row
+* (non-query, non-object schema, or a serialization style we do not expand).
+*/
+var getExpansionMode = (parameter, schema) => {
+	if (parameter.in !== "query" || !isParameterWithSchema(parameter) || !schema || !isObjectSchema(schema)) return null;
+	const { style, explode } = getParameterStyleAndExplode(parameter);
+	if (!explode) return null;
+	if (style === "form") return "form";
+	if (style === "deepObject") return "deepObject";
+	return null;
+};
+var toTableValue = (value) => {
+	if (value === void 0 || value === null) return "";
+	if (Array.isArray(value)) return value.join(",");
+	if (typeof value === "object") return JSON.stringify(value);
+	return String(value);
+};
+var toPathKey = (path) => path.join("\0");
+var toTableRow = ({ parameter, name, value, description, schema, isRequired, isDisabled, sourceParameterValuePath }) => ({
+	name,
+	value: toTableValue(value),
+	description,
+	schema,
+	isRequired,
+	isDisabled,
+	originalParameter: parameter,
+	sourceParameterValuePath
+});
+/**
+* Builds the row name for an expanded property at a given value path. deepObject rows mirror the
+* wire format (`parent[a][b]`); form-style explode uses the bare top-level key.
+*/
+var getExpandedRowName = (parameter, path, mode) => mode === "deepObject" ? `${parameter.name}${path.map((segment) => `[${segment}]`).join("")}` : path[0] ?? "";
+/**
+* Appends the display-only trailing `[]` to deepObject array leaves so the name matches the
+* serialized `parent[ids][]=1&parent[ids][]=2` form. The bracket is display-only — the row's
+* `sourceParameterValuePath` stays bracket-free. It also lets write-back recognize the leaf as an
+* array even on renamed and unmapped rows, which carry no schema.
+*/
+var withArrayBracket = (name, mode, isArray) => mode === "deepObject" && isArray ? `${name}[]` : name;
+/** Build the single-row representation used when a parameter is not expanded. */
+var toSingleParameterRow = (parameter, schema, value, isDisabled) => toTableRow({
+	parameter,
+	name: parameter.name,
+	value,
+	description: parameter.description,
+	schema,
+	isRequired: parameter.required,
+	isDisabled
+});
+/**
+* Walks an object schema and produces one row per property.
+*
+* - In `form` mode (the OpenAPI default for query parameters) only the top-level properties are
+*   flattened, and each row is named after the property itself (`status`).
+* - In `deepObject` mode we recurse into nested objects and emit bracketed names that mirror the
+*   serialization on the wire (`filter[user][id]`).
+*
+* `pathPrefix` tracks the path inside the parent parameter value so the handler can later
+* reassemble all sibling rows back into a single object payload.
+*/
+var getExpandedPropertyRows = ({ parameter, schema, value, pathPrefix, namePrefix, mode, isDisabled, hiddenValuePaths, renamedValuePaths, renameTargetPaths }) => {
+	if (!schema.properties) return [];
+	const requiredProperties = new Set(schema.required ?? []);
+	return Object.entries(schema.properties).flatMap(([propertyName, propertySchema]) => {
+		const resolvedPropertySchema = resolveSchema(propertySchema);
+		if (!resolvedPropertySchema) return [];
+		const path = [...pathPrefix, propertyName];
+		const name = namePrefix ? `${namePrefix}[${propertyName}]` : propertyName;
+		const renamedTo = renamedValuePaths.get(toPathKey(path));
+		const effectivePath = renamedTo ?? path;
+		if (hiddenValuePaths.has(toPathKey(effectivePath))) return [];
+		if (renamedTo) {
+			const renamedValue = getValueAtPath(value, renamedTo);
+			const effectiveValue = renamedValue === void 0 ? getValueAtPath(value, path) : renamedValue;
+			return [toTableRow({
+				parameter,
+				name: withArrayBracket(getExpandedRowName(parameter, renamedTo, mode), mode, Array.isArray(effectiveValue)),
+				value: effectiveValue,
+				description: parameter.description,
+				schema: void 0,
+				isRequired: false,
+				isDisabled,
+				sourceParameterValuePath: renamedTo
+			})];
+		}
+		if (renameTargetPaths.has(toPathKey(path))) return [];
+		if (mode === "deepObject" && isObjectSchema(resolvedPropertySchema) && Boolean(resolvedPropertySchema.properties)) return getExpandedPropertyRows({
+			parameter,
+			schema: resolvedPropertySchema,
+			value,
+			pathPrefix: path,
+			namePrefix: name,
+			mode,
+			isDisabled,
+			hiddenValuePaths,
+			renamedValuePaths,
+			renameTargetPaths
+		});
+		const leafValue = getValueAtPath(value, path);
+		return [toTableRow({
+			parameter,
+			name: withArrayBracket(name, mode, isArraySchema(resolvedPropertySchema) || Array.isArray(leafValue)),
+			value: leafValue,
+			description: resolvedPropertySchema.description ?? parameter.description,
+			schema: resolvedPropertySchema,
+			isRequired: requiredProperties.has(propertyName),
+			isDisabled,
+			sourceParameterValuePath: path
+		})];
+	});
+};
+/**
+* Collects the leaf paths of an object value. In `form` mode only the top-level keys are leaves
+* (form-style explode does not flatten nested objects); in `deepObject` mode we recurse into nested
+* objects, mirroring how the rows and serialization are built.
+*/
+var collectValueLeafPaths = (value, mode) => {
+	if (!isObject(value)) return [];
+	const paths = [];
+	const walk = (node, prefix) => {
+		for (const [key, val] of Object.entries(node)) {
+			const path = [...prefix, key];
+			if (mode === "deepObject" && isObject(val)) walk(val, path);
+			else paths.push(path);
+		}
+	};
+	walk(value, []);
+	return paths;
+};
+/**
+* Builds rows for value paths that the schema does not describe. This keeps user-edited keys (for
+* example a property that was renamed in the table) visible instead of snapping back to the
+* schema-derived rows on the next render.
+*/
+var getUnmappedValueRows = ({ parameter, value, schemaRows, mode, isDisabled, renamedValuePaths }) => {
+	const seen = new Set([...schemaRows.map((row) => toPathKey(row.sourceParameterValuePath ?? [])), ...renamedValuePaths.keys()]);
+	return collectValueLeafPaths(value, mode).filter((path) => !seen.has(toPathKey(path))).map((path) => {
+		const leafValue = getValueAtPath(value, path);
+		return toTableRow({
+			parameter,
+			name: withArrayBracket(getExpandedRowName(parameter, path, mode), mode, Array.isArray(leafValue)),
+			value: leafValue,
+			description: parameter.description,
+			schema: void 0,
+			isRequired: false,
+			isDisabled,
+			sourceParameterValuePath: path
+		});
+	});
+};
+/**
+* Turns a single OpenAPI parameter into one or more table rows.
+*
+* For object-typed query parameters with `form`/`explode: true` (the default) or `deepObject`
+* serialization, each property becomes its own row so the user can edit them individually,
+* matching how tools like Postman present the same parameter. Every other parameter passes
+* through as a single row.
+*/
+var createParameterRows = (parameter, exampleKey, options = {}) => {
+	const example = getExample(parameter, exampleKey, void 0);
+	const isDisabled = isParamDisabled(parameter, example);
+	const schema = getParameterSchema(parameter);
+	const mode = getExpansionMode(parameter, schema);
+	if (mode === null || !schema || !isObjectSchema(schema)) return [toSingleParameterRow(parameter, schema, example?.value, isDisabled)];
+	const value = example?.value === void 0 ? void 0 : deSerializeParameter(example.value, parameter);
+	if (!schema.properties) return [toSingleParameterRow(parameter, schema, example?.value, isDisabled)];
+	const hiddenValuePaths = new Set(options.hiddenValuePaths?.map(toPathKey) ?? []);
+	const renamedValuePaths = new Map((options.renamedValuePaths ?? []).map(({ from, to }) => [toPathKey(from), to]));
+	const renameTargetPaths = new Set((options.renamedValuePaths ?? []).map(({ to }) => toPathKey(to)));
+	const rows = getExpandedPropertyRows({
+		parameter,
+		schema,
+		value,
+		pathPrefix: [],
+		namePrefix: mode === "deepObject" ? parameter.name : "",
+		mode,
+		isDisabled,
+		hiddenValuePaths,
+		renamedValuePaths,
+		renameTargetPaths
+	});
+	const unmappedRows = getUnmappedValueRows({
+		parameter,
+		value,
+		schemaRows: rows,
+		mode,
+		isDisabled,
+		renamedValuePaths
+	});
+	return [...rows, ...unmappedRows];
+};
+//#endregion
+export { createParameterRows };
+
+//# sourceMappingURL=create-parameter-rows.js.map

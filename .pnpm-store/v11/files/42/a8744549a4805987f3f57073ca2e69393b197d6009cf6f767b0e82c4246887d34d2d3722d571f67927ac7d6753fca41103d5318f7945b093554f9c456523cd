@@ -1,0 +1,25 @@
+import type { OperationExampleMeta, WorkspaceEventBus } from '@scalar/workspace-store/events';
+import type { TableRow } from '../../../../v2/blocks/request-block/components/RequestTableRow.vue.js';
+type ParameterType = 'path' | 'cookie' | 'header' | 'query';
+type ParameterUpsertPayload = {
+    name: string;
+    value: string;
+    isDisabled: boolean;
+    shouldRenameExpandedRow?: boolean;
+};
+/** Create parameter event handlers for a given type */
+export declare const createParameterHandlers: (type: ParameterType, eventBus: WorkspaceEventBus, meta: OperationExampleMeta, { context, defaultParameters, globalParameters, onDeleteExpandedRow, onRenameExpandedRow, }: {
+    context: TableRow[];
+    defaultParameters?: number;
+    globalParameters?: number;
+    onDeleteExpandedRow?: (row: TableRow) => void;
+    onRenameExpandedRow?: (row: TableRow, newValuePath: string[]) => void;
+}) => {
+    delete: (payload: {
+        index: number;
+    }) => void;
+    deleteAll: () => void;
+    upsert: (index: number, payload: ParameterUpsertPayload) => void;
+};
+export {};
+//# sourceMappingURL=create-parameter-handlers.d.ts.map

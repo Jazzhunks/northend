@@ -1,0 +1,56 @@
+import type { WorkspaceEvents } from '../events/definitions/workspace.js';
+import type { Workspace } from '../schemas.js';
+/**
+ * Updates the active proxy for the given workspace.
+ *
+ * @param workspace - The workspace to update
+ * @param payload - The new active proxy value
+ */
+export declare const updateActiveProxy: (workspace: Workspace | null, payload: WorkspaceEvents["workspace:update:active-proxy"]) => void;
+/**
+ * Updates the color mode for the given workspace.
+ *
+ * @param workspace - The workspace to update
+ * @param payload - The new color mode value
+ */
+export declare const updateColorMode: (workspace: Workspace | null, payload: WorkspaceEvents["workspace:update:color-mode"]) => void;
+/**
+ * Updates the theme for the given workspace.
+ *
+ * @param workspace - The workspace to update
+ * @param payload - The new theme value
+ */
+export declare const updateTheme: (workspace: Workspace | null, payload: WorkspaceEvents["workspace:update:theme"]) => void;
+/**
+ * Updates the active environment for the given workspace.
+ *
+ * @param workspace - The workspace to update
+ * @param payload - The new active environment value
+ */
+export declare const updateActiveEnvironment: (workspace: Workspace | null, payload: WorkspaceEvents["workspace:update:active-environment"]) => void;
+/**
+ * Updates the selected http client on the workspace
+ *
+ * @param workspace - The workspace to update the selected http client in
+ * @param payload - The payload to update the selected client with
+ * @returns
+ */
+export declare const updateSelectedClient: (workspace: Workspace | null, payload: WorkspaceEvents["workspace:update:selected-client"]) => void;
+/**
+ * Updates the selected example on the workspace
+ *
+ * @param workspace - The workspace to update the selected example in
+ * @param payload - The example key to select across the document
+ */
+export declare const updateSelectedExample: (workspace: Workspace | null, payload: WorkspaceEvents["workspace:update:selected-example"]) => void;
+export declare const workspaceMutatorsFactory: ({ workspace }: {
+    workspace: Workspace | null;
+}) => {
+    updateActiveProxy: (payload: WorkspaceEvents["workspace:update:active-proxy"]) => void;
+    updateColorMode: (payload: WorkspaceEvents["workspace:update:color-mode"]) => void;
+    updateTheme: (payload: WorkspaceEvents["workspace:update:theme"]) => void;
+    updateSelectedClient: (payload: WorkspaceEvents["workspace:update:selected-client"]) => void;
+    updateSelectedExample: (payload: WorkspaceEvents["workspace:update:selected-example"]) => void;
+    updateActiveEnvironment: (payload: WorkspaceEvents["workspace:update:active-environment"]) => void;
+};
+//# sourceMappingURL=workspace.d.ts.map

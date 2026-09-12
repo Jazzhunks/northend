@@ -1,0 +1,9 @@
+import type { CustomClientOptionGroup, CustomOrDefaultClientOption } from '../types';
+/**
+ * Filters the clients based on a query
+ *
+ * When dealing with multiple groups, include all options from a group if the
+ * group label itself matches — so searching "JavaScript" shows all JS clients.
+ */
+export declare const filterClientsByQuery: (query: string, options: CustomOrDefaultClientOption[], groups: CustomClientOptionGroup[]) => CustomOrDefaultClientOption[];
+//# sourceMappingURL=filter-clients-by-query.d.ts.map

@@ -1,0 +1,39 @@
+import type { HotKeyModifier } from '../ScalarHotkey/types';
+import type { ScalarTooltipPlacement } from './types';
+/**
+ * Scalar hotkey tooltip component
+ *
+ * Adds a tooltip to an interactive element with a hotkey, if
+ * you don't need to display a hotkey, use the ScalarTooltip
+ * component instead
+ *
+ * @example
+ * <ScalarHotkeyTooltip content="Bold" hotkey="B" modifier="Meta">
+ *   <ScalarButton>Make bold</ScalarButton>
+ * </ScalarHotkeyTooltip>
+ */
+declare const _default: typeof __VLS_export;
+export default _default;
+declare const __VLS_export: __VLS_WithSlots<import("vue").DefineComponent<{
+    content?: string;
+    hotkey: string;
+    modifier?: HotKeyModifier[];
+    delay?: number;
+    placement?: ScalarTooltipPlacement;
+    offset?: number;
+}, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").PublicProps, Readonly<{
+    content?: string;
+    hotkey: string;
+    modifier?: HotKeyModifier[];
+    delay?: number;
+    placement?: ScalarTooltipPlacement;
+    offset?: number;
+}> & Readonly<{}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>, {
+    default?: (props: {}) => any;
+}>;
+type __VLS_WithSlots<T, S> = T & {
+    new (): {
+        $slots: S;
+    };
+};
+//# sourceMappingURL=ScalarHotkeyTooltip.vue.d.ts.map

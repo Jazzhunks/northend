@@ -1,0 +1,1 @@
+{"version":3,"file":"openid-discovery-to-flows.d.ts","sourceRoot":"","sources":["../../../../../src/v2/blocks/scalar-auth-selector-block/helpers/openid-discovery-to-flows.ts"],"names":[],"mappings":"AAAA,OAAO,EAAuB,KAAK,oBAAoB,EAAE,MAAM,uCAAuC,CAAA;AAItG,OAAO,KAAK,EAAE,sBAAsB,EAAE,MAAM,kCAAkC,CAAA;AAE9E,qHAAqH;AACrH,eAAO,MAAM,sBAAsB,GAAI,WAAW,sBAAsB,KAAG,oBAqD1E,CAAA"}

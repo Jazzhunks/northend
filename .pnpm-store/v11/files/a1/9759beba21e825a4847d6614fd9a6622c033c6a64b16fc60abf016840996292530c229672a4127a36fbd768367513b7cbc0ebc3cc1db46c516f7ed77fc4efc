@@ -1,0 +1,93 @@
+import { useLocalization } from "../../localization/use-localization.js";
+import SecurityRequirementBadgeScheme_default from "./SecurityRequirementBadgeScheme.vue.js";
+import { Fragment, computed, createBlock, createCommentVNode, createElementBlock, createElementVNode, createTextVNode, defineComponent, normalizeClass, openBlock, renderList, toDisplayString, unref, withCtx, withModifiers } from "vue";
+import { ScalarIconLockSimple, ScalarIconLockSimpleOpen } from "@scalar/icons";
+import { ScalarPopover } from "@scalar/components/popover";
+//#region src/features/Operation/components/SecurityRequirementBadge.vue?vue&type=script&setup=true&lang.ts
+var _hoisted_1 = { key: 2 };
+var _hoisted_2 = { class: "flex max-w-xs min-w-48 flex-col gap-1.5 p-2 text-sm" };
+var _hoisted_3 = { class: "font-medium" };
+var _hoisted_4 = {
+	key: 0,
+	class: "contents"
+};
+var _hoisted_5 = {
+	key: 1,
+	class: "contents"
+};
+var _hoisted_6 = {
+	key: 1,
+	class: "contents"
+};
+var SecurityRequirementBadge_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	__name: "SecurityRequirementBadge",
+	props: {
+		requiredSecurity: {},
+		hideLabel: {
+			type: Boolean,
+			default: false
+		}
+	},
+	setup(__props) {
+		const { translate } = useLocalization();
+		const label = computed(() => __props.requiredSecurity.state === "required" ? translate("authentication.required") : translate("authentication.optional"));
+		const verb = computed(() => __props.requiredSecurity.state === "required" ? translate("authentication.requires") : translate("authentication.accepts"));
+		/** Single group, single scheme — shown inline in the header. */
+		const isSingleScheme = computed(() => __props.requiredSecurity.requirements.length === 1 && __props.requiredSecurity.requirements[0]?.schemes.length === 1);
+		/** Single group with multiple schemes — all must be satisfied (AND). */
+		const isAndGroup = computed(() => __props.requiredSecurity.requirements.length === 1 && (__props.requiredSecurity.requirements[0]?.schemes.length ?? 0) > 1);
+		/** Multiple groups — any one group satisfies authentication (OR). */
+		const isOrAlternatives = computed(() => __props.requiredSecurity.requirements.length > 1);
+		return (_ctx, _cache) => {
+			return __props.requiredSecurity.state !== "none" ? (openBlock(), createBlock(unref(ScalarPopover), {
+				key: 0,
+				placement: "bottom-end"
+			}, {
+				popover: withCtx(() => [createElementVNode("div", _hoisted_2, [createElementVNode("div", _hoisted_3, [createTextVNode(toDisplayString(verb.value) + " ", 1), isSingleScheme.value ? (openBlock(), createBlock(SecurityRequirementBadgeScheme_default, {
+					key: 0,
+					is: "span",
+					class: "contents",
+					scheme: __props.requiredSecurity.requirements[0].schemes[0]
+				}, null, 8, ["scheme"])) : isOrAlternatives.value ? (openBlock(), createElementBlock(Fragment, { key: 1 }, [createTextVNode(toDisplayString(unref(translate)("authentication.oneOf")), 1)], 64)) : isAndGroup.value ? (openBlock(), createElementBlock(Fragment, { key: 2 }, [createTextVNode(toDisplayString(unref(translate)("authentication.allOf")), 1)], 64)) : (openBlock(), createElementBlock(Fragment, { key: 3 }, [createTextVNode(toDisplayString(unref(translate)("authentication.authentication")), 1)], 64))]), isOrAlternatives.value ? (openBlock(), createElementBlock("ul", _hoisted_4, [(openBlock(true), createElementBlock(Fragment, null, renderList(__props.requiredSecurity.requirements, (group, gi) => {
+					return openBlock(), createElementBlock("li", {
+						key: gi,
+						class: "markdown"
+					}, [group.schemes.length === 1 ? (openBlock(), createBlock(SecurityRequirementBadgeScheme_default, {
+						key: 0,
+						is: "span",
+						class: "contents",
+						scheme: group.schemes[0]
+					}, null, 8, ["scheme"])) : (openBlock(), createElementBlock("ul", _hoisted_5, [(openBlock(true), createElementBlock(Fragment, null, renderList(group.schemes, (scheme, si) => {
+						return openBlock(), createBlock(SecurityRequirementBadgeScheme_default, {
+							key: si,
+							scheme
+						}, null, 8, ["scheme"]);
+					}), 128))]))]);
+				}), 128))])) : isAndGroup.value ? (openBlock(), createElementBlock("ul", _hoisted_6, [(openBlock(true), createElementBlock(Fragment, null, renderList(__props.requiredSecurity.requirements[0].schemes, (scheme, key) => {
+					return openBlock(), createBlock(SecurityRequirementBadgeScheme_default, {
+						key,
+						scheme
+					}, null, 8, ["scheme"]);
+				}), 128))])) : createCommentVNode("", true)])]),
+				default: withCtx(() => [createElementVNode("button", {
+					class: normalizeClass(["security-requirement-badge inline-flex w-fit shrink-0 items-center justify-center gap-1 text-sm", __props.requiredSecurity.state === "optional" ? "text-c-2" : "text-c-1 font-medium"]),
+					type: "button",
+					onClick: _cache[0] || (_cache[0] = withModifiers(() => {}, ["stop"]))
+				}, [__props.requiredSecurity.state === "required" ? (openBlock(), createBlock(unref(ScalarIconLockSimple), {
+					key: 0,
+					class: "size-3",
+					weight: "bold"
+				})) : (openBlock(), createBlock(unref(ScalarIconLockSimpleOpen), {
+					key: 1,
+					class: "size-3",
+					weight: "bold"
+				})), !__props.hideLabel ? (openBlock(), createElementBlock("span", _hoisted_1, toDisplayString(label.value), 1)) : createCommentVNode("", true)], 2)]),
+				_: 1
+			})) : createCommentVNode("", true);
+		};
+	}
+});
+//#endregion
+export { SecurityRequirementBadge_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=SecurityRequirementBadge.vue.script.js.map

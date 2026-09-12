@@ -1,0 +1,78 @@
+import { APP_VERSION as e } from "../../../constants.js";
+import { processBody as t } from "./process-body.js";
+import { processParameters as n } from "./process-parameters.js";
+import { processSecuritySchemes as r } from "./process-security-schemes.js";
+import { processServerUrl as i } from "./process-server-url.js";
+import { getResolvedRef as a } from "@scalar/workspace-store/helpers/get-resolved-ref";
+import { isElectron as o } from "@scalar/helpers/general/is-electron";
+import { filterGlobalCookie as s, getDefaultHeaders as c, restoreConventionalDefaultHeaderNames as l } from "@scalar/workspace-store/request-example";
+//#region src/code-example/helpers/operation-to-har/operation-to-har.ts
+var u = ({ includeDefaultHeaders: u = !1, operation: d, contentType: f, method: p, path: m, server: h = null, example: g, securitySchemes: _, globalCookies: v, requestBodyCompositionSelection: y, defaultDisabledParameters: b = !1 }) => {
+	let x = l(u ? c({
+		method: p,
+		operation: d,
+		exampleName: g ?? "default",
+		hideDisabledHeaders: !0,
+		hideOverriddenHeaders: !0,
+		options: {
+			isElectron: o(),
+			appVersion: e
+		}
+	}) : {}), S = d["x-scalar-disable-parameters"]?.["global-cookies"]?.[g ?? "default"] ?? {}, C = {
+		method: p,
+		url: i(h, m),
+		headers: Object.entries(x).map(([e, t]) => ({
+			name: e,
+			value: t
+		})),
+		queryString: [],
+		postData: void 0,
+		httpVersion: "HTTP/1.1",
+		cookies: [],
+		headersSize: -1,
+		bodySize: -1
+	};
+	if (d.parameters) {
+		let { url: e, headers: t, queryString: r, cookies: i } = n({
+			harRequest: C,
+			parameters: d.parameters,
+			example: g,
+			defaultDisabled: b
+		}), a = v?.filter((t) => s({
+			cookie: t,
+			url: e,
+			disabledGlobalCookies: S
+		}))?.map((e) => ({
+			name: e.name,
+			value: e.value
+		})) ?? [];
+		C.url = e, C.headers = t, C.queryString = r, C.cookies = [...a, ...i];
+	}
+	let w = a(d.requestBody);
+	if (w?.content) {
+		let e = t({
+			requestBody: w,
+			contentType: f,
+			example: g,
+			requestBodyCompositionSelection: y
+		});
+		if (e && (C.postData = e, C.bodySize = e.text?.length ?? -1, e.mimeType)) {
+			let t = C.headers.find((e) => e.name.toLowerCase() === "content-type");
+			t && !t.value ? t.value = e.mimeType : t || C.headers.push({
+				name: "Content-Type",
+				value: e.mimeType
+			});
+		}
+	}
+	if (_) {
+		let { headers: e, queryString: t, cookies: n } = r(_);
+		C.headers.push(...e), C.queryString.push(...t), C.cookies.push(...n);
+	}
+	let T = 0;
+	for (let e of C.headers) T += (e.name?.length ?? 0) + 2 + (e.value?.length ?? 0) + 2;
+	return C.headersSize = T, C;
+};
+//#endregion
+export { u as operationToHar };
+
+//# sourceMappingURL=operation-to-har.js.map

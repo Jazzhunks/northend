@@ -1,0 +1,20 @@
+import { FileExtensionInfo } from "typescript";
+//#region src/volar.d.ts
+interface VolarPlugin {
+  extensionPatterns: RegExp[];
+  tsFileExtensionInfos: FileExtensionInfo[];
+  volarTypeScript: typeof import("@volar/typescript");
+  create: Parameters<(typeof import("@volar/typescript"))["proxyCreateProgram"]>[2];
+  toTsFilename?: (id: string) => string;
+}
+declare class VolarContext {
+  plugins: VolarPlugin[];
+  patterns: RegExp[];
+  constructor(plugins: VolarPlugin[]);
+  isVolarFile(id: string): boolean;
+  getExtraFileExtensions(): FileExtensionInfo[] | undefined;
+  getCreateProgram(ts: typeof import("typescript")): typeof import("typescript").createProgram;
+  toTsFilename(id: string): string;
+}
+//#endregion
+export { VolarPlugin as n, VolarContext as t };

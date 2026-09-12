@@ -1,0 +1,29 @@
+import { p as IndexFilePluginOptions, r as CoreOptions } from "../core-BmvJhZxm.js";
+import { t as MacroPluginOption } from "../options-aB6xV-d7.js";
+import { Plugin } from "vite";
+//#region src/vite/index.d.ts
+interface PluginOptions extends Pick<CoreOptions, 'configPath' | 'outDir' | 'plugins'> {
+  /**
+   * Configure the macro API (`fumadocs-mdx/macro`), or `false` to disable it.
+   *
+   * `macro.include` is passed to the
+   * [`id` filter](https://vite.dev/guide/api-plugin#hook-filters) of the transform hook.
+   */
+  macro?: MacroPluginOption;
+  /**
+   * Generate index files for accessing content.
+   *
+   * @defaultValue true
+   */
+  index?: boolean | IndexFilePluginOptions;
+  /**
+   * Update Vite config to fix module resolution of Fumadocs
+   *
+   * @defaultValue true
+   */
+  updateViteConfig?: boolean;
+}
+declare function mdx(forcedConfig?: Record<string, unknown> | Promise<Record<string, unknown>> | undefined, pluginOptions?: PluginOptions): Plugin[];
+declare function postInstall(pluginOptions?: PluginOptions): Promise<void>;
+//#endregion
+export { PluginOptions, mdx as default, postInstall };

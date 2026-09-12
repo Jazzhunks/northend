@@ -1,0 +1,122 @@
+import { objectEntries } from "@scalar/helpers/object/object-entries";
+import { resolve } from "@scalar/workspace-store/resolve";
+import { isObject } from "@scalar/helpers/object/is-object";
+import { isObjectSchema } from "@scalar/workspace-store/schemas/v3.1/strict/type-guards";
+//#region src/v2/blocks/request-block/helpers/get-form-body-rows.ts
+var stringifyValue = (value) => {
+	if (value instanceof File) return value.name;
+	if (typeof value === "object" && value !== null) return JSON.stringify(value);
+	return String(value);
+};
+/**
+* Walk a (possibly nested) object schema and collect one entry per leaf property.
+*
+* A "leaf" is any property whose resolved schema is not an `{ type: 'object' }` schema
+* with named `properties` — i.e. primitives, arrays, files, and `additionalProperties`
+* placeholders all stop the recursion. Object properties recurse, so the widget example
+* (`file` + `props.{name,description,created_at}`) yields four leaves.
+*/
+var collectLeafProperties = (schema, parentPath = [], parentRequired = true) => {
+	if (!isObjectSchema(schema) || !schema.properties) return [];
+	const requiredSet = new Set(schema.required ?? []);
+	const leaves = [];
+	for (const [key, rawChildSchema] of objectEntries(schema.properties)) {
+		const childSchema = resolve.schema(rawChildSchema);
+		const path = [...parentPath, String(key)];
+		const isRequired = parentRequired && requiredSet.has(String(key));
+		if (childSchema && isObjectSchema(childSchema) && childSchema.properties) leaves.push(...collectLeafProperties(childSchema, path, isRequired));
+		else leaves.push({
+			path,
+			schema: childSchema,
+			isRequired
+		});
+	}
+	return leaves;
+};
+/**
+* Walk a schema + example together and collect one row per leaf, including example-only
+* keys that the schema does not declare. Schema-declared properties come first in schema
+* order; extras present in the example follow in example order at each level.
+*
+* Unlike `collectLeafProperties` (which is schema-only and feeds the dotted-name index),
+* this walker drives what the user actually sees in the form: a row for every leaf the
+* example contains, even when the schema is partial or out of date.
+*/
+var collectExampleRows = (example, schema, parentPath = []) => {
+	const rows = [];
+	const exampleEntries = isObject(example) ? objectEntries(example) : [];
+	const exampleByKey = new Map(exampleEntries.map(([key, value]) => [String(key), value]));
+	const declaredKeys = /* @__PURE__ */ new Set();
+	const schemaProperties = schema && isObjectSchema(schema) ? schema.properties ?? {} : {};
+	for (const [key, rawChildSchema] of objectEntries(schemaProperties)) {
+		const keyStr = String(key);
+		declaredKeys.add(keyStr);
+		const childSchema = resolve.schema(rawChildSchema);
+		const path = [...parentPath, keyStr];
+		const exampleSubvalue = exampleByKey.get(keyStr);
+		if (childSchema && isObjectSchema(childSchema) && childSchema.properties) rows.push(...collectExampleRows(exampleSubvalue, childSchema, path));
+		else rows.push({
+			path,
+			value: exampleSubvalue
+		});
+	}
+	for (const [key, value] of exampleEntries) {
+		const keyStr = String(key);
+		if (declaredKeys.has(keyStr)) continue;
+		rows.push({
+			path: [...parentPath, keyStr],
+			value
+		});
+	}
+	return rows;
+};
+/** Build the table rows for the form data, optionally enriched with schema (e.g. enum) per property */
+var getFormBodyRows = (example, contentType, formBodySchema) => {
+	if (!example?.value || contentType !== "multipart/form-data" && contentType !== "application/x-www-form-urlencoded") return [];
+	const schemaWithProperties = formBodySchema && isObjectSchema(formBodySchema) ? formBodySchema : void 0;
+	const requiredSet = schemaWithProperties ? new Set(schemaWithProperties.required ?? []) : void 0;
+	const leafByDottedName = /* @__PURE__ */ new Map();
+	if (schemaWithProperties) for (const leaf of collectLeafProperties(schemaWithProperties)) leafByDottedName.set(leaf.path.join("."), leaf);
+	const mapRow = ({ name, value, isDisabled = false }) => {
+		const row = {
+			name,
+			value,
+			isDisabled
+		};
+		if (!schemaWithProperties || !name) return row;
+		const leaf = leafByDottedName.get(name);
+		const propSchema = leaf?.schema ?? resolve.schema(schemaWithProperties.properties?.[name]);
+		row.schema = propSchema;
+		row.description = propSchema?.description;
+		row.isRequired = leaf?.isRequired ?? requiredSet?.has(name) ?? false;
+		return row;
+	};
+	if (Array.isArray(example.value)) return example.value.map((exampleValue) => {
+		if (isObject(exampleValue)) return mapRow({
+			name: String(exampleValue.name),
+			value: exampleValue.value instanceof File ? exampleValue.value : String(exampleValue.value),
+			isDisabled: Boolean(exampleValue.isDisabled)
+		});
+		return {
+			name: "",
+			value: exampleValue,
+			isDisabled: false
+		};
+	});
+	if (contentType === "multipart/form-data" && schemaWithProperties && typeof example.value === "object") return collectExampleRows(example.value, schemaWithProperties).map(({ path, value }) => {
+		const rendered = value instanceof File ? value : value === void 0 || value === null ? "" : stringifyValue(value);
+		return mapRow({
+			name: path.join("."),
+			value: rendered
+		});
+	});
+	if (typeof example.value === "object" && example.value) return objectEntries(example.value).map(([key, value]) => mapRow({
+		name: String(key),
+		value: stringifyValue(value)
+	}));
+	return [];
+};
+//#endregion
+export { getFormBodyRows };
+
+//# sourceMappingURL=get-form-body-rows.js.map

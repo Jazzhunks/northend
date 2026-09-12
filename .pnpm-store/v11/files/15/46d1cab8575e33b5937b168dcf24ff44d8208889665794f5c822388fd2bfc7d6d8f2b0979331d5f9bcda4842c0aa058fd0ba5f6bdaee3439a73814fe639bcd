@@ -1,0 +1,26 @@
+import { Type } from '@scalar/typebox';
+import { AVAILABLE_CLIENTS } from '@scalar/types/snippetz';
+import { compose } from '../schemas/compose.js';
+import { extensions } from '../schemas/extensions.js';
+import { xScalarEnvironmentsSchema, } from '../schemas/extensions/document/x-scalar-environments.js';
+import { XScalarActiveEnvironmentSchema, } from '../schemas/extensions/general/x-scalar-active-environment.js';
+import { xScalarCookiesSchema } from '../schemas/extensions/general/x-scalar-cookies.js';
+import { XScalarOrderSchema } from '../schemas/extensions/general/x-scalar-order.js';
+import { XScalarActiveProxySchema } from '../schemas/extensions/workspace/x-scalar-active-proxy.js';
+import { XScalarTabsSchema } from '../schemas/extensions/workspace/x-scalar-tabs.js';
+export const ColorModeSchema = Type.Union([Type.Literal('system'), Type.Literal('light'), Type.Literal('dark')]);
+export const WorkspaceMetaSchema = Type.Partial(compose(Type.Object({
+    [extensions.workspace.colorMode]: ColorModeSchema,
+    // A built-in client id (e.g. `js/fetch`) or a custom sample id (e.g. `custom/python`)
+    [extensions.workspace.defaultClient]: Type.Union([
+        ...AVAILABLE_CLIENTS.map((client) => Type.Literal(client)),
+        Type.String({ pattern: '^custom/' }),
+    ]),
+    // The example key (from an operation's `examples` map) selected across the document,
+    // so request and response example pickers stay in sync between operations
+    [extensions.workspace.defaultExample]: Type.String(),
+    [extensions.workspace.activeDocument]: Type.String(),
+    [extensions.workspace.theme]: Type.String(),
+    [extensions.workspace.sidebarWidth]: Type.Number({ default: 288 }),
+}), XScalarActiveProxySchema));
+export const WorkspaceExtensionsSchema = compose(xScalarEnvironmentsSchema, XScalarActiveEnvironmentSchema, XScalarOrderSchema, xScalarCookiesSchema, XScalarTabsSchema);

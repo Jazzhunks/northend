@@ -1,0 +1,38 @@
+import { type Component } from 'vue';
+/**
+ * Scalar dropdown menu component
+ *
+ * Provides a scrollable container for dropdown items
+ * This is used internally by the ScalarDropdown component
+ *
+ * If you're looking to create a dropdown menu with a trigger
+ * button you probably want the ScalarDropdown component
+ *
+ * @example
+ * <ScalarDropdownMenu>
+ *   <ScalarDropdownItem>Item 1</ScalarDropdownItem>
+ *   <ScalarDropdownItem>Item 2</ScalarDropdownItem>
+ * </ScalarDropdownMenu>
+ */
+declare const _default: typeof __VLS_export;
+export default _default;
+declare const __VLS_export: __VLS_WithSlots<import("vue").DefineComponent<{
+    /** The component to render */
+    is?: string | Component;
+}, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").PublicProps, Readonly<{
+    /** The component to render */
+    is?: string | Component;
+}> & Readonly<{}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>, {
+    /** The menu contents */
+    default?(): unknown;
+    /** Overrides the normal menu list element */
+    menu?(): unknown;
+    /** Overrides the backdrop for the dropdown */
+    backdrop?(): unknown;
+}>;
+type __VLS_WithSlots<T, S> = T & {
+    new (): {
+        $slots: S;
+    };
+};
+//# sourceMappingURL=ScalarDropdownMenu.vue.d.ts.map

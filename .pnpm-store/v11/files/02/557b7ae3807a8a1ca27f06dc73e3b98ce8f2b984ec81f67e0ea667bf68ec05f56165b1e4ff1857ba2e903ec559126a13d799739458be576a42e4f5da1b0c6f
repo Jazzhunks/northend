@@ -1,0 +1,89 @@
+import { a as MetaMethods, n as DocMethods, t as DocData } from "../types-DWoea9Sq.js";
+import { MetaData, PageData, Source } from "fumadocs-core/source";
+import { StructuredData } from "fumadocs-core/mdx-plugins/remark-structure";
+//#region src/runtime/macro.d.ts
+type MacroDocEntry<Frontmatter = unknown, Extra = unknown> = DocData & DocMethods & Frontmatter & Extra;
+type MacroAsyncDocEntry<Frontmatter = unknown, Extra = unknown> = {
+  load: () => Promise<DocData & Extra>;
+  structuredData: () => Promise<StructuredData>;
+} & DocMethods & Frontmatter;
+type MacroMetaEntry<Data = unknown> = MetaMethods & Data;
+interface MacroDocCollection<Frontmatter = unknown, Extra = unknown> {
+  entries: MacroDocEntry<Frontmatter, Extra>[];
+  /**
+   * get an entry by its file path (relative to collection directory)
+   */
+  get: (path: string) => MacroDocEntry<Frontmatter, Extra> | undefined;
+  toFumadocsSource: (options?: ToFumadocsSourceOptions) => Source<{
+    pageData: MacroDocEntry<Frontmatter, Extra>;
+    metaData: MetaData;
+  }>;
+}
+interface MacroAsyncDocCollection<Frontmatter = unknown, Extra = unknown> {
+  entries: MacroAsyncDocEntry<Frontmatter, Extra>[];
+  /**
+   * get an entry by its file path (relative to collection directory)
+   */
+  get: (path: string) => MacroAsyncDocEntry<Frontmatter, Extra> | undefined;
+  toFumadocsSource: (options?: ToFumadocsSourceOptions) => Source<{
+    pageData: MacroAsyncDocEntry<Frontmatter, Extra>;
+    metaData: MetaData;
+  }>;
+}
+interface MacroMetaCollection<Data = unknown> {
+  entries: MacroMetaEntry<Data>[];
+  /**
+   * get an entry by its file path (relative to collection directory)
+   */
+  get: (path: string) => MacroMetaEntry<Data> | undefined;
+}
+interface ToFumadocsSourceOptions {
+  /** base directory for virtual file paths */
+  baseDir?: string;
+}
+interface MacroDocsCollection<Frontmatter extends PageData = PageData, Meta extends MetaData = MetaData, Extra = unknown> {
+  docs: MacroDocEntry<Frontmatter, Extra>[];
+  meta: MacroMetaEntry<Meta>[];
+  getPage: (path: string) => MacroDocEntry<Frontmatter, Extra> | undefined;
+  getMeta: (path: string) => MacroMetaEntry<Meta> | undefined;
+  toFumadocsSource: (options?: ToFumadocsSourceOptions) => Source<{
+    pageData: MacroDocEntry<Frontmatter, Extra>;
+    metaData: MacroMetaEntry<Meta>;
+  }>;
+}
+interface MacroAsyncDocsCollection<Frontmatter extends PageData = PageData, Meta extends MetaData = MetaData, Extra = unknown> {
+  docs: MacroAsyncDocEntry<Frontmatter, Extra>[];
+  meta: MacroMetaEntry<Meta>[];
+  getPage: (path: string) => MacroAsyncDocEntry<Frontmatter, Extra> | undefined;
+  getMeta: (path: string) => MacroMetaEntry<Meta> | undefined;
+  toFumadocsSource: (options?: ToFumadocsSourceOptions) => Source<{
+    pageData: MacroAsyncDocEntry<Frontmatter, Extra>;
+    metaData: MacroMetaEntry<Meta>;
+  }>;
+}
+type GlobEntries = Record<string, unknown | (() => Promise<unknown>)>;
+type LazyGlobEntries = Record<string, () => Promise<unknown>>;
+interface BaseArgs {
+  base: string;
+}
+declare function doc(args: BaseArgs & {
+  entries: GlobEntries;
+}): Promise<MacroDocCollection>;
+declare function docAsync(args: BaseArgs & {
+  head: GlobEntries;
+  body: LazyGlobEntries;
+}): Promise<MacroAsyncDocCollection>;
+declare function meta(args: BaseArgs & {
+  entries: GlobEntries;
+}): Promise<MacroMetaCollection>;
+declare function docs(args: BaseArgs & {
+  entries: GlobEntries;
+  meta: GlobEntries;
+}): Promise<MacroDocsCollection>;
+declare function docsAsync(args: BaseArgs & {
+  head: GlobEntries;
+  body: LazyGlobEntries;
+  meta: GlobEntries;
+}): Promise<MacroAsyncDocsCollection>;
+//#endregion
+export { MacroAsyncDocCollection, MacroAsyncDocEntry, MacroAsyncDocsCollection, MacroDocCollection, MacroDocEntry, MacroDocsCollection, MacroMetaCollection, MacroMetaEntry, doc, docAsync, docs, docsAsync, meta };

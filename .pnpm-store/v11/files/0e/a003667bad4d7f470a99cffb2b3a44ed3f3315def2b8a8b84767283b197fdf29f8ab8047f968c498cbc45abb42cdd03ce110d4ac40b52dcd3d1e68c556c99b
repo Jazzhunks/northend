@@ -1,0 +1,27 @@
+import { computed as e, createBlock as t, createTextVNode as n, defineComponent as r, normalizeStyle as i, openBlock as a, renderSlot as o, resolveDynamicComponent as s, toDisplayString as c, withCtx as l } from "vue";
+import { getHttpMethodInfo as u } from "@scalar/helpers/http/http-info";
+import { normalizeHttpMethod as d } from "@scalar/helpers/http/normalize-http-method";
+//#region src/code-example/components/HttpMethod.vue?vue&type=script&setup=true&lang.ts
+var f = /* @__PURE__ */ r({
+	__name: "HttpMethod",
+	props: {
+		as: {},
+		property: {},
+		short: { type: Boolean },
+		method: {}
+	},
+	setup(r) {
+		let f = r, p = e(() => u(String(f.method || ""))), m = e(() => d(f.method));
+		return (e, u) => (a(), t(s(r.as ?? "span"), {
+			class: "uppercase",
+			style: i({ [r.property || "color"]: p.value.colorVar })
+		}, {
+			default: l(() => [o(e.$slots, "default"), n(" " + c(r.short ? p.value.short : m.value), 1)]),
+			_: 3
+		}, 8, ["style"]));
+	}
+});
+//#endregion
+export { f as default };
+
+//# sourceMappingURL=HttpMethod.vue.script.js.map

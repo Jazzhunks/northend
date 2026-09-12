@@ -1,0 +1,12 @@
+import { replaceVariables as e } from "@scalar/helpers/regex/replace-variables";
+import { mergeUrls as t } from "@scalar/helpers/url/merge-urls";
+//#region src/code-example/helpers/operation-to-har/process-server-url.ts
+var n = (n, r) => {
+	if (!n?.url) return r;
+	let i = n.url;
+	return n.variables ? t(e(i, Object.entries(n.variables).reduce((e, [t, n]) => (n.default !== void 0 && (e[t] = n.default), e), {})), r) : t(i, r);
+};
+//#endregion
+export { n as processServerUrl };
+
+//# sourceMappingURL=process-server-url.js.map

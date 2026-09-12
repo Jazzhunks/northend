@@ -1,0 +1,148 @@
+import PillTooltipHost_default from "./PillTooltipHost.vue.js";
+import { createApp } from "vue";
+import { Decoration, EditorView, RangeSetBuilder, ViewPlugin, WidgetType } from "@scalar/use-codemirror";
+import { getContextFunctionComment } from "@scalar/workspace-store/request-example";
+import { REGEX } from "@scalar/helpers/regex/regex-helpers";
+//#region src/v2/components/code-input/code-variable-widget.ts
+/**
+* Displays `{{name}}` as a pill: environment variables show the resolved value;
+* context functions (e.g. `{{$guid}}`) show that the value is generated at send time.
+*/
+var PillWidget = class PillWidget extends WidgetType {
+	app;
+	pillColor;
+	variableInfo;
+	constructor(variableName, environment, variant) {
+		super();
+		this.variableName = variableName;
+		if (variant === "contextFunction") {
+			this.pillColor = "var(--scalar-color-3)";
+			this.variableInfo = {
+				type: "contextFunction",
+				identifier: variableName,
+				details: getContextFunctionComment(variableName)
+			};
+			return;
+		}
+		this.pillColor = environment?.color || "var(--scalar-color-1)";
+		const variable = environment?.variables?.find((v) => v.name === variableName);
+		const value = variable ? typeof variable.value === "string" ? variable.value : variable.value?.default : void 0;
+		this.variableInfo = {
+			type: "environment",
+			name: variableName,
+			value: value || "No value",
+			isDefined: Boolean(value)
+		};
+	}
+	toDOM() {
+		const span = document.createElement("span");
+		span.className = this.variableInfo.type === "contextFunction" ? "cm-pill cm-pill--context-fn" : "cm-pill";
+		span.textContent = this.variableName;
+		span.style.setProperty("--tw-bg-base", this.pillColor);
+		if (this.variableInfo.type === "environment") span.style.opacity = this.variableInfo.isDefined ? "1" : "0.5";
+		this.app = createApp(PillTooltipHost_default, {
+			context: this.variableInfo,
+			target: span
+		});
+		this.app.mount(document.createElement("div"));
+		return span;
+	}
+	destroy() {
+		if (this.app) {
+			this.app.unmount();
+			this.app = null;
+		}
+	}
+	eq(other) {
+		if (!(other instanceof PillWidget)) return false;
+		if (other.variableName !== this.variableName || other.pillColor !== this.pillColor || other.variableInfo.type !== this.variableInfo.type) return false;
+		const a = other.variableInfo;
+		const b = this.variableInfo;
+		if (a.type !== b.type) return false;
+		if (a.type === "environment" && b.type === "environment") return a.name === b.name && a.value === b.value && a.isDefined === b.isDefined;
+		if (a.type === "contextFunction" && b.type === "contextFunction") return a.identifier === b.identifier && a.details === b.details;
+		return false;
+	}
+	ignoreEvent() {
+		return false;
+	}
+};
+/**
+* Styles the active environment variable pill.
+* This plugin creates decorations for environment variables in the editor.
+*/
+var pillPlugin = (props) => ViewPlugin.fromClass(class {
+	decorations;
+	lastEnvironment;
+	constructor(view) {
+		this.lastEnvironment = props.environment;
+		this.decorations = this.buildDecorations(view);
+	}
+	update(update) {
+		if (props.environment !== this.lastEnvironment) {
+			this.lastEnvironment = props.environment;
+			this.decorations = this.buildDecorations(update.view);
+			return;
+		}
+		if (update.docChanged || update.viewportChanged) this.decorations = this.buildDecorations(update.view);
+	}
+	buildDecorations(view) {
+		const builder = new RangeSetBuilder();
+		const isContextFn = props.isContextFunctionName ?? (() => false);
+		for (const { from, to } of view.visibleRanges) {
+			const text = view.state.doc.sliceString(from, to);
+			const regex = new RegExp(REGEX.VARIABLES.source, REGEX.VARIABLES.flags);
+			let match;
+			while ((match = regex.exec(text)) !== null) {
+				const start = from + match.index;
+				const end = start + match[0].length;
+				const variableName = match[1] ?? "";
+				if (view.state.doc.sliceString(start, end).includes("\n")) continue;
+				const variant = isContextFn(variableName) ? "contextFunction" : "environment";
+				builder.add(start, end, Decoration.widget({
+					widget: new PillWidget(variableName, props.environment, variant),
+					side: 1
+				}));
+			}
+		}
+		return builder.finish();
+	}
+}, { decorations: (v) => v.decorations });
+/**
+* Custom backspace handler for the editor.
+* Handles special cases like removing entire variable syntax and clearing all content.
+*/
+var backspaceCommand = EditorView.domEventHandlers({ keydown(event, view) {
+	if (event.key !== "Backspace") return false;
+	const { state } = view;
+	const { from, to } = state.selection.main;
+	if (from === 0 && to === state.doc.length) {
+		view.dispatch({
+			changes: {
+				from: 0,
+				to: state.doc.length
+			},
+			selection: { anchor: 0 }
+		});
+		event.preventDefault();
+		return true;
+	}
+	if (from === to && from >= 2) {
+		if (state.doc.sliceString(from - 2, from) === "}}") {
+			view.dispatch({
+				changes: {
+					from: from - 2,
+					to: from
+				},
+				selection: { anchor: from - 2 }
+			});
+			event.preventDefault();
+			return true;
+		}
+	}
+	return false;
+} });
+//#endregion
+export { backspaceCommand, pillPlugin };
+
+//# sourceMappingURL=code-variable-widget.js.map

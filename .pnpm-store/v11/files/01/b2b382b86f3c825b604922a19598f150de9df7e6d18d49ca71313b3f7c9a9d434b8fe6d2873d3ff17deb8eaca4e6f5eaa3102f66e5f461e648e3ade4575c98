@@ -1,0 +1,8 @@
+import { ComponentProps } from "react";
+//#region src/layouts/home/slots/header.d.ts
+declare const navItemVariants: (props?: ({
+  variant?: "icon" | "main" | "button" | null | undefined;
+} & import("class-variance-authority/types").ClassProp) | undefined) => string;
+declare function Header(props: ComponentProps<'header'>): string | number | bigint | true | import("react").JSX.Element | Iterable<import("react").ReactNode> | Promise<string | number | bigint | boolean | import("react").ReactPortal | import("react").ReactElement<unknown, string | import("react").JSXElementConstructor<any>> | Iterable<import("react").ReactNode> | null | undefined>;
+//#endregion
+export { Header, navItemVariants };

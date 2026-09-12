@@ -1,0 +1,17 @@
+import type { AuthenticationConfiguration } from '@scalar/types/api-reference';
+import type { AsyncApiComponentsObject } from '@scalar/types/asyncapi/3.1';
+import type { AuthStore } from '@scalar/workspace-store/entities/auth';
+import { type ComponentsObject } from '@scalar/workspace-store/schemas/v3.1/strict/openapi-document';
+import type { SecuritySchemeObjectSecret } from '../../../request-example/builder/security/secret-types.js';
+/** Document security merged with the config security schemes */
+export type MergedSecuritySchemes = Record<string, SecuritySchemeObjectSecret>;
+/**
+ * Merge the authentication config with the document security schemes + the auth store secrets.
+ *
+ * AsyncAPI keeps its security schemes in the same `components.securitySchemes` slot and shares the
+ * `http`/`apiKey`/`oauth2`/`openIdConnect` shapes with OpenAPI, so we accept either spec's schemes
+ * here. Every value is coerced into the OpenAPI `SecuritySchemeObject` shape below, so broker-specific
+ * AsyncAPI types still flow through and degrade gracefully downstream.
+ */
+export declare const mergeSecurity: (documentSecuritySchemes: ComponentsObject["securitySchemes"] | NonNullable<AsyncApiComponentsObject["securitySchemes"]>, configSecuritySchemes: AuthenticationConfiguration["securitySchemes"], authStore: AuthStore, documentName: string, oauth2RedirectUri?: string) => MergedSecuritySchemes;
+//# sourceMappingURL=merge-security.d.ts.map

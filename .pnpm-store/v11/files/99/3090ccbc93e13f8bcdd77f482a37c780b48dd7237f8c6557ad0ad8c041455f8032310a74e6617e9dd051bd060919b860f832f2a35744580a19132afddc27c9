@@ -1,0 +1,1 @@
+{"version":3,"file":"create-search-index.d.ts","sourceRoot":"","sources":["../../../../../src/v2/features/search/helpers/create-search-index.ts"],"names":[],"mappings":"AAGA,OAAO,KAAK,EAAE,eAAe,EAAE,MAAM,8DAA8D,CAAA;AAEnG,OAAO,KAAK,EAAE,QAAQ,EAAE,MAAM,4BAA4B,CAAA;AAE1D;;GAEG;AACH,wBAAgB,iBAAiB,CAAC,SAAS,EAAE,eAAe,EAAE,GAAG,QAAQ,EAAE,CAoB1E"}

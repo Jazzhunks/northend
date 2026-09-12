@@ -1,0 +1,37 @@
+import { cva, useBindCx } from "@scalar/use-hooks/useBindCx";
+import { createCommentVNode, createElementBlock, createElementVNode, defineComponent, mergeProps, normalizeClass, openBlock, toDisplayString, unref } from "vue";
+//#region src/components/ScalarToggle/ScalarToggleSlider.vue?vue&type=script&setup=true&lang.ts
+var _hoisted_1 = ["aria-disabled"];
+var _hoisted_2 = {
+	key: 0,
+	class: "sr-only"
+};
+var ScalarToggleSlider_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	inheritAttrs: false,
+	__name: "ScalarToggleSlider",
+	props: {
+		thumb: { default: "start" },
+		disabled: { type: Boolean },
+		label: {}
+	},
+	setup(__props) {
+		const variants = cva({
+			base: "relative h-3.5 min-w-6 w-6 cursor-pointer rounded-full bg-b-3 transition-colors duration-300",
+			variants: { disabled: { true: "cursor-not-allowed opacity-40" } }
+		});
+		const { cx } = useBindCx();
+		return (_ctx, _cache) => {
+			return openBlock(), createElementBlock("button", mergeProps({
+				"aria-disabled": __props.disabled,
+				type: "button"
+			}, unref(cx)(unref(variants)({ disabled: __props.disabled }))), [createElementVNode("div", { class: normalizeClass(["absolute left-px top-px flex h-3 w-3 items-center justify-center rounded-full bg-b-1 transition-transform duration-300", {
+				"translate-x-1.25": __props.thumb === "center",
+				"translate-x-2.5": __props.thumb === "end"
+			}]) }, null, 2), __props.label ? (openBlock(), createElementBlock("span", _hoisted_2, toDisplayString(__props.label), 1)) : createCommentVNode("", true)], 16, _hoisted_1);
+		};
+	}
+});
+//#endregion
+export { ScalarToggleSlider_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=ScalarToggleSlider.vue.script.js.map

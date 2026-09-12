@@ -1,0 +1,54 @@
+import { capitalize as e } from "@scalar/helpers/string/capitalize";
+//#region src/code-example/helpers/format-language.ts
+var t = {
+	c: "C",
+	clojure: "Clojure",
+	cpp: "C++",
+	"c++": "C++",
+	csharp: "C#",
+	"c#": "C#",
+	css: "CSS",
+	curl: "cURL",
+	dart: "Dart",
+	fsharp: "F#",
+	"f#": "F#",
+	go: "Go",
+	golang: "Go",
+	graphql: "GraphQL",
+	html: "HTML",
+	http: "HTTP",
+	java: "Java",
+	javascript: "JavaScript",
+	js: "JavaScript",
+	json: "JSON",
+	kotlin: "Kotlin",
+	node: "Node.js",
+	nodejs: "Node.js",
+	objc: "Objective-C",
+	"objective-c": "Objective-C",
+	ocaml: "OCaml",
+	php: "PHP",
+	powershell: "PowerShell",
+	py: "Python",
+	python: "Python",
+	r: "R",
+	ruby: "Ruby",
+	rust: "Rust",
+	scala: "Scala",
+	sh: "Shell",
+	shell: "Shell",
+	bash: "Shell",
+	sql: "SQL",
+	swift: "Swift",
+	ts: "TypeScript",
+	typescript: "TypeScript",
+	xml: "XML",
+	yaml: "YAML",
+	yml: "YAML"
+}, n = (n) => {
+	if (n) return t[n.toLowerCase()] ?? e(n);
+};
+//#endregion
+export { n as formatLanguage };
+
+//# sourceMappingURL=format-language.js.map

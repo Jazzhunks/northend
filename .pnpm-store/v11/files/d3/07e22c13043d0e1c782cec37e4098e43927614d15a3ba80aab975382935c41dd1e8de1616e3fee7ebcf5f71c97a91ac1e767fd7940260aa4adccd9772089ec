@@ -1,0 +1,28 @@
+import { lookupVariableValue } from "./lookup-variable-value.js";
+import { getContextFunctionComment, isContextFunctionName } from "@scalar/workspace-store/request-example";
+//#region src/v2/components/code-input/helpers/build-pill-context.ts
+/**
+* Build the tooltip context shown when hovering a pill.
+*
+* `{{$contextFunctions}}` describe what they generate at send time, while
+* regular environment variables show the resolved value (or a "not defined"
+* fallback when the environment does not declare them).
+*/
+var buildPillContext = (variableName, environment) => {
+	if (isContextFunctionName(variableName)) return {
+		type: "contextFunction",
+		identifier: variableName,
+		details: getContextFunctionComment(variableName)
+	};
+	const value = lookupVariableValue(environment, variableName);
+	return {
+		type: "environment",
+		name: variableName,
+		value: value || "No value",
+		isDefined: Boolean(value)
+	};
+};
+//#endregion
+export { buildPillContext };
+
+//# sourceMappingURL=build-pill-context.js.map

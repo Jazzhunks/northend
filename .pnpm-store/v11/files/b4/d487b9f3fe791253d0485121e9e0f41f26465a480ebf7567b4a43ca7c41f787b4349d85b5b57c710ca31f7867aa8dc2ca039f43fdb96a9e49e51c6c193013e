@@ -1,0 +1,7 @@
+import ScalarIconLinkSimpleHorizontalBreak_vue_vue_type_script_setup_true_lang_default from "./ScalarIconLinkSimpleHorizontalBreak.vue.script.js";
+//#region src/components/ScalarIconLinkSimpleHorizontalBreak.vue
+var ScalarIconLinkSimpleHorizontalBreak_default = ScalarIconLinkSimpleHorizontalBreak_vue_vue_type_script_setup_true_lang_default;
+//#endregion
+export { ScalarIconLinkSimpleHorizontalBreak_default as default };
+
+//# sourceMappingURL=ScalarIconLinkSimpleHorizontalBreak.js.map

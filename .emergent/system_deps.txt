@@ -1,0 +1,5 @@
+apt-transport-https=2.6.1
+cron=3.0pl1-162
+gnupg=2.2.40-1.1+deb12u2
+nano=7.2-1+deb12u1
+zstd=1.5.4+dfsg2-5

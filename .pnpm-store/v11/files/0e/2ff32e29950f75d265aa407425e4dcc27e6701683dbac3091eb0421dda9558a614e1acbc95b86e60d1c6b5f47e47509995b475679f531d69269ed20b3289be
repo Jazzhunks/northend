@@ -1,0 +1,92 @@
+/**
+ * Browser clipboard integration for Effect programs.
+ *
+ * This module defines the `Clipboard` service, the `ClipboardError` raised by
+ * failed browser operations, a `make` constructor for custom implementations,
+ * and a browser-backed `layer` that uses `navigator.clipboard`. The service
+ * supports reading and writing text, reading and writing `ClipboardItem`
+ * payloads, writing one `Blob`, and clearing the clipboard.
+ *
+ * @since 4.0.0
+ */
+import * as Context from "effect/Context";
+import * as Data from "effect/Data";
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+const TypeId = "~@effect/platform-browser/Clipboard";
+const ErrorTypeId = "~@effect/platform-browser/Clipboard/ClipboardError";
+/**
+ * Tagged error raised when a browser clipboard operation fails.
+ *
+ * @category errors
+ * @since 4.0.0
+ */
+export class ClipboardError extends /*#__PURE__*/Data.TaggedError("ClipboardError") {
+  [ErrorTypeId] = ErrorTypeId;
+}
+/**
+ * Service tag for browser clipboard capabilities.
+ *
+ * **When to use**
+ *
+ * Use when you need to require or provide clipboard capabilities through
+ * Effect's context.
+ *
+ * @see {@link make} for building a custom clipboard service
+ * @see {@link layer} for providing the browser-backed clipboard service
+ *
+ * @category services
+ * @since 4.0.0
+ */
+export const Clipboard = /*#__PURE__*/Context.Service(TypeId);
+/**
+ * Builds a `Clipboard` service from primitive read and write operations, deriving `clear` and `writeBlob` helpers.
+ *
+ * @category constructors
+ * @since 4.0.0
+ */
+export const make = impl => Clipboard.of({
+  ...impl,
+  [TypeId]: TypeId,
+  clear: impl.writeString(""),
+  writeBlob: blob => impl.write([new ClipboardItem({
+    [blob.type]: blob
+  })])
+});
+/**
+ * Layer that directly interfaces with the browser Clipboard API.
+ *
+ * @category layers
+ * @since 4.0.0
+ */
+export const layer = /*#__PURE__*/Layer.succeed(Clipboard, /*#__PURE__*/make({
+  read: /*#__PURE__*/Effect.tryPromise({
+    try: () => navigator.clipboard.read(),
+    catch: cause => new ClipboardError({
+      cause,
+      "message": "Unable to read from clipboard"
+    })
+  }),
+  write: s => Effect.tryPromise({
+    try: () => navigator.clipboard.write(s),
+    catch: cause => new ClipboardError({
+      cause,
+      "message": "Unable to write to clipboard"
+    })
+  }),
+  readString: /*#__PURE__*/Effect.tryPromise({
+    try: () => navigator.clipboard.readText(),
+    catch: cause => new ClipboardError({
+      cause,
+      "message": "Unable to read a string from clipboard"
+    })
+  }),
+  writeString: text => Effect.tryPromise({
+    try: () => navigator.clipboard.writeText(text),
+    catch: cause => new ClipboardError({
+      cause,
+      "message": "Unable to write a string to clipboard"
+    })
+  })
+}));
+//# sourceMappingURL=Clipboard.js.map

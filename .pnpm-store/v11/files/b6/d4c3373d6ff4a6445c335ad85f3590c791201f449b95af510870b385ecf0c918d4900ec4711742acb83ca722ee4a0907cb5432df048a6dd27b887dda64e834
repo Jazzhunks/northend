@@ -1,0 +1,192 @@
+import { getPathItemOperation } from '../../helpers/for-each-path-item-operation.js';
+import { getResolvedRef } from '../../helpers/get-resolved-ref.js';
+import { unpackProxyObject } from '../../helpers/unpack-proxy.js';
+import { isOpenApiDocument } from '../../schemas/type-guards.js';
+const getPathItemsForParameterMutation = (pathItemRef) => {
+    if (!pathItemRef || typeof pathItemRef !== 'object') {
+        return [];
+    }
+    if ('$ref' in pathItemRef) {
+        const targets = [];
+        const refWrapper = pathItemRef;
+        if (refWrapper.parameters !== undefined) {
+            targets.push(refWrapper);
+        }
+        const resolved = getResolvedRef(pathItemRef);
+        if (resolved) {
+            targets.push(resolved);
+        }
+        return targets;
+    }
+    return [pathItemRef];
+};
+/**
+ * Updates an existing parameter of a given `type` by its index within that
+ * type subset (e.g. the N-th query parameter). Supports updating name, value,
+ * and enabled state for the targeted example.
+ * Safely no-ops if the document, operation, or parameter does not exist.
+ *
+ * Example:
+ * ```ts
+ * updateOperationParameter({
+ *   document,
+ *   type: 'query',
+ *   index: 0,
+ *   meta: { method: 'get', path: '/search', exampleKey: 'default' },
+ *   payload: { value: 'alice', isDisabled: false },
+ * })
+ * ```
+ */
+export const upsertOperationParameter = (document, { meta, type, payload, originalParameter }) => {
+    // We are editing an existing parameter
+    if (originalParameter) {
+        // To support content-type parameters in the API client, we just assume an
+        // examples property can be set.
+        const param = originalParameter;
+        param.name = payload.name;
+        if (!param.examples) {
+            param.examples = {};
+        }
+        // Create the example if it doesn't exist
+        if (!param.examples[meta.exampleKey]) {
+            param.examples[meta.exampleKey] = {};
+        }
+        const example = getResolvedRef(param.examples[meta.exampleKey]);
+        // Update the example value and disabled state
+        example.value = payload.value;
+        example['x-disabled'] = payload.isDisabled;
+        return;
+    }
+    // We are adding a new parameter
+    if (!isOpenApiDocument(document)) {
+        return;
+    }
+    const operation = getResolvedRef(getPathItemOperation(document.paths?.[meta.path], meta.method));
+    if (!operation) {
+        console.error('Operation not found', { meta, document });
+        return;
+    }
+    operation.parameters ||= [];
+    operation.parameters.push({
+        name: payload.name,
+        in: type,
+        required: type === 'path' ? true : false,
+        examples: {
+            [meta.exampleKey]: {
+                value: payload.value,
+                // We always want a new parameter to be enabled by default
+                'x-disabled': false,
+            },
+        },
+    });
+    return;
+};
+/**
+ * Updates the disabled state of a default parameter for an operation.
+ * Default parameters are inherited from higher-level configurations (like collection or server defaults)
+ * and this allows individual operations to selectively disable them without removing them entirely.
+ *
+ * The disabled state is stored in the `x-scalar-disable-parameters` extension object, organized by
+ * parameter type and example key. Missing objects are initialized automatically.
+ *
+ * @param document - The current workspace document
+ * @param type - The parameter type (e.g., 'header'). Determines the storage key ('default-headers' for headers)
+ * @param meta.path - Path of the operation (e.g., '/users')
+ * @param meta.method - HTTP method of the operation (e.g., 'get')
+ * @param meta.exampleKey - Key identifying the relevant example
+ * @param meta.key - The specific parameter key being updated
+ * @param payload.isDisabled - Whether the parameter should be disabled
+ */
+export const updateOperationExtraParameters = (document, { type, meta, payload, in: location }) => {
+    // Ensure there's a valid document
+    if (!isOpenApiDocument(document)) {
+        return;
+    }
+    // Resolve the referenced operation from the document using the path and method
+    const operation = getResolvedRef(getPathItemOperation(document.paths?.[meta.path], meta.method));
+    if (!operation) {
+        return;
+    }
+    // Initialize the 'x-scalar-disable-parameters' object if it doesn't exist
+    if (!operation['x-scalar-disable-parameters']) {
+        operation['x-scalar-disable-parameters'] = {};
+    }
+    /**
+     * Maps parameter type and location to the corresponding config key.
+     * Only valid combinations are defined here.
+     */
+    const mapping = {
+        global: { cookie: 'global-cookies' },
+        default: { header: 'default-headers' },
+    };
+    const key = mapping[type]?.[location];
+    if (!key) {
+        return;
+    }
+    // Initialize the 'default-headers' object within 'x-scalar-disable-parameters' if it doesn't exist
+    if (!operation['x-scalar-disable-parameters'][key]) {
+        operation['x-scalar-disable-parameters'][key] = {};
+    }
+    // Update (or create) the entry for the specific example and key, preserving any existing settings
+    operation['x-scalar-disable-parameters'][key][meta.exampleKey] = {
+        ...(operation['x-scalar-disable-parameters'][key][meta.exampleKey] ?? {}),
+        [meta.name]: payload.isDisabled ?? false,
+    };
+};
+/**
+ * Removes a parameter from the operation OR path
+ *
+ * Example:
+ * ```ts
+ * deleteOperationParameter({
+ *   document,
+ *   originalParameter,
+ *   meta: { method: 'get', path: '/users', exampleKey: 'default' },
+ * })
+ * ```
+ */
+export const deleteOperationParameter = (document, { meta, originalParameter }) => {
+    if (!isOpenApiDocument(document)) {
+        return;
+    }
+    const operation = getResolvedRef(getPathItemOperation(document.paths?.[meta.path], meta.method));
+    // Lets check if its on the operation first as its more likely
+    const operationIndex = operation?.parameters?.findIndex((it) => getResolvedRef(it) === originalParameter) ?? -1;
+    // We cannot call splice on a proxy object, so we unwrap the array and filter it
+    if (operation && operationIndex >= 0) {
+        operation.parameters = unpackProxyObject(operation.parameters?.filter((_, i) => i !== operationIndex), { depth: 1 });
+        return;
+    }
+    // If it wasn't on the operation it might be on the path (wrapper siblings or $ref-value)
+    for (const path of getPathItemsForParameterMutation(document.paths?.[meta.path])) {
+        const pathIndex = path.parameters?.findIndex((parameter) => getResolvedRef(parameter) === originalParameter) ?? -1;
+        if (pathIndex >= 0) {
+            path.parameters = unpackProxyObject(path.parameters?.filter((_, i) => i !== pathIndex), { depth: 1 });
+            return;
+        }
+    }
+};
+/**
+ * Deletes all parameters of a given `type` from the operation.
+ * Safely no-ops if the document or operation does not exist.
+ *
+ * Example:
+ * ```ts
+ * deleteAllOperationParameters({
+ *   document,
+ *   type: 'cookie',
+ *   meta: { method: 'get', path: '/users' },
+ * })
+ * ```
+ */
+export const deleteAllOperationParameters = (document, { meta, type }) => {
+    if (!isOpenApiDocument(document)) {
+        return;
+    }
+    const operation = getResolvedRef(getPathItemOperation(document.paths?.[meta.path], meta.method));
+    if (!operation) {
+        return;
+    }
+    // Filter out parameters of the specified type
+    operation.parameters = operation.parameters?.filter((it) => getResolvedRef(it).in !== type) ?? [];
+};

@@ -1,0 +1,1 @@
+{"version":3,"file":"use-signup-link.d.ts","sourceRoot":"","sources":["../../src/hooks/use-signup-link.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,WAAW,EAAE,MAAM,KAAK,CAAA;AAKtC;;;;;GAKG;AACH,wBAAgB,aAAa,IAAI;IAC/B,UAAU,EAAE,WAAW,CAAC,MAAM,CAAC,CAAA;IAC/B,gBAAgB,EAAE,MAAM,IAAI,CAAA;CAC7B,CAoBA"}

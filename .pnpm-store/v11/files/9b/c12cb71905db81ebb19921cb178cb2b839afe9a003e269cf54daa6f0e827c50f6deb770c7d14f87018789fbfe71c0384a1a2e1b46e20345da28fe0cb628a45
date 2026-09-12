@@ -1,0 +1,33 @@
+/**
+ * Scalar Tristate Toggle component
+ *
+ * A switch-style toggle control with three states — unset, on, and off —
+ * useful for representing an optional boolean that can also be left
+ * unset (e.g. "inherit"). Supports a disabled state and accessible
+ * labeling.
+ *
+ * @example
+ * <ScalarTristateToggle v-model="overridden" label="Override default" />
+ */
+declare const _default: typeof __VLS_export;
+export default _default;
+declare const __VLS_export: import("vue").DefineComponent<{
+    /** Prevents the toggle from being cycled, and dims it visually. */
+    disabled?: boolean;
+    /** Accessible label announced to assistive technology */
+    label?: string;
+} & {
+    modelValue?: boolean | undefined;
+}, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {
+    "update:modelValue": (value: boolean | undefined) => any;
+}, string, import("vue").PublicProps, Readonly<{
+    /** Prevents the toggle from being cycled, and dims it visually. */
+    disabled?: boolean;
+    /** Accessible label announced to assistive technology */
+    label?: string;
+} & {
+    modelValue?: boolean | undefined;
+}> & Readonly<{
+    "onUpdate:modelValue"?: ((value: boolean | undefined) => any) | undefined;
+}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;
+//# sourceMappingURL=ScalarTristateToggle.vue.d.ts.map

@@ -1,0 +1,1 @@
+export declare const staticFunctionMiddleware: import('@tanstack/start-client-core').FunctionMiddlewareAfterServer<{}, unknown, undefined, undefined, undefined, undefined, undefined>;

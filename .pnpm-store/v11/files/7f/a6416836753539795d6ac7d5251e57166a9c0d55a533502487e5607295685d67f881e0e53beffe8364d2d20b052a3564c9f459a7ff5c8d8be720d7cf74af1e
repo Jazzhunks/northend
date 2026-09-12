@@ -1,0 +1,1 @@
+{"version":3,"file":"constants.js","names":[],"sources":["../../../src/entities/prompt/constants.ts"],"sourcesContent":["export const MAX_PROMPT_SIZE = 10_000\n"],"mappings":";AAAA,IAAa,kBAAkB"}

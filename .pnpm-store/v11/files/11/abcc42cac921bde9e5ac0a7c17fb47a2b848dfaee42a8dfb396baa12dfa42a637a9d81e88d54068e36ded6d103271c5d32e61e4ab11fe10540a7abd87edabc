@@ -1,0 +1,107 @@
+import DataTable_default from "../../../components/data-table/DataTable.vue.js";
+import RequestAuthTab_default from "./RequestAuthTab.vue.js";
+import { Fragment, computed, createBlock, createCommentVNode, createElementBlock, createElementVNode, createVNode, defineComponent, normalizeClass, openBlock, renderList, toDisplayString, unref, withCtx, withModifiers } from "vue";
+//#region src/v2/blocks/scalar-auth-selector-block/components/RequestAuthDataTable.vue?vue&type=script&setup=true&lang.ts
+var _hoisted_1 = ["onClick"];
+var _hoisted_2 = { class: "relative z-10 font-medium whitespace-nowrap" };
+var _hoisted_3 = {
+	key: 0,
+	class: "absolute inset-x-1 bottom-[var(--scalar-border-width)] left-1/2 z-1 h-px w-full -translate-x-1/2 bg-current"
+};
+var RequestAuthDataTable_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	__name: "RequestAuthDataTable",
+	props: {
+		environment: {},
+		isStatic: { type: Boolean },
+		selectedSchemeOptions: {},
+		activeAuthIndex: {},
+		proxyUrl: {},
+		securitySchemes: { default: () => ({}) },
+		server: {},
+		eventBus: {},
+		meta: {},
+		options: {},
+		documentType: {}
+	},
+	setup(__props, { expose: __expose }) {
+		/** Currently selected authentication scheme based on the active tab index */
+		const activeScheme = computed(() => __props.selectedSchemeOptions[__props.activeAuthIndex]);
+		/**
+		* Whether to display multiple authentication tabs.
+		* Only shows tabs when there are 2 or more schemes available.
+		*/
+		const shouldShowTabs = computed(() => __props.selectedSchemeOptions.length > 1);
+		/** Handles authentication tab selection */
+		const handleTabChange = (index) => __props.eventBus.emit("auth:update:active-index", {
+			index,
+			meta: __props.meta
+		});
+		/** Handles updates to OAuth scope selection */
+		const handleScopesUpdate = (params) => __props.eventBus.emit("auth:update:selected-scopes", {
+			...params,
+			meta: __props.meta
+		});
+		/** Handles scope-definition upserts (add / rename / description change) */
+		const handleScopeUpsert = (params) => __props.eventBus.emit("auth:upsert:scopes", params);
+		/** Handles scope-definition deletes */
+		const handleScopeDelete = (params) => __props.eventBus.emit("auth:delete:scopes", params);
+		/** Determines if a tab is currently active */
+		const isTabActive = (index) => __props.activeAuthIndex === index;
+		/** Expose the active scheme for parent component access */
+		__expose({ activeScheme });
+		return (_ctx, _cache) => {
+			return openBlock(), createElementBlock("form", { onSubmit: _cache[0] || (_cache[0] = withModifiers(() => {}, ["prevent"])) }, [shouldShowTabs.value ? (openBlock(), createElementBlock("div", {
+				key: 0,
+				class: normalizeClass(["box-content flex flex-wrap gap-x-2.5 overflow-hidden border-x border-t px-3", { "border-x-0": !__props.isStatic }]),
+				"data-testid": "auth-tabs"
+			}, [(openBlock(true), createElementBlock(Fragment, null, renderList(__props.selectedSchemeOptions, (option, index) => {
+				return openBlock(), createElementBlock("div", {
+					key: option.id,
+					class: "relative z-1 -mb-[var(--scalar-border-width)] flex h-8"
+				}, [createElementVNode("button", {
+					class: normalizeClass(["floating-bg relative cursor-pointer border-b border-transparent py-1 text-sm font-medium transition-colors", isTabActive(index) ? "text-c-1" : "text-c-3"]),
+					type: "button",
+					onClick: ($event) => handleTabChange(index)
+				}, [createElementVNode("span", _hoisted_2, toDisplayString(option.label), 1)], 10, _hoisted_1), isTabActive(index) ? (openBlock(), createElementBlock("div", _hoisted_3)) : createCommentVNode("", true)]);
+			}), 128))], 2)) : createCommentVNode("", true), activeScheme.value ? (openBlock(), createBlock(unref(DataTable_default), {
+				key: 1,
+				class: normalizeClass(["flex-1", { "bg-b-1 rounded-b-lg border-x border-b": __props.isStatic }]),
+				columns: [""],
+				presentational: ""
+			}, {
+				default: withCtx(() => [createVNode(RequestAuthTab_default, {
+					documentType: __props.documentType,
+					environment: __props.environment,
+					eventBus: __props.eventBus,
+					isStatic: __props.isStatic,
+					options: __props.options,
+					proxyUrl: __props.proxyUrl,
+					securitySchemes: __props.securitySchemes,
+					selectedSecuritySchemas: activeScheme.value.value,
+					server: __props.server,
+					"onDelete:scope": handleScopeDelete,
+					"onUpdate:selectedScopes": handleScopesUpdate,
+					"onUpsert:scope": handleScopeUpsert
+				}, null, 8, [
+					"documentType",
+					"environment",
+					"eventBus",
+					"isStatic",
+					"options",
+					"proxyUrl",
+					"securitySchemes",
+					"selectedSecuritySchemas",
+					"server"
+				])]),
+				_: 1
+			}, 8, ["class"])) : (openBlock(), createElementBlock("div", {
+				key: 2,
+				class: normalizeClass(["bg-b-1 text-c-3 flex min-h-16 items-center justify-center border-t px-4 text-sm", { "min-h-[calc(4rem+0.5px)] rounded-b-lg border": __props.isStatic }])
+			}, " No authentication selected ", 2))], 32);
+		};
+	}
+});
+//#endregion
+export { RequestAuthDataTable_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=RequestAuthDataTable.vue.script.js.map

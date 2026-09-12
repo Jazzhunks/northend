@@ -1,0 +1,128 @@
+import { type XScalarCredentialsLocation } from '../../../schemas/extensions/security/x-scalar-credentials-location.js';
+import { type XScalarSecurityBody } from '../../../schemas/extensions/security/x-scalar-security-body.js';
+import { type XScalarSecurityQuery } from '../../../schemas/extensions/security/x-scalar-security-query.js';
+import { type XScalarAuthUrl, type XScalarTokenUrl } from '../../../schemas/extensions/security/x-scalar-security-secrets.js';
+import { type XTokenName } from '../../../schemas/extensions/security/x-tokenName.js';
+import { type XusePkce } from '../../../schemas/extensions/security/x-use-pkce.js';
+/** Common properties used across all OAuth flows */
+type OAuthFlowCommon = {
+    /** The URL to be used for obtaining refresh tokens. This MUST be in the form of a URL. The OAuth2 standard requires the use of TLS. */
+    refreshUrl: string;
+    /** REQUIRED. The available scopes for the OAuth2 security scheme. A map between the scope name and a short description for it. The map MAY be empty. */
+    scopes: Record<string, string>;
+} & XScalarSecurityQuery & XScalarSecurityBody & XTokenName & XScalarTokenUrl & XScalarAuthUrl;
+/** Configuration for the OAuth Implicit flow */
+export declare const OAuthFlowImplicitSchema: import("@scalar/typebox").TIntersect<[import("@scalar/typebox").TIntersect<[import("@scalar/typebox").TObject<{
+    /** The URL to be used for obtaining refresh tokens. This MUST be in the form of a URL. The OAuth2 standard requires the use of TLS. */
+    refreshUrl: import("@scalar/typebox").TString;
+    /** REQUIRED. The available scopes for the OAuth2 security scheme. A map between the scope name and a short description for it. The map MAY be empty. */
+    scopes: import("@scalar/typebox").TRecord<import("@scalar/typebox").TString, import("@scalar/typebox").TString>;
+}>, import("@scalar/typebox").TObject<{
+    'x-scalar-security-query': import("@scalar/typebox").TOptional<import("@scalar/typebox").TRecord<import("@scalar/typebox").TString, import("@scalar/typebox").TString>>;
+}>, import("@scalar/typebox").TObject<{
+    'x-scalar-security-body': import("@scalar/typebox").TOptional<import("@scalar/typebox").TRecord<import("@scalar/typebox").TString, import("@scalar/typebox").TString>>;
+}>, import("@scalar/typebox").TObject<{
+    'x-tokenName': import("@scalar/typebox").TOptional<import("@scalar/typebox").TString>;
+}>, import("@scalar/typebox").TObject<{
+    'x-scalar-secret-auth-url': import("@scalar/typebox").TOptional<import("@scalar/typebox").TString>;
+}>, import("@scalar/typebox").TObject<{
+    'x-scalar-secret-token-url': import("@scalar/typebox").TOptional<import("@scalar/typebox").TString>;
+}>]>, import("@scalar/typebox").TObject<{
+    /** REQUIRED. The authorization URL to be used for this flow. This MUST be in the form of a URL. The OAuth2 standard requires the use of TLS. */
+    authorizationUrl: import("@scalar/typebox").TString;
+}>]>;
+/** Configuration for the OAuth Implicit flow */
+export type OAuthFlowImplicit = OAuthFlowCommon & {
+    /** REQUIRED. The authorization URL to be used for this flow. This MUST be in the form of a URL. The OAuth2 standard requires the use of TLS. */
+    authorizationUrl: string;
+};
+/** Configuration for the OAuth Resource Owner Password flow */
+export declare const OAuthFlowPasswordSchema: import("@scalar/typebox").TIntersect<[import("@scalar/typebox").TIntersect<[import("@scalar/typebox").TObject<{
+    /** The URL to be used for obtaining refresh tokens. This MUST be in the form of a URL. The OAuth2 standard requires the use of TLS. */
+    refreshUrl: import("@scalar/typebox").TString;
+    /** REQUIRED. The available scopes for the OAuth2 security scheme. A map between the scope name and a short description for it. The map MAY be empty. */
+    scopes: import("@scalar/typebox").TRecord<import("@scalar/typebox").TString, import("@scalar/typebox").TString>;
+}>, import("@scalar/typebox").TObject<{
+    'x-scalar-security-query': import("@scalar/typebox").TOptional<import("@scalar/typebox").TRecord<import("@scalar/typebox").TString, import("@scalar/typebox").TString>>;
+}>, import("@scalar/typebox").TObject<{
+    'x-scalar-security-body': import("@scalar/typebox").TOptional<import("@scalar/typebox").TRecord<import("@scalar/typebox").TString, import("@scalar/typebox").TString>>;
+}>, import("@scalar/typebox").TObject<{
+    'x-tokenName': import("@scalar/typebox").TOptional<import("@scalar/typebox").TString>;
+}>, import("@scalar/typebox").TObject<{
+    'x-scalar-secret-auth-url': import("@scalar/typebox").TOptional<import("@scalar/typebox").TString>;
+}>, import("@scalar/typebox").TObject<{
+    'x-scalar-secret-token-url': import("@scalar/typebox").TOptional<import("@scalar/typebox").TString>;
+}>]>, import("@scalar/typebox").TObject<{
+    /** REQUIRED. The token URL to be used for this flow. This MUST be in the form of a URL. The OAuth2 standard requires the use of TLS. */
+    tokenUrl: import("@scalar/typebox").TString;
+}>, import("@scalar/typebox").TObject<{
+    'x-scalar-credentials-location': import("@scalar/typebox").TOptional<import("@scalar/typebox").TUnion<[import("@scalar/typebox").TLiteral<"header">, import("@scalar/typebox").TLiteral<"body">]>>;
+}>]>;
+/** Configuration for the OAuth Resource Owner Password flow */
+export type OAuthFlowPassword = OAuthFlowCommon & {
+    /** REQUIRED. The token URL to be used for this flow. This MUST be in the form of a URL. The OAuth2 standard requires the use of TLS. */
+    tokenUrl: string;
+} & XScalarCredentialsLocation;
+/** Configuration for the OAuth Client Credentials flow. Previously called application in OpenAPI 2.0. */
+export declare const OAuthFlowClientCredentialsSchema: import("@scalar/typebox").TIntersect<[import("@scalar/typebox").TIntersect<[import("@scalar/typebox").TObject<{
+    /** The URL to be used for obtaining refresh tokens. This MUST be in the form of a URL. The OAuth2 standard requires the use of TLS. */
+    refreshUrl: import("@scalar/typebox").TString;
+    /** REQUIRED. The available scopes for the OAuth2 security scheme. A map between the scope name and a short description for it. The map MAY be empty. */
+    scopes: import("@scalar/typebox").TRecord<import("@scalar/typebox").TString, import("@scalar/typebox").TString>;
+}>, import("@scalar/typebox").TObject<{
+    'x-scalar-security-query': import("@scalar/typebox").TOptional<import("@scalar/typebox").TRecord<import("@scalar/typebox").TString, import("@scalar/typebox").TString>>;
+}>, import("@scalar/typebox").TObject<{
+    'x-scalar-security-body': import("@scalar/typebox").TOptional<import("@scalar/typebox").TRecord<import("@scalar/typebox").TString, import("@scalar/typebox").TString>>;
+}>, import("@scalar/typebox").TObject<{
+    'x-tokenName': import("@scalar/typebox").TOptional<import("@scalar/typebox").TString>;
+}>, import("@scalar/typebox").TObject<{
+    'x-scalar-secret-auth-url': import("@scalar/typebox").TOptional<import("@scalar/typebox").TString>;
+}>, import("@scalar/typebox").TObject<{
+    'x-scalar-secret-token-url': import("@scalar/typebox").TOptional<import("@scalar/typebox").TString>;
+}>]>, import("@scalar/typebox").TObject<{
+    /** REQUIRED. The token URL to be used for this flow. This MUST be in the form of a URL. The OAuth2 standard requires the use of TLS. */
+    tokenUrl: import("@scalar/typebox").TString;
+}>, import("@scalar/typebox").TObject<{
+    'x-scalar-credentials-location': import("@scalar/typebox").TOptional<import("@scalar/typebox").TUnion<[import("@scalar/typebox").TLiteral<"header">, import("@scalar/typebox").TLiteral<"body">]>>;
+}>]>;
+/** Configuration for the OAuth Client Credentials flow. Previously called application in OpenAPI 2.0. */
+export type OAuthFlowClientCredentials = OAuthFlowCommon & {
+    /** REQUIRED. The token URL to be used for this flow. This MUST be in the form of a URL. The OAuth2 standard requires the use of TLS. */
+    tokenUrl: string;
+} & XScalarCredentialsLocation;
+/** Configuration for the OAuth Authorization Code flow. Previously called accessCode in OpenAPI 2.0. */
+export declare const OAuthFlowAuthorizationCodeSchema: import("@scalar/typebox").TIntersect<[import("@scalar/typebox").TIntersect<[import("@scalar/typebox").TObject<{
+    /** The URL to be used for obtaining refresh tokens. This MUST be in the form of a URL. The OAuth2 standard requires the use of TLS. */
+    refreshUrl: import("@scalar/typebox").TString;
+    /** REQUIRED. The available scopes for the OAuth2 security scheme. A map between the scope name and a short description for it. The map MAY be empty. */
+    scopes: import("@scalar/typebox").TRecord<import("@scalar/typebox").TString, import("@scalar/typebox").TString>;
+}>, import("@scalar/typebox").TObject<{
+    'x-scalar-security-query': import("@scalar/typebox").TOptional<import("@scalar/typebox").TRecord<import("@scalar/typebox").TString, import("@scalar/typebox").TString>>;
+}>, import("@scalar/typebox").TObject<{
+    'x-scalar-security-body': import("@scalar/typebox").TOptional<import("@scalar/typebox").TRecord<import("@scalar/typebox").TString, import("@scalar/typebox").TString>>;
+}>, import("@scalar/typebox").TObject<{
+    'x-tokenName': import("@scalar/typebox").TOptional<import("@scalar/typebox").TString>;
+}>, import("@scalar/typebox").TObject<{
+    'x-scalar-secret-auth-url': import("@scalar/typebox").TOptional<import("@scalar/typebox").TString>;
+}>, import("@scalar/typebox").TObject<{
+    'x-scalar-secret-token-url': import("@scalar/typebox").TOptional<import("@scalar/typebox").TString>;
+}>]>, import("@scalar/typebox").TObject<{
+    /** REQUIRED. The authorization URL to be used for this flow. This MUST be in the form of a URL. The OAuth2 standard requires the use of TLS. */
+    authorizationUrl: import("@scalar/typebox").TString;
+    /** REQUIRED. The token URL to be used for this flow. This MUST be in the form of a URL. The OAuth2 standard requires the use of TLS. */
+    tokenUrl: import("@scalar/typebox").TString;
+}>, import("@scalar/typebox").TObject<{
+    'x-usePkce': import("@scalar/typebox").TUnion<[import("@scalar/typebox").TLiteral<"SHA-256">, import("@scalar/typebox").TLiteral<"plain">, import("@scalar/typebox").TLiteral<"no">]>;
+}>, import("@scalar/typebox").TObject<{
+    'x-scalar-credentials-location': import("@scalar/typebox").TOptional<import("@scalar/typebox").TUnion<[import("@scalar/typebox").TLiteral<"header">, import("@scalar/typebox").TLiteral<"body">]>>;
+}>]>;
+/** Configuration for the OAuth Authorization Code flow. Previously called accessCode in OpenAPI 2.0. */
+export type OAuthFlowAuthorizationCode = OAuthFlowCommon & {
+    /** REQUIRED. The authorization URL to be used for this flow. This MUST be in the form of a URL. The OAuth2 standard requires the use of TLS. */
+    authorizationUrl: string;
+    /** REQUIRED. The token URL to be used for this flow. This MUST be in the form of a URL. The OAuth2 standard requires the use of TLS. */
+    tokenUrl: string;
+} & XusePkce & XScalarCredentialsLocation;
+export type OAuthFlow = OAuthFlowImplicit | OAuthFlowPassword | OAuthFlowClientCredentials | OAuthFlowAuthorizationCode;
+export {};
+//# sourceMappingURL=oauth-flow.d.ts.map

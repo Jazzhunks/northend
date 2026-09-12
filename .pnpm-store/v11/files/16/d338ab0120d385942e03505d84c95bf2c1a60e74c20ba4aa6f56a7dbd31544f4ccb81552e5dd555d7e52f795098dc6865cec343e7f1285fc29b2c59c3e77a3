@@ -1,0 +1,151 @@
+import OperationBlock_default from "../../blocks/operation-block/OperationBlock.vue.js";
+import { APP_VERSION } from "../../constants.js";
+import { mapHiddenClientsConfig } from "../modal/helpers/map-hidden-clients-config.js";
+import { computed, createBlock, createElementBlock, createElementVNode, defineComponent, openBlock, toValue, unref } from "vue";
+import { getActiveProxyUrl, getRequestExampleContext } from "@scalar/workspace-store/request-example";
+import { isElectron } from "@scalar/helpers/general/is-electron";
+//#region src/v2/features/operation/Operation.vue?vue&type=script&setup=true&lang.ts
+var _hoisted_1 = {
+	key: 1,
+	class: "flex h-full w-full items-center justify-center"
+};
+var Operation_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	__name: "Operation",
+	props: {
+		documentSlug: {},
+		document: {},
+		eventBus: {},
+		layout: {},
+		path: {},
+		method: {},
+		exampleName: {},
+		environment: {},
+		workspaceStore: {},
+		plugins: {},
+		options: {},
+		requestBodyCompositionSelection: {}
+	},
+	setup(__props) {
+		/**
+		* Shared request-example context (operation, servers, auth scope, cookies). Recomputed when any
+		* underlying workspace or route input changes — same reactivity as the previous local computeds.
+		*/
+		const requestExample = computed(() => {
+			if (!__props.path || !__props.method || !__props.exampleName || !__props.document) return null;
+			const result = getRequestExampleContext(__props.workspaceStore, __props.documentSlug, {
+				path: __props.path,
+				method: __props.method,
+				exampleName: __props.exampleName
+			}, {
+				baseServerUrl: toValue(__props.options)?.baseServerURL,
+				fallbackDocument: __props.document,
+				isElectron: isElectron(),
+				layout: __props.layout === "web" ? "web" : "other",
+				servers: toValue(__props.options)?.servers,
+				appVersion: APP_VERSION,
+				authentication: toValue(__props.options)?.authentication
+			});
+			return result.ok ? result.data : null;
+		});
+		const operation = computed(() => requestExample.value?.operation ?? null);
+		const workspaceCookies = computed(() => requestExample.value?.cookies.workspace ?? []);
+		const documentCookies = computed(() => requestExample.value?.cookies.document ?? []);
+		const servers = computed(() => requestExample.value?.servers.list ?? []);
+		const selectedServer = computed(() => requestExample.value?.servers.selected ?? null);
+		const serverMeta = computed(() => requestExample.value?.servers.meta ?? { type: "document" });
+		const securitySchemes = computed(() => requestExample.value?.security.schemes ?? {});
+		const selectedSecurity = computed(() => requestExample.value?.security.selected ?? {
+			selectedIndex: -1,
+			selectedSchemes: []
+		});
+		const selectedSecuritySchemes = computed(() => requestExample.value?.security.selectedSchemes ?? []);
+		const securityRequirements = computed(() => requestExample.value?.security.requirements ?? []);
+		const authMeta = computed(() => requestExample.value?.security.meta ?? { type: "document" });
+		const defaultHeaders = computed(() => requestExample.value?.headers.default ?? {});
+		/** Combine environments from document and workspace into a unique array of environment names */
+		const environments = computed(() => {
+			return Array.from(new Set(Object.keys({
+				...__props.document?.["x-scalar-environments"],
+				...__props.workspaceStore.workspace["x-scalar-environments"]
+			})));
+		});
+		/** Temporarily use the old config.hiddenClients until we migrate to the new httpClients config */
+		const httpClients = computed(() => mapHiddenClientsConfig(toValue(__props.options)?.hiddenClients));
+		return (_ctx, _cache) => {
+			return __props.path && __props.method && __props.exampleName && operation.value && __props.document ? (openBlock(), createBlock(unref(OperationBlock_default), {
+				key: 0,
+				activeEnvironment: __props.workspaceStore.workspace["x-scalar-active-environment"],
+				appVersion: unref(APP_VERSION),
+				authMeta: authMeta.value,
+				defaultHeaders: defaultHeaders.value,
+				document: __props.document,
+				documentCookies: documentCookies.value,
+				documentSecurity: __props.document?.security ?? [],
+				documentSlug: __props.documentSlug,
+				documentUrl: __props.document?.["x-scalar-original-source-url"],
+				environment: __props.environment,
+				environments: environments.value,
+				eventBus: __props.eventBus,
+				exampleKey: __props.exampleName,
+				hideClientButton: toValue(__props.options)?.hideClientButton ?? false,
+				history: __props.workspaceStore.history.getHistory(__props.documentSlug, __props.path, __props.method),
+				httpClients: httpClients.value,
+				layout: __props.layout,
+				method: __props.method,
+				operation: operation.value,
+				options: __props.options,
+				path: __props.path,
+				plugins: __props.plugins,
+				proxyUrl: unref(getActiveProxyUrl)(__props.workspaceStore.workspace["x-scalar-active-proxy"], __props.layout === "web" ? "web" : "other") ?? "",
+				requestBodyCompositionSelection: __props.requestBodyCompositionSelection,
+				securityRequirements: securityRequirements.value,
+				securitySchemes: securitySchemes.value,
+				selectedClient: __props.workspaceStore.workspace["x-scalar-default-client"],
+				selectedSecurity: selectedSecurity.value,
+				selectedSecuritySchemes: selectedSecuritySchemes.value,
+				server: selectedServer.value,
+				serverMeta: serverMeta.value,
+				servers: servers.value,
+				workspaceCookies: workspaceCookies.value
+			}, null, 8, [
+				"activeEnvironment",
+				"appVersion",
+				"authMeta",
+				"defaultHeaders",
+				"document",
+				"documentCookies",
+				"documentSecurity",
+				"documentSlug",
+				"documentUrl",
+				"environment",
+				"environments",
+				"eventBus",
+				"exampleKey",
+				"hideClientButton",
+				"history",
+				"httpClients",
+				"layout",
+				"method",
+				"operation",
+				"options",
+				"path",
+				"plugins",
+				"proxyUrl",
+				"requestBodyCompositionSelection",
+				"securityRequirements",
+				"securitySchemes",
+				"selectedClient",
+				"selectedSecurity",
+				"selectedSecuritySchemes",
+				"server",
+				"serverMeta",
+				"servers",
+				"workspaceCookies"
+			])) : (openBlock(), createElementBlock("div", _hoisted_1, [..._cache[0] || (_cache[0] = [createElementVNode("span", { class: "text-c-3" }, "Select an operation to view details", -1)])]));
+		};
+	}
+});
+//#endregion
+export { Operation_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=Operation.vue.script.js.map

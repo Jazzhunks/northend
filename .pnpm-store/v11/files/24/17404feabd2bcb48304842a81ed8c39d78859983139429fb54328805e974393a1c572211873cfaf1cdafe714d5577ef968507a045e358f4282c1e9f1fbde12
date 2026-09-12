@@ -1,0 +1,22 @@
+import { Duplex } from 'node:stream';
+import { ChildProcess, SpawnOptions } from 'node:child_process';
+import type { DuplexOptions } from 'node:stream';
+type SpawnProcessFn = (command: string, args: string[], options?: SpawnOptions) => ChildProcess;
+type NonZeroExitPolicy = boolean | ((code: number | null, signal: NodeJS.Signals | null) => boolean);
+interface ProcessDuplexOptions {
+    command: string;
+    args: string[];
+    spawnOptions?: SpawnOptions;
+    streamOptions?: DuplexOptions;
+    nonZeroExitPolicy?: NonZeroExitPolicy;
+    spawnProcess?: SpawnProcessFn;
+}
+export default class ProcessDuplex extends Duplex {
+    #private;
+    constructor(options: ProcessDuplexOptions);
+    _read(_size: number): void;
+    _write(chunk: Buffer, encoding: BufferEncoding, callback: (error?: Error | null) => void): void;
+    _final(callback: (error?: Error | null) => void): void;
+    _destroy(error: Error | null, callback: (error: Error | null) => void): void;
+}
+export {};

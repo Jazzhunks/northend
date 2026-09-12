@@ -1,0 +1,46 @@
+import { redirectToProxy } from "@scalar/helpers/url/redirect-to-proxy";
+import { Type } from "@scalar/typebox";
+import { coerceValue } from "@scalar/workspace-store/schemas/typebox-coerce";
+//#region src/v2/blocks/scalar-auth-selector-block/helpers/fetch-openid-connect-discovery.ts
+/**
+* OpenID Connect Discovery Document (subset)
+* Represents the metadata fields consumed by the auth selector flow conversion.
+*
+* @see https://openid.net/specs/openid-connect-discovery-1_0.html
+*/
+var OpenIDConnectDiscoverySchema = Type.Object({
+	authorization_endpoint: Type.Optional(Type.String()),
+	token_endpoint: Type.Optional(Type.String()),
+	scopes_supported: Type.Optional(Type.Array(Type.String())),
+	grant_types_supported: Type.Optional(Type.Array(Type.String())),
+	code_challenge_methods_supported: Type.Optional(Type.Array(Type.String()))
+});
+/**
+* Fetches the OpenID Connect discovery document from the specified URL.
+* Supports both full discovery URLs and issuer URLs.
+*
+* @param url - The OpenID Connect discovery URL or issuer URL
+* @param proxyUrl - Optional CORS proxy to route the request through
+* @param customFetch - Fetch used for the discovery request; the desktop app passes an IPC-backed fetch so it leaves the renderer's network stack.
+* @returns The discovery document or an error
+*/
+var fetchOpenIDConnectDiscovery = async (url, proxyUrl, customFetch = fetch) => {
+	try {
+		let discoveryUrl = url.trim();
+		if (!discoveryUrl) return [/* @__PURE__ */ new Error("URL cannot be empty"), null];
+		if (discoveryUrl.endsWith("/")) discoveryUrl = discoveryUrl.slice(0, -1);
+		if (!discoveryUrl.includes("/.well-known/openid-configuration")) discoveryUrl = `${discoveryUrl}/.well-known/openid-configuration`;
+		const response = await customFetch(redirectToProxy(proxyUrl, discoveryUrl));
+		if (!response.ok) return [/* @__PURE__ */ new Error(`Failed to fetch OpenID Connect discovery document: ${response.status} ${response.statusText}`), null];
+		const data = coerceValue(OpenIDConnectDiscoverySchema, await response.json());
+		if (!data.authorization_endpoint && !data.token_endpoint) return [/* @__PURE__ */ new Error("Invalid OpenID Connect discovery document: missing required endpoints"), null];
+		return [null, data];
+	} catch (error) {
+		if (error instanceof Error) return [error, null];
+		return [/* @__PURE__ */ new Error("Failed to fetch OpenID Connect discovery document"), null];
+	}
+};
+//#endregion
+export { fetchOpenIDConnectDiscovery };
+
+//# sourceMappingURL=fetch-openid-connect-discovery.js.map

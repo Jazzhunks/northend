@@ -1,0 +1,22 @@
+import type { FileUploadInputProps, FileUploadInputSlots } from './types.js';
+/**
+ * Scalar File Upload Input
+ *
+ * Displays a label and button for file uploads
+ *
+ * @example
+ * <ScalarFileUploadInput />
+ */
+declare const _default: typeof __VLS_export;
+export default _default;
+declare const __VLS_export: __VLS_WithSlots<import("vue").DefineComponent<FileUploadInputProps, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {} & {
+    click: (event: MouseEvent) => any;
+}, string, import("vue").PublicProps, Readonly<FileUploadInputProps> & Readonly<{
+    onClick?: ((event: MouseEvent) => any) | undefined;
+}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>, FileUploadInputSlots>;
+type __VLS_WithSlots<T, S> = T & {
+    new (): {
+        $slots: S;
+    };
+};
+//# sourceMappingURL=ScalarFileUploadInputCompact.vue.d.ts.map

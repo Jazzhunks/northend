@@ -1,0 +1,142 @@
+import { getValueAtPath } from "@scalar/helpers/object/get-value-at-path";
+//#region src/plugins/posthog/sanitize-event-payload.ts
+/**
+* Builds an extractor that pulls a string from `payload` at `path` and emits
+* it under `{ [key]: value }`. Returns `{}` when the leaf is missing or is
+* not a string.
+*
+* `key` defaults to the dotted form of `path` (e.g. `['meta', 'type']` becomes
+* `'meta.type'`), matching the existing PostHog property names.
+*
+* Built on `getValueAtPath`, so null/undefined traversal and missing segments
+* are handled centrally.
+*/
+var stringAtPath = (path, key = path.join(".")) => {
+	return (payload) => {
+		const value = getValueAtPath(payload, path);
+		return typeof value === "string" ? { [key]: value } : {};
+	};
+};
+/** Extractor for events whose only useful property is the fact they fired. */
+var empty = () => ({});
+var TRACKED_EVENTS = {
+	"auth:update:selected-security-schemes": stringAtPath(["meta", "type"]),
+	"auth:update:active-index": stringAtPath(["meta", "type"]),
+	"auth:update:security-scheme": stringAtPath(["payload", "type"]),
+	"auth:clear:selected-security-schemes": stringAtPath(["meta", "type"]),
+	"auth:update:selected-scopes": stringAtPath(["meta", "type"]),
+	"auth:delete:security-scheme": empty,
+	"auth:clear:security-scheme-secrets": empty,
+	"auth:upsert:scopes": empty,
+	"auth:delete:scopes": empty,
+	"cookie:upsert:cookie": stringAtPath(["collectionType"]),
+	"cookie:delete:cookie": stringAtPath(["collectionType"]),
+	"environment:upsert:environment": stringAtPath(["collectionType"]),
+	"environment:delete:environment": stringAtPath(["collectionType"]),
+	"environment:upsert:environment-variable": stringAtPath(["collectionType"]),
+	"environment:delete:environment-variable": stringAtPath(["collectionType"]),
+	"document:create:empty-document": empty,
+	"document:delete:document": empty,
+	"document:update:info": empty,
+	"document:update:icon": empty,
+	"document:update:watch-mode": empty,
+	"operation:send:request:hotkey": empty,
+	"operation:cancel:request": empty,
+	"operation:create:operation": empty,
+	"operation:delete:operation": empty,
+	"operation:create:draft-example": empty,
+	"operation:delete:example": empty,
+	"operation:update:requestBody:contentType": stringAtPath(["payload", "contentType"]),
+	"operation:update:pathMethod": empty,
+	"operation:rename:example": empty,
+	"operation:reload:history": empty,
+	"ui:open:client-modal": empty,
+	"ui:open:command-palette": empty,
+	"ui:open:settings": empty,
+	"ui:download:document": stringAtPath(["format"]),
+	"ui:toggle:sidebar": empty,
+	"ui:save:local-document": empty,
+	"copy-url:address-bar": empty,
+	"tabs:add:tab": empty,
+	"tabs:copy:url": empty,
+	"server:add:server": empty,
+	"server:delete:server": empty,
+	"tag:create:tag": empty,
+	"tag:delete:tag": empty,
+	"hooks:on:request:sent": empty,
+	"hooks:on:request:complete": empty,
+	"hooks:on:rebase:document:complete": empty,
+	"workspace:update:color-mode": empty,
+	"workspace:update:theme": empty,
+	"workspace:update:selected-client": empty,
+	"workspace:update:selected-example": empty,
+	"workspace:update:active-proxy": (payload) => ({ enabled: !!payload }),
+	"workspace:update:active-environment": empty,
+	"update:dark-mode": empty,
+	"update:active-document": empty,
+	"update:selected-client": empty,
+	"log:login-click": empty,
+	"log:register-click": empty,
+	"log:user-login": empty,
+	"log:user-logout": empty,
+	"log:save-document": empty,
+	"log:sync-pull-document": empty,
+	"log:sync-push-document": empty,
+	"auth:update:security-scheme-secrets": void 0,
+	"analytics:on:show-more": void 0,
+	"analytics:on:loaded": void 0,
+	"document:update:extension": void 0,
+	"operation:update:meta": void 0,
+	"operation:update:extension": void 0,
+	"operation:upsert:parameter": void 0,
+	"operation:update:extra-parameters": void 0,
+	"operation:delete:parameter": void 0,
+	"operation:delete-all:parameters": void 0,
+	"operation:update:requestBody:value": void 0,
+	"operation:update:requestBody:formValue": void 0,
+	"server:initialize:servers": void 0,
+	"server:update:server": void 0,
+	"server:update:variables": void 0,
+	"server:update:selected": void 0,
+	"server:clear:servers": void 0,
+	"asyncapi-server:update:selected": void 0,
+	"asyncapi-server:update:variables": void 0,
+	"tabs:update:tabs": void 0,
+	"tabs:close:tab": void 0,
+	"tabs:close:other-tabs": void 0,
+	"tabs:navigate:previous": void 0,
+	"tabs:navigate:next": void 0,
+	"tabs:focus:tab": void 0,
+	"tabs:focus:tab-last": void 0,
+	"ui:focus:address-bar": void 0,
+	"ui:focus:send-button": void 0,
+	"ui:focus:search": void 0,
+	"ui:open:create-workspace": void 0,
+	"ui:close:client-modal": void 0,
+	"ui:navigate": void 0,
+	"toggle:nav-item": void 0,
+	"select:nav-item": void 0,
+	"intersecting:nav-item": void 0,
+	"scroll-to:nav-item": void 0,
+	"scroll-to:model-by-name": void 0,
+	"copy-url:nav-item": void 0,
+	"tag:edit:tag": void 0,
+	"workspace:update:name": void 0
+};
+/**
+* Returns sanitized properties for a tracked event, or `null` if the event
+* should not be captured at all.
+*
+* This is the only function that the PostHog plugin needs to call — it
+* encapsulates both the "should we track this?" decision and the "what
+* properties are safe to send?" extraction in one step.
+*/
+var sanitizeEventPayload = (event, payload) => {
+	const extractor = TRACKED_EVENTS[event];
+	if (!extractor) return null;
+	return extractor(payload);
+};
+//#endregion
+export { sanitizeEventPayload };
+
+//# sourceMappingURL=sanitize-event-payload.js.map

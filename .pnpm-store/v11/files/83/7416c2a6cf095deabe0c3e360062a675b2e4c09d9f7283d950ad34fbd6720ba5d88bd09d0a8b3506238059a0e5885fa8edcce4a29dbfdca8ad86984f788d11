@@ -1,0 +1,96 @@
+import { isObjectEqual } from '@scalar/helpers/object/is-object-equal';
+import { getNameFromRef } from '../helpers/get-name-from-ref.js';
+import { getResolvedRef } from '../helpers/get-resolved-ref.js';
+import { dedupeRequirements } from './dedupe-requirements.js';
+const getSecuritySchemeNameFromRef = (ref) => getNameFromRef(ref, ['components', 'securitySchemes']);
+/** Strips requirement-only `scopes` so inline entries can match component scheme definitions. */
+const getSecuritySchemeDefinition = (entry) => {
+    const resolved = getResolvedRef(entry);
+    if (resolved == null) {
+        return undefined;
+    }
+    if (!('scopes' in resolved)) {
+        return resolved;
+    }
+    const { scopes: _scopes, ...scheme } = resolved;
+    return scheme;
+};
+const getSecuritySchemeName = (document, entry) => {
+    if ('$ref' in entry) {
+        const nameFromRef = getSecuritySchemeNameFromRef(entry.$ref);
+        if (nameFromRef) {
+            return nameFromRef;
+        }
+    }
+    const resolvedDefinition = getSecuritySchemeDefinition(entry);
+    if (resolvedDefinition == null) {
+        return undefined;
+    }
+    const components = document.components ? getResolvedRef(document.components) : undefined;
+    if (components?.securitySchemes) {
+        for (const [name, schemeRef] of Object.entries(components.securitySchemes)) {
+            const scheme = getResolvedRef(schemeRef);
+            if (scheme === resolvedDefinition || isObjectEqual(scheme, resolvedDefinition)) {
+                return name;
+            }
+        }
+    }
+    return undefined;
+};
+const securityEntryToRequirement = (document, entry) => {
+    const schemeName = getSecuritySchemeName(document, entry);
+    if (!schemeName) {
+        return undefined;
+    }
+    const resolved = getResolvedRef(entry);
+    const scopes = resolved != null && 'scopes' in resolved && Array.isArray(resolved.scopes) ? [...resolved.scopes] : [];
+    return { [schemeName]: scopes };
+};
+const collectSecurityRequirements = (document, security) => {
+    if (!security?.length) {
+        return [];
+    }
+    return security
+        .map((entry) => securityEntryToRequirement(document, entry))
+        .filter((requirement) => requirement != null);
+};
+/**
+ * Converts AsyncAPI security arrays (operation, traits, server) into OpenAPI-style requirement objects.
+ */
+export const getAsyncApiSecurityRequirements = (document, operation, server) => {
+    const operationRequirements = collectSecurityRequirements(document, operation?.security);
+    const serverRequirements = collectSecurityRequirements(document, server?.security);
+    const combined = operationRequirements.length === 0
+        ? serverRequirements
+        : serverRequirements.length === 0
+            ? operationRequirements
+            : [...operationRequirements, ...serverRequirements];
+    return dedupeRequirements(combined);
+};
+/**
+ * Document-wide security requirements for an AsyncAPI document.
+ *
+ * AsyncAPI has no root-level `security`; the closest document-wide scope is the union of every
+ * server's security (a server applies to the whole connection). Operation-level security is
+ * intentionally excluded here — that is per-channel and handled separately.
+ */
+export const getAsyncApiDocumentSecurityRequirements = (document) => {
+    const servers = document.servers ? getResolvedRef(document.servers) : undefined;
+    if (!servers) {
+        return [];
+    }
+    const resolvedServers = Object.values(servers).map((serverRef) => getResolvedRef(serverRef));
+    const perServerRequirements = resolvedServers.map((server) => getAsyncApiSecurityRequirements(document, null, server));
+    const combined = perServerRequirements.flat();
+    // When some servers require auth while others accept unauthenticated connections, surface the
+    // no-auth path as an optional `{}` requirement so those servers stay selectable. "No auth" is
+    // keyed off the declared `security` array (absent or empty), not off a server whose declared
+    // security failed to resolve to a scheme — that server still requires auth. If no server
+    // requires auth at all, we return `[]` and let the selector treat every scheme as optional.
+    const someRequireAuth = perServerRequirements.some((requirements) => requirements.length > 0);
+    const someDeclareNoAuth = resolvedServers.some((server) => !server?.security?.length);
+    if (someRequireAuth && someDeclareNoAuth) {
+        combined.push({});
+    }
+    return dedupeRequirements(combined);
+};

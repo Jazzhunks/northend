@@ -1,0 +1,93 @@
+import type { ApiClientConfiguration } from '@scalar/types/api-reference';
+import type { WorkspaceEventBus } from '@scalar/workspace-store/events';
+import { type OAuthFlowsObjectSecret, type SecuritySchemeObjectSecret } from '@scalar/workspace-store/request-example';
+import type { XScalarEnvironment } from '@scalar/workspace-store/schemas/extensions/document/x-scalar-environments';
+import type { ServerObject } from '@scalar/workspace-store/schemas/v3.1/strict/openapi-document';
+import { type CaptureOAuth2Callback } from '../../../../v2/blocks/scalar-auth-selector-block/helpers/oauth.js';
+/**  Any config options required for the OAuth2 flow */
+export type OAuth2Options = Pick<ApiClientConfiguration, 'oauth2RedirectUri'> & {
+    /** Optional fetch override (IPC-backed on desktop) used for token exchange, refresh, and OIDC discovery */
+    customFetch?: typeof fetch;
+    /** Optional redirect capture (loopback-backed on desktop) for interactive OAuth2 flows */
+    captureOAuth2Callback?: CaptureOAuth2Callback;
+};
+declare const _default: typeof __VLS_export;
+export default _default;
+declare const __VLS_export: import("vue").DefineComponent<{
+    /** Current environment configuration */
+    environment: XScalarEnvironment;
+    /** OAuth flows */
+    flows: OAuthFlowsObjectSecret;
+    /** Type of the OAuth flow */
+    type: keyof OAuthFlowsObjectSecret;
+    /** Selected scopes */
+    selectedScopes: string[];
+    /** Security scheme */
+    scheme: SecuritySchemeObjectSecret;
+    /** Current server configuration */
+    server: ServerObject | null;
+    /** Proxy URL */
+    proxyUrl: string;
+    /** Name of the security scheme */
+    name: string;
+    /** Event bus for authentication updates */
+    eventBus: WorkspaceEventBus;
+    /**  Any config options required for the OAuth2 flow */
+    options?: OAuth2Options;
+}, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {} & {
+    "update:selectedScopes": (payload: {
+        scopes: string[];
+    }) => any;
+    "upsert:scope": (payload: Omit<{
+        name: string;
+        flowType: keyof import("@scalar/workspace-store/schemas/v3.1/strict/oauthflows").OAuthFlowsObject;
+        scope: string;
+        description: string;
+        oldScope?: string;
+        enable?: boolean;
+    }, "name">) => any;
+    "delete:scope": (payload: Omit<{
+        name: string;
+        flowType: keyof import("@scalar/workspace-store/schemas/v3.1/strict/oauthflows").OAuthFlowsObject;
+        scope: string;
+    }, "name">) => any;
+}, string, import("vue").PublicProps, Readonly<{
+    /** Current environment configuration */
+    environment: XScalarEnvironment;
+    /** OAuth flows */
+    flows: OAuthFlowsObjectSecret;
+    /** Type of the OAuth flow */
+    type: keyof OAuthFlowsObjectSecret;
+    /** Selected scopes */
+    selectedScopes: string[];
+    /** Security scheme */
+    scheme: SecuritySchemeObjectSecret;
+    /** Current server configuration */
+    server: ServerObject | null;
+    /** Proxy URL */
+    proxyUrl: string;
+    /** Name of the security scheme */
+    name: string;
+    /** Event bus for authentication updates */
+    eventBus: WorkspaceEventBus;
+    /**  Any config options required for the OAuth2 flow */
+    options?: OAuth2Options;
+}> & Readonly<{
+    "onUpdate:selectedScopes"?: ((payload: {
+        scopes: string[];
+    }) => any) | undefined;
+    "onUpsert:scope"?: ((payload: Omit<{
+        name: string;
+        flowType: keyof import("@scalar/workspace-store/schemas/v3.1/strict/oauthflows").OAuthFlowsObject;
+        scope: string;
+        description: string;
+        oldScope?: string;
+        enable?: boolean;
+    }, "name">) => any) | undefined;
+    "onDelete:scope"?: ((payload: Omit<{
+        name: string;
+        flowType: keyof import("@scalar/workspace-store/schemas/v3.1/strict/oauthflows").OAuthFlowsObject;
+        scope: string;
+    }, "name">) => any) | undefined;
+}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;
+//# sourceMappingURL=OAuth2.vue.d.ts.map

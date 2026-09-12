@@ -1,0 +1,9 @@
+import _plugin_vue_export_helper_default from "../_virtual/_plugin-vue_export-helper.js";
+import ContextItem_vue_vue_type_script_setup_true_lang_default from "./ContextItem.vue.script.js";
+/* empty css                          */
+//#region src/components/ContextItem.vue
+var ContextItem_default = /* @__PURE__ */ _plugin_vue_export_helper_default(ContextItem_vue_vue_type_script_setup_true_lang_default, [["__scopeId", "data-v-0509fef2"]]);
+//#endregion
+export { ContextItem_default as default };
+
+//# sourceMappingURL=ContextItem.vue.js.map

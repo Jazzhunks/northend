@@ -1,0 +1,43 @@
+{
+  "summary": "Frontend-only verification of the three /wath fixes: (a) Invalid-Date bug, (b) registration submission (schema-aligned payload), (c) 'Northend Srinagar' → 'Northend 90 FT' rename. 8 of 9 review checkpoints PASS. One remaining CRITICAL functional gap discovered: the WATH Result-Check flow calls a GET endpoint that does not exist on the backend, so res-block never renders and the admit-card fallback link (data-testid='dl-admit') is unreachable.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "GET /api/scholarship-applications/{application_no}?phone=…",
+        "issue": "Endpoint does not exist. Frontend WATH ResultCheckSection (WATH.jsx line 547) calls api.get(`/scholarship-applications/${applicationNo}`, { params: { phone } }). Backend only exposes POST /api/scholarship-applications/lookup (server.py:495). Result: 404 → toast 'Not Found' → res-block + dl-admit never render.",
+        "priority": "CRITICAL"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "WATH → Result check (data-testid='res-submit')",
+        "issue": "Frontend↔backend contract mismatch. Two-line fix options: (1) In /app/frontend/src/pages/WATH.jsx replace `api.get('/scholarship-applications/' + applicationNo, { params: { phone } })` with `api.post('/scholarship-applications/lookup', { application_no: applicationNo, phone })`. (2) OR add a GET route in server.py that proxies the same lookup logic. Recommend option 1 (frontend) — smaller, no schema change.",
+        "affected_selectors": ["[data-testid='res-submit']", "[data-testid='res-block']", "[data-testid='dl-admit']", "[data-testid='dl-result-card']"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Fix WATH result-check API call — see backend_issues.critical above. Recommended: patch /app/frontend/src/pages/WATH.jsx (single line) to call POST /scholarship-applications/lookup with body {application_no, phone}.",
+    "After fix, re-verify: enter freshly-registered app_no (e.g. NEW-SCH-11937504) + phone 9999900321 → res-block should show 'Application on file' and dl-admit link should open the admit-card PDF (200 application/pdf)."
+  ],
+  "critical_code_review_comments": [
+    "WATH.jsx line 547: uses a non-existent GET endpoint. This is the last remaining functional regression on /wath — everything else in the review request passes.",
+    "parseFlexibleDate() implementation is solid — handles ISO (YYYY-MM-DD), DD-MM-YYYY and DD/MM/YYYY without ambiguity. Confirmed with live campaign data (exam_date='24-07-2026', deadline='22-07-2026').",
+    "Registration payload now correctly matches ScholarshipApplicationIn Pydantic schema (name, email, phone, school, standard, target_exam, city, venue, scholarship_id). Backend POST /scholarship-applications returned 200 with generated application_no; email notifications fired to applicant + manager (visible in backend logs).",
+    "Venues count uses `campaign?.available_venues?.length || 6` which now renders '4' (correct for the WATH campaign). No falsy-zero issue seen since the campaign has 4 real venues."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "not tested (frontend-only run)", "frontend": "8/9 checkpoints (89%) — only result-check flow fails" },
+  "test_credentials": "No login required for /wath. Registered during this run: qa.aarav@example.com / 9999900321 → NEW-SCH-22576346; qa.aarav2@example.com / 9999900321 → NEW-SCH-11937504.",
+  "seed_data_creation": "Created 2 WATH scholarship_applications (QA Aarav, QA Aarav 2) at 'Northend 90 FT'. Both have valid admit-card PDFs (verified: GET /api/scholarship-applications/NEW-SCH-11937504/admit-card → 200 application/pdf, 9608 bytes).",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "The three original bugs are FIXED. Live WATH campaign in DB has id=1ed94009-d949-4504-b291-68e3571a5a44, exam_date='24-07-2026' (DD-MM-YYYY), deadline='22-07-2026', available_venues=['Northend 90 FT','Northend Anantnag','Northend Zakura','Northend Parraypora'] — all four render in the venue <select>. Centers page shows Northend 90 FT (Srinagar city label preserved as address). Header nav-wath renders 'WATH 2026'. Home /wath banner is a <section data-testid='home-wath-banner'> that wraps a <Link to='/wath'> so href is null on the section itself but the whole card is clickable. Remaining bug is only the result-check GET vs POST mismatch — one-line fix in WATH.jsx.",
+  "rca_of_the_issue": "Original bugs — Invalid Date: DD-MM-YYYY strings from the DB were being passed straight into new Date() which returns NaN for that format; fix added parseFlexibleDate() that matches the DD-[-/]MM-[-/]YYYY pattern before falling back to native parse. Registration failure: frontend was posting keys that didn't match the Pydantic schema (class_or_course, school_name, no city/target_exam); fix maps class_or_course→standard, derives target_exam from class label, defaults city to venue-without-'Northend'. Northend Srinagar rename: seed + live DB migration renamed centers, scholarships.available_venues[] and scholarship_applications.venue — all verified clean via body-text search on /wath, /centers and the venue dropdown. New bug (result-check 404): pre-existing frontend/backend contract drift — WATH.jsx GETs a resource with the application_no as path segment while backend only exposes a POST /lookup with body {application_no, phone}. Manifests only when the user tries to check result after registration."
+}

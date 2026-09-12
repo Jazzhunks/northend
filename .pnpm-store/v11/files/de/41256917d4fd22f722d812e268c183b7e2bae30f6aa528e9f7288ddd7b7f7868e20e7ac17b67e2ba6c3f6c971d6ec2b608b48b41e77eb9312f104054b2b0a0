@@ -1,0 +1,2 @@
+import { staticFunctionMiddleware } from "./staticFunctionMiddleware.js";
+export { staticFunctionMiddleware };

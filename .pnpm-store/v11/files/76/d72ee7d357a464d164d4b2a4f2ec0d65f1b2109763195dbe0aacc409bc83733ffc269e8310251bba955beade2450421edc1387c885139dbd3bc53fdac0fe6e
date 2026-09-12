@@ -1,0 +1,44 @@
+import { a as GeneratedDoc, c as RawTag, d as createProject, f as Cache, h as GenerateTypeTableOptions, i as GenerateOptions, l as TypescriptConfig, m as BaseTypeTableProps, n as ShikiOptions, o as Generator, p as generateHash, r as DocEntry, s as GeneratorOptions, t as MarkdownRenderer, u as createGenerator } from "./markdown-CM2iLQC-.js";
+import { Root } from "mdast";
+import { Transformer } from "unified";
+
+//#region src/lib/remark-auto-type-table.d.ts
+interface RemarkAutoTypeTableOptions {
+  /**
+   * @defaultValue 'auto-type-table'
+   */
+  name?: string;
+  /**
+   * @defaultValue 'TypeTable'
+   */
+  outputName?: string;
+  /**
+   * config for Shiki when using default `renderMarkdown` & `renderType`.
+   */
+  shiki?: ShikiOptions;
+  renderMarkdown?: MarkdownRenderer['renderMarkdownToHast'];
+  renderType?: MarkdownRenderer['renderTypeToHast'];
+  /**
+   * Customize type table generation
+   */
+  options?: GenerateTypeTableOptions;
+  /**
+   * generate the stringified form of props (useful for `remark-stringify` etc).
+   */
+  remarkStringify?: boolean;
+  generator?: Generator;
+}
+interface TypeTableProps extends BaseTypeTableProps {
+  cwd?: true;
+}
+/**
+ * Compile `auto-type-table` into Fumadocs UI compatible TypeTable
+ *
+ * MDX is required to use this plugin.
+ */
+declare function remarkAutoTypeTable(config?: RemarkAutoTypeTableOptions): Transformer<Root, Root>;
+//#endregion
+//#region src/cache/fs-cache.d.ts
+declare function createFileSystemGeneratorCache(dir: string): Cache;
+//#endregion
+export { Cache, DocEntry, GenerateOptions, GeneratedDoc, Generator, GeneratorOptions, type MarkdownRenderer, RawTag, RemarkAutoTypeTableOptions, TypeTableProps, TypescriptConfig, createFileSystemGeneratorCache, createGenerator, createProject, generateHash, remarkAutoTypeTable };

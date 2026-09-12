@@ -1,0 +1,7 @@
+//#region src/v2/constants.ts
+/** The version number taken from the package.json. Consumers can override at build time via define (e.g. OVERRIDE_PACKAGE_VERSION: JSON.stringify('1.2.3')). */
+var APP_VERSION = typeof OVERRIDE_PACKAGE_VERSION !== "undefined" ? OVERRIDE_PACKAGE_VERSION : "3.13.7";
+//#endregion
+export { APP_VERSION };
+
+//# sourceMappingURL=constants.js.map

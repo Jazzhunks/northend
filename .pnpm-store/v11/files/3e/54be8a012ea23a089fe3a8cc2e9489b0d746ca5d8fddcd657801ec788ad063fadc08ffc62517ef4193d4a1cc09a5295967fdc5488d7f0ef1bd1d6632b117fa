@@ -1,0 +1,189 @@
+import { getResolvedRef as e } from "@scalar/workspace-store/helpers/get-resolved-ref";
+import { deSerializeParameter as t, getExample as n, getExampleFromSchema as r, isParamDisabled as i, serializeContentValue as a, serializeDeepObjectStyle as o, serializeFormStyle as s, serializeFormStyleForCookies as c, serializePipeDelimitedStyle as l, serializeSimpleStyle as u, serializeSpaceDelimitedStyle as d } from "@scalar/workspace-store/request-example";
+//#region src/code-example/helpers/operation-to-har/process-parameters.ts
+var f = (t) => (t ?? []).map((t) => e(t)), p = (e) => "allowReserved" in e && e.allowReserved !== void 0 ? e.allowReserved : "schema" in e && e.schema && typeof e.schema == "object" && "allowReserved" in e.schema ? e.schema.allowReserved === !0 : !1, m = (e, t) => p(t) ? e : encodeURIComponent(e), h = (e) => {
+	if (e.in === "header") return {
+		style: "simple",
+		explode: "explode" in e && e.explode !== void 0 ? e.explode : !1
+	};
+	if (e.in === "cookie") return {
+		style: "form",
+		explode: "explode" in e && e.explode !== void 0 ? e.explode : !0
+	};
+	let t = {
+		path: "simple",
+		query: "form",
+		header: "simple",
+		cookie: "form"
+	}[e.in], n = "style" in e && e.style ? e.style : t;
+	return {
+		style: n,
+		explode: "explode" in e && e.explode !== void 0 ? e.explode : n === "form"
+	};
+}, g = (a, o, s, c) => {
+	let l = n(a, o, s);
+	if (i(a, l, c)) return;
+	if (l?.value !== void 0) return t(l.value, a);
+	if (!("schema" in a) || !a.schema) return;
+	let u = a.in === "path" ? { emptyString: `{${a.name}}` } : {};
+	return r(e(a.schema), u);
+}, _ = ({ harRequest: e, parameters: t, example: n, defaultDisabled: r }) => {
+	let i = [...e.headers], p = [...e.queryString], _ = e.url, y = f(t);
+	for (let t of y) {
+		if (!t.in || !t.name) continue;
+		let f = g(t, n, void 0, r);
+		if (f === void 0) continue;
+		let { style: y, explode: b } = h(t);
+		switch (t.in) {
+			case "path":
+				_ = v(_, t, f, y, b);
+				break;
+			case "query":
+				if ("content" in t && t.content) {
+					let e = a(f, Object.keys(t.content)[0] ?? "application/json");
+					p.push({
+						name: t.name,
+						value: m(e, t)
+					});
+					break;
+				}
+				switch (y) {
+					case "form": {
+						let e = s(f, b);
+						if (Array.isArray(e)) for (let n of e) {
+							let e = n.key || t.name;
+							p.push({
+								name: e,
+								value: m(String(n.value), t)
+							});
+						}
+						else p.push({
+							name: t.name,
+							value: m(String(e), t)
+						});
+						break;
+					}
+					case "spaceDelimited": {
+						let e = d(f);
+						p.push({
+							name: t.name,
+							value: m(e, t)
+						});
+						break;
+					}
+					case "pipeDelimited": {
+						let e = l(f);
+						p.push({
+							name: t.name,
+							value: m(e, t)
+						});
+						break;
+					}
+					case "deepObject":
+						if (Array.isArray(f)) {
+							let e = s(f, !0);
+							if (Array.isArray(e)) for (let n of e) {
+								let e = n.key || t.name;
+								p.push({
+									name: e,
+									value: m(String(n.value), t)
+								});
+							}
+							else p.push({
+								name: t.name,
+								value: m(String(e), t)
+							});
+						} else {
+							let e = o(t.name, f);
+							for (let n of e) p.push({
+								name: n.key,
+								value: m(n.value, t)
+							});
+						}
+						break;
+					default: p.push({
+						name: t.name,
+						value: m(String(f), t)
+					});
+				}
+				break;
+			case "header": {
+				let e = u(f, b);
+				i.push({
+					name: t.name,
+					value: String(e)
+				});
+				break;
+			}
+			case "cookie": {
+				let n = c(f, b);
+				if (Array.isArray(n)) for (let r of n) {
+					let n = r.key || t.name, i = r.value === null ? "null" : String(r.value);
+					e.cookies.push({
+						name: n,
+						value: i
+					});
+				}
+				else {
+					let r = n === null ? "null" : String(n);
+					e.cookies.push({
+						name: t.name,
+						value: r
+					});
+				}
+				break;
+			}
+		}
+	}
+	return {
+		url: _,
+		headers: i,
+		queryString: p,
+		cookies: e.cookies
+	};
+}, v = (e, t, n, r, i) => {
+	switch (r) {
+		case "matrix":
+			if (i) {
+				if (Array.isArray(n)) {
+					let r = n.map((e) => `${t.name}=${e}`).join(";");
+					return e.replace(`{;${t.name}}`, `;${r}`);
+				}
+				if (typeof n == "object" && n) {
+					let r = Object.entries(n).map(([e, t]) => `${e}=${t}`).join(";");
+					return e.replace(`{;${t.name}}`, `;${r}`);
+				}
+				return e.replace(`{;${t.name}}`, `;${t.name}=${n}`);
+			}
+			if (Array.isArray(n)) return e.replace(`{;${t.name}}`, `;${t.name}=${n.join(",")}`);
+			if (typeof n == "object" && n) {
+				let r = Object.entries(n).map(([e, t]) => `${e},${t}`).join(",");
+				return e.replace(`{;${t.name}}`, `;${t.name}=${r}`);
+			}
+			return e.replace(`{;${t.name}}`, `;${t.name}=${n}`);
+		case "label":
+			if (i) {
+				if (Array.isArray(n)) return e.replace(`{.${t.name}}`, `.${n.join(".")}`);
+				if (typeof n == "object" && n) {
+					let r = Object.entries(n).map(([e, t]) => `${e}=${t}`).join(".");
+					return e.replace(`{.${t.name}}`, `.${r}`);
+				}
+				return e.replace(`{.${t.name}}`, `.${n}`);
+			}
+			if (Array.isArray(n)) return e.replace(`{.${t.name}}`, `.${n.join(",")}`);
+			if (typeof n == "object" && n) {
+				let r = Object.entries(n).map(([e, t]) => `${e},${t}`).join(",");
+				return e.replace(`{.${t.name}}`, `.${r}`);
+			}
+			return e.replace(`{.${t.name}}`, `.${n}`);
+		case "simple": {
+			let r = u(n, i);
+			return e.replace(`{${t.name}}`, String(r));
+		}
+		default: return e.replace(`{${t.name}}`, String(n));
+	}
+};
+//#endregion
+export { _ as processParameters };
+
+//# sourceMappingURL=process-parameters.js.map

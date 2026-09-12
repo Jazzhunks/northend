@@ -1,0 +1,631 @@
+import DataTableInputSelect_default from "../data-table/DataTableInputSelect.vue.js";
+import EnvironmentVariablesDropdown_default from "../../features/environments/components/EnvironmentVariablesDropdown.vue.js";
+import PillTooltipHost_default from "./PillTooltipHost.vue.js";
+import { lookupVariableValue } from "./helpers/lookup-variable-value.js";
+import { buildPillContext } from "./helpers/build-pill-context.js";
+import { pillSignature } from "./helpers/pill-signature.js";
+import { serializeValue } from "./helpers/serialize-value.js";
+import { Fragment, computed, createApp, createBlock, createCommentVNode, createElementBlock, createElementVNode, defineComponent, mergeProps, nextTick, normalizeClass, onBeforeUnmount, onMounted, openBlock, ref, renderSlot, toDisplayString, unref, useAttrs, useTemplateRef, watch } from "vue";
+import { isDefined } from "@scalar/helpers/array/is-defined";
+import { CONTEXT_FUNCTION_NAMES, getContextFunctionComment, isContextFunctionName } from "@scalar/workspace-store/request-example";
+import { nanoid } from "nanoid";
+import { REGEX } from "@scalar/helpers/regex/regex-helpers";
+//#region src/v2/components/code-input/CodeInputLite.vue?vue&type=script&setup=true&lang.ts
+var _hoisted_1 = { class: "whitespace-nowrap" };
+var _hoisted_2 = ["id"];
+var _hoisted_3 = [
+	"aria-activedescendant",
+	"aria-autocomplete",
+	"aria-controls",
+	"aria-expanded",
+	"aria-invalid",
+	"aria-label",
+	"aria-readonly",
+	"aria-required",
+	"contenteditable",
+	"data-placeholder",
+	"role"
+];
+var _hoisted_4 = {
+	key: 5,
+	class: "centered-y text-orange absolute right-7 text-xs"
+};
+var _hoisted_5 = {
+	key: 6,
+	class: "centered-y absolute right-0 flex h-full items-center p-1.5 group-has-[.code-input-lite__editor:focus]:z-1"
+};
+var _hoisted_6 = {
+	key: 7,
+	class: "required centered-y text-xxs text-c-3 group-[.error]:text-red bg-b-1 pointer-events-none absolute right-0 mr-0.5 pt-px pr-2 opacity-100 shadow-[-8px_0_4px_var(--scalar-background-1)] transition-opacity duration-150 peer-has-[.code-input-lite__editor:focus]:opacity-0"
+};
+var CodeInputLite_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	inheritAttrs: false,
+	__name: "CodeInputLite",
+	props: {
+		modelValue: { type: [
+			String,
+			Number,
+			Boolean,
+			Array,
+			Object
+		] },
+		environment: {},
+		disabled: {
+			type: Boolean,
+			default: false
+		},
+		readOnly: {
+			type: Boolean,
+			default: false
+		},
+		error: {
+			type: Boolean,
+			default: false
+		},
+		layout: { default: "desktop" },
+		placeholder: {},
+		required: {
+			type: Boolean,
+			default: false
+		},
+		emitOnBlur: {
+			type: Boolean,
+			default: true
+		},
+		withVariables: {
+			type: Boolean,
+			default: true
+		},
+		withFakeData: {
+			type: Boolean,
+			default: false
+		},
+		alwaysEmitChange: {
+			type: Boolean,
+			default: false
+		},
+		linethrough: {
+			type: Boolean,
+			default: false
+		},
+		type: {},
+		enum: {},
+		examples: {},
+		default: { type: [
+			String,
+			Number,
+			Boolean,
+			Array,
+			Object
+		] },
+		nullable: {
+			type: Boolean,
+			default: false
+		}
+	},
+	emits: [
+		"update:modelValue",
+		"submit",
+		"blur",
+		"navigate"
+	],
+	setup(__props, { expose: __expose, emit: __emit }) {
+		const emit = __emit;
+		const attrs = useAttrs();
+		/**
+		* The id only matters once the dropdown opens (`aria-controls` /
+		* `aria-activedescendant`), so we defer `nanoid()` until first focus to
+		* keep idle instances cheap. A consumer-supplied `id` attr is preserved.
+		*/
+		const generatedComponentId = ref(null);
+		const componentId = computed(() => attrs.id ?? generatedComponentId.value ?? void 0);
+		const ensureComponentId = () => {
+			if (!attrs.id && generatedComponentId.value === null) generatedComponentId.value = `id-${nanoid()}`;
+		};
+		const editorRef = useTemplateRef("editorRef");
+		const dropdownRef = ref(null);
+		/** Id of the dropdown's `role="listbox"` element, for the combobox wiring. */
+		const listboxId = computed(() => componentId.value ? `${componentId.value}-listbox` : void 0);
+		/**
+		* Id of the option the dropdown currently highlights. Mirrors the dropdown's
+		* own selection so the editor can expose it via `aria-activedescendant`.
+		*/
+		const activeOptionId = computed(() => dropdownRef.value?.activeOptionId);
+		const isFocused = ref(false);
+		const isEmpty = ref(true);
+		/**
+		* True while an IME composition is in progress. Rebuilding the editor DOM
+		* mid-composition (e.g. when `{{` forms a pill) cancels the composition, so we
+		* defer those rebuilds until `compositionend`.
+		*/
+		const isComposing = ref(false);
+		/**
+		* Whether the serialized value should count as empty for placeholder display.
+		*
+		* `contenteditable` can leave behind invisible residue after some delete
+		* sequences — most commonly a non-breaking space (` `) — which makes a
+		* visually empty field report a non-zero length and silently drop its
+		* placeholder. Trimming covers that case; ` ` counts as whitespace, so a
+		* field that only holds editor residue is treated as empty. This affects the
+		* placeholder flag only, never the value emitted via `serializeEditor`.
+		*/
+		const isBlankValue = (text) => text.trim().length === 0;
+		/** True when the schema type is exactly `boolean` (or includes it in a tuple type). */
+		const isBooleanMode = computed(() => {
+			if (__props.enum?.length) return false;
+			return __props.type === "boolean" || Array.isArray(__props.type) && __props.type.includes("boolean");
+		});
+		const booleanOptions = computed(() => __props.nullable ? [
+			"true",
+			"false",
+			"null"
+		] : ["true", "false"]);
+		/** Default type when the schema is a tuple — picks the first non-null entry. */
+		const defaultType = computed(() => {
+			if (Array.isArray(__props.type)) return __props.type.find((t) => t !== "null") ?? "string";
+			return __props.type;
+		});
+		const handleSelectChange = (value) => emit("update:modelValue", value);
+		let pillTooltipApps = [];
+		/**
+		* Per-pill tooltips are the heaviest part of the render (a Vue app +
+		* `useTooltip` watch + listeners each), so we defer mounting them until
+		* the first interaction (focus, pointerover, or dropdown open). Once on,
+		* subsequent rebuilds remount tooltips for the new pills.
+		*/
+		let tooltipsActive = false;
+		const teardownPillTooltips = () => {
+			for (const app of pillTooltipApps) app.unmount();
+			pillTooltipApps = [];
+		};
+		const mountPillTooltips = () => {
+			if (!editorRef.value || __props.layout === "modal") return;
+			const pills = editorRef.value.querySelectorAll(".scalar-pill");
+			for (const pillEl of pills) {
+				const app = createApp(PillTooltipHost_default, {
+					context: buildPillContext(pillEl.dataset.variable ?? "", __props.environment),
+					target: pillEl
+				});
+				app.mount(document.createElement("div"));
+				pillTooltipApps.push(app);
+			}
+		};
+		/**
+		* Build a pill `<span>` for the given variable. `contentEditable = 'false'`
+		* makes the browser treat it as a single atom (arrow keys jump over it,
+		* Backspace deletes it whole); `{{` / `}}` only live in the model string.
+		*/
+		const createPillElement = (name, start, end) => {
+			const isCtx = isContextFunctionName(name);
+			const span = document.createElement("span");
+			span.className = isCtx ? "scalar-pill scalar-pill--context-fn" : "scalar-pill";
+			span.contentEditable = "false";
+			span.dataset.variable = name;
+			span.dataset.pillStart = String(start);
+			span.dataset.pillEnd = String(end);
+			const color = isCtx ? "var(--scalar-color-3)" : __props.environment?.color || "var(--scalar-color-1)";
+			span.style.setProperty("--tw-bg-base", color);
+			if (!isCtx && !lookupVariableValue(__props.environment, name)) span.style.opacity = "0.5";
+			span.textContent = name;
+			return span;
+		};
+		/** Render a model string into the editor as a mix of text nodes + pills. */
+		const renderModel = (text) => {
+			const editor = editorRef.value;
+			if (!editor) return;
+			teardownPillTooltips();
+			editor.replaceChildren();
+			if (!__props.withVariables || !text.includes("{{")) {
+				if (text) editor.appendChild(document.createTextNode(text));
+				isEmpty.value = isBlankValue(text);
+				return;
+			}
+			const regex = new RegExp(REGEX.VARIABLES.source, REGEX.VARIABLES.flags);
+			let lastIndex = 0;
+			let match;
+			while ((match = regex.exec(text)) !== null) {
+				const start = match.index;
+				const end = start + match[0].length;
+				if (start > lastIndex) editor.appendChild(document.createTextNode(text.slice(lastIndex, start)));
+				editor.appendChild(createPillElement(match[1] ?? "", start, end));
+				lastIndex = end;
+			}
+			if (lastIndex < text.length) editor.appendChild(document.createTextNode(text.slice(lastIndex)));
+			isEmpty.value = false;
+			if (tooltipsActive) mountPillTooltips();
+		};
+		/** Length the given child contributes to the serialized model string. */
+		const modelLengthOf = (node) => {
+			if (node.nodeType === Node.TEXT_NODE) return (node.textContent ?? "").length;
+			if (node instanceof HTMLElement && node.classList.contains("scalar-pill")) return `{{${node.dataset.variable ?? ""}}}`.length;
+			return (node.textContent ?? "").length;
+		};
+		/** Read the editor DOM back into a `{{name}}`-bearing model string. */
+		const serializeEditor = () => {
+			const editor = editorRef.value;
+			if (!editor) return "";
+			let out = "";
+			for (const node of Array.from(editor.childNodes)) if (node.nodeType === Node.TEXT_NODE) out += node.textContent ?? "";
+			else if (node instanceof HTMLElement && node.classList.contains("scalar-pill")) out += `{{${node.dataset.variable ?? ""}}}`;
+			else if (node instanceof HTMLElement) out += node.textContent ?? "";
+			return out;
+		};
+		let lastPillSignature = null;
+		let lastEnvKey = "";
+		/**
+		* Cache key for the env + `withVariables` state. Includes variable
+		* name/value pairs so the watcher notices adds/removes/edits even when
+		* `environment.color` is unchanged — without that, pills keep stale
+		* `isDefined` opacity and tooltip values until the input itself changes.
+		*/
+		const computeEnvKey = () => {
+			const color = __props.environment?.color ?? "";
+			const flag = __props.withVariables ? "1" : "0";
+			const variables = __props.environment?.variables ?? [];
+			let vars = "";
+			for (const v of variables) {
+				const value = typeof v.value === "string" ? v.value : v.value?.default ?? "";
+				vars += `\x1f${v.name}\x1e${value}`;
+			}
+			return `${color}|${flag}|${vars}`;
+		};
+		/** Idempotent: first call flips `tooltipsActive` and mounts pill tooltips. */
+		const ensureTooltipsActive = () => {
+			if (tooltipsActive) return;
+			tooltipsActive = true;
+			mountPillTooltips();
+		};
+		/** Selection start as a model-string offset, or `null` if not inside the editor. */
+		const getModelCaret = () => {
+			const editor = editorRef.value;
+			if (!editor) return null;
+			const selection = window.getSelection();
+			if (!selection || selection.rangeCount === 0) return null;
+			const range = selection.getRangeAt(0);
+			if (range.startContainer !== editor && !editor.contains(range.startContainer)) return null;
+			if (range.startContainer === editor) {
+				let pos = 0;
+				for (let i = 0; i < range.startOffset && i < editor.childNodes.length; i++) pos += modelLengthOf(editor.childNodes[i]);
+				return pos;
+			}
+			let pos = 0;
+			for (const child of Array.from(editor.childNodes)) {
+				if (child === range.startContainer) return pos + range.startOffset;
+				if (child.contains(range.startContainer)) return range.startOffset === 0 ? pos : pos + modelLengthOf(child);
+				pos += modelLengthOf(child);
+			}
+			return pos;
+		};
+		/** Place the caret at the given model offset, walking the DOM to find it. */
+		const setModelCaret = (target) => {
+			const editor = editorRef.value;
+			if (!editor) return;
+			const range = document.createRange();
+			let pos = 0;
+			let placed = false;
+			for (const child of Array.from(editor.childNodes)) {
+				const len = modelLengthOf(child);
+				if (pos + len >= target) {
+					if (child.nodeType === Node.TEXT_NODE) {
+						const into = Math.max(0, Math.min(target - pos, (child.textContent ?? "").length));
+						range.setStart(child, into);
+					} else if (target - pos <= 0) range.setStartBefore(child);
+					else range.setStartAfter(child);
+					placed = true;
+					break;
+				}
+				pos += len;
+			}
+			if (!placed) {
+				range.selectNodeContents(editor);
+				range.collapse(false);
+			} else range.collapse(true);
+			const selection = window.getSelection();
+			if (!selection) return;
+			selection.removeAllRanges();
+			selection.addRange(range);
+		};
+		const showDropdown = ref(false);
+		const dropdownQuery = ref("");
+		const dropdownPosition = ref({
+			left: 0,
+			top: 0
+		});
+		const contextFunctionDropdownItems = computed(() => __props.withFakeData ? CONTEXT_FUNCTION_NAMES.map((key) => ({
+			key,
+			description: getContextFunctionComment(key)
+		})) : []);
+		const displayVariablesDropdown = computed(() => showDropdown.value && __props.withVariables && __props.layout !== "modal" && (Boolean(__props.environment) || __props.withFakeData));
+		const updateDropdownVisibility = () => {
+			if (!editorRef.value) return;
+			const caret = getModelCaret();
+			if (caret === null) {
+				showDropdown.value = false;
+				return;
+			}
+			const text = serializeEditor().slice(0, caret);
+			const lastOpen = text.lastIndexOf("{{");
+			if (lastOpen <= text.lastIndexOf("}}")) {
+				showDropdown.value = false;
+				return;
+			}
+			dropdownQuery.value = text.slice(lastOpen + 2);
+			ensureComponentId();
+			showDropdown.value = true;
+			nextTick(() => {
+				const selection = window.getSelection();
+				if (!selection || selection.rangeCount === 0 || !editorRef.value) return;
+				const r = selection.getRangeAt(0).cloneRange();
+				r.collapse(true);
+				const rect = r.getBoundingClientRect();
+				const editorRect = editorRef.value.getBoundingClientRect();
+				dropdownPosition.value = {
+					left: rect.left || editorRect.left,
+					top: rect.bottom || editorRect.bottom
+				};
+			});
+		};
+		const handleDropdownSelect = (item) => {
+			if (__props.readOnly) return;
+			const caret = getModelCaret() ?? 0;
+			const value = serializeEditor();
+			const from = Math.max(0, caret - dropdownQuery.value.length - 2);
+			const to = caret;
+			const next = `${value.slice(0, from)}{{${item}}}${value.slice(to)}`;
+			const nextCursor = from + `{{${item}}}`.length;
+			lastPillSignature = pillSignature(next, __props.withVariables);
+			renderModel(next);
+			setModelCaret(nextCursor);
+			showDropdown.value = false;
+			emitChange(next, { skipDropdownCheck: true });
+		};
+		const emitChange = (value, opts = {}) => {
+			const same = value === serializeValue(__props.modelValue);
+			if (__props.alwaysEmitChange || !same) emit("update:modelValue", value);
+			if (!opts.skipDropdownCheck) updateDropdownVisibility();
+		};
+		const handleInput = () => {
+			const text = serializeEditor();
+			isEmpty.value = isBlankValue(text);
+			const sig = pillSignature(text, __props.withVariables);
+			if (!isComposing.value && sig !== lastPillSignature) {
+				const caret = getModelCaret();
+				lastPillSignature = sig;
+				renderModel(text);
+				if (caret !== null) setModelCaret(caret);
+			}
+			emitChange(text);
+		};
+		const handleCompositionStart = () => {
+			isComposing.value = true;
+		};
+		const handleCompositionEnd = () => {
+			isComposing.value = false;
+			handleInput();
+		};
+		const handleFocus = () => {
+			isFocused.value = true;
+			ensureComponentId();
+			ensureTooltipsActive();
+		};
+		const handleBlur = (event) => {
+			isFocused.value = false;
+			showDropdown.value = false;
+			const value = serializeEditor();
+			if (__props.emitOnBlur && value) emit("submit", value, event);
+			emit("blur", value, event);
+		};
+		/**
+		* Strip rich content on paste; `contenteditable="plaintext-only"` is not
+		* reliable cross-browser, so we intercept and use `insertText` to keep undo.
+		*/
+		const handlePaste = (event) => {
+			event.preventDefault();
+			const text = event.clipboardData?.getData("text/plain") ?? "";
+			if (!text) return;
+			document.execCommand("insertText", false, text.replace(/\r?\n/g, " "));
+			handleInput();
+		};
+		const handleKeyDown = (event) => {
+			if (showDropdown.value) {
+				if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+					event.preventDefault();
+					event.stopPropagation();
+					dropdownRef.value?.handleArrowKey(event.key === "ArrowDown" ? "down" : "up");
+					return;
+				}
+				if (event.key === "Enter") {
+					event.preventDefault();
+					event.stopPropagation();
+					dropdownRef.value?.handleSelect();
+					return;
+				}
+				if (event.key === "Escape") {
+					event.preventDefault();
+					event.stopPropagation();
+					showDropdown.value = false;
+					return;
+				}
+			}
+			if (event.key === "Enter") {
+				event.preventDefault();
+				emit("submit", serializeEditor(), event);
+				return;
+			}
+		};
+		/**
+		* Clicking a pill selects it whole, so a subsequent Backspace deletes it
+		* in one keystroke and typing replaces it — the usual chip/mention model.
+		*/
+		const handleEditorClick = (event) => {
+			const target = event.target?.closest(".scalar-pill");
+			if (!target) return;
+			const editor = editorRef.value;
+			if (!editor) return;
+			editor.focus();
+			const range = document.createRange();
+			range.selectNode(target);
+			const selection = window.getSelection();
+			selection?.removeAllRanges();
+			selection?.addRange(range);
+			updateDropdownVisibility();
+		};
+		onMounted(() => {
+			const initial = serializeValue(__props.modelValue);
+			lastPillSignature = pillSignature(initial, __props.withVariables);
+			lastEnvKey = computeEnvKey();
+			renderModel(initial);
+			isEmpty.value = isBlankValue(initial);
+			if (Object.hasOwn(attrs, "autofocus")) editorRef.value?.focus();
+		});
+		watch(() => __props.modelValue, (next) => {
+			const serialized = serializeValue(next);
+			isEmpty.value = isBlankValue(serialized);
+			if (serializeEditor() === serialized) return;
+			lastPillSignature = pillSignature(serialized, __props.withVariables);
+			renderModel(serialized);
+		});
+		watch([() => __props.environment, () => __props.withVariables], () => {
+			const envKey = computeEnvKey();
+			if (envKey === lastEnvKey) return;
+			lastEnvKey = envKey;
+			if (lastPillSignature === "") return;
+			lastPillSignature = pillSignature(serializeEditor(), __props.withVariables);
+			const caret = getModelCaret();
+			renderModel(serializeEditor());
+			if (caret !== null) setModelCaret(caret);
+		}, { deep: true });
+		onBeforeUnmount(() => {
+			teardownPillTooltips();
+		});
+		__expose({
+			focus: (position) => {
+				const editor = editorRef.value;
+				if (!editor) return;
+				editor.focus();
+				if (!isDefined(position)) return;
+				const length = serializeEditor().length;
+				setModelCaret(position === "start" ? 0 : position === "end" ? length : position);
+			},
+			setContent: (next = "") => {
+				if (serializeEditor() === next) return;
+				lastPillSignature = pillSignature(next, __props.withVariables);
+				renderModel(next);
+				isEmpty.value = isBlankValue(next);
+			},
+			getValue: () => serializeEditor(),
+			cursorPosition: () => {
+				const c = getModelCaret();
+				return c === null ? void 0 : c;
+			},
+			isFocused,
+			editorRef
+		});
+		return (_ctx, _cache) => {
+			return openBlock(), createElementBlock(Fragment, null, [
+				__props.disabled ? (openBlock(), createElementBlock("div", {
+					key: 0,
+					class: normalizeClass(["text-c-2 flex cursor-default items-center justify-center", {
+						"font-code pr-2 pl-1 text-base": __props.layout === "modal",
+						"px-2": __props.layout !== "modal",
+						"line-through": __props.linethrough
+					}]),
+					"data-testid": "code-input-lite-disabled"
+				}, [createElementVNode("span", _hoisted_1, toDisplayString(__props.modelValue), 1)], 2)) : __props.enum?.length ? (openBlock(), createBlock(DataTableInputSelect_default, {
+					key: 1,
+					default: __props.default,
+					modelValue: __props.modelValue,
+					type: defaultType.value,
+					value: __props.enum,
+					"onUpdate:modelValue": handleSelectChange
+				}, null, 8, [
+					"default",
+					"modelValue",
+					"type",
+					"value"
+				])) : isBooleanMode.value ? (openBlock(), createBlock(DataTableInputSelect_default, {
+					key: 2,
+					default: __props.default,
+					modelValue: __props.modelValue,
+					value: booleanOptions.value,
+					"onUpdate:modelValue": handleSelectChange
+				}, null, 8, [
+					"default",
+					"modelValue",
+					"value"
+				])) : __props.examples?.length ? (openBlock(), createBlock(DataTableInputSelect_default, {
+					key: 3,
+					default: __props.default,
+					modelValue: __props.modelValue,
+					value: __props.examples,
+					"onUpdate:modelValue": handleSelectChange
+				}, null, 8, [
+					"default",
+					"modelValue",
+					"value"
+				])) : (openBlock(), createElementBlock("div", mergeProps({
+					key: 4,
+					id: componentId.value
+				}, _ctx.$attrs, { class: ["code-input-lite group/code-input-lite peer relative w-full leading-[1.44] -outline-offset-1 has-[:focus-visible]:rounded-[4px] has-[:focus-visible]:outline", {
+					"code-input-lite--error": __props.error,
+					"code-input-lite--empty": isEmpty.value,
+					"line-through": __props.linethrough
+				}] }), [createElementVNode("div", {
+					ref_key: "editorRef",
+					ref: editorRef,
+					"aria-activedescendant": displayVariablesDropdown.value ? activeOptionId.value : void 0,
+					"aria-autocomplete": __props.withVariables ? "list" : void 0,
+					"aria-controls": displayVariablesDropdown.value ? listboxId.value : void 0,
+					"aria-expanded": displayVariablesDropdown.value ? "true" : void 0,
+					"aria-invalid": __props.error ? "true" : void 0,
+					"aria-label": unref(attrs)["aria-label"],
+					"aria-readonly": __props.readOnly ? "true" : void 0,
+					"aria-required": __props.required ? "true" : void 0,
+					class: "code-input-lite__editor",
+					contenteditable: __props.readOnly ? "false" : "true",
+					"data-placeholder": __props.placeholder,
+					role: __props.withVariables ? "combobox" : "textbox",
+					spellcheck: "false",
+					onBlur: handleBlur,
+					onClick: handleEditorClick,
+					onCompositionend: handleCompositionEnd,
+					onCompositionstart: handleCompositionStart,
+					onFocus: handleFocus,
+					onInput: handleInput,
+					onKeydown: handleKeyDown,
+					onPaste: handlePaste,
+					onPointerover: ensureTooltipsActive
+				}, null, 40, _hoisted_3)], 16, _hoisted_2)),
+				_ctx.$slots.warning ? (openBlock(), createElementBlock("div", _hoisted_4, [renderSlot(_ctx.$slots, "warning", {}, void 0, true)])) : createCommentVNode("", true),
+				_ctx.$slots.icon ? (openBlock(), createElementBlock("div", _hoisted_5, [renderSlot(_ctx.$slots, "icon", {}, void 0, true)])) : createCommentVNode("", true),
+				__props.required ? (openBlock(), createElementBlock("div", _hoisted_6, " Required ")) : createCommentVNode("", true),
+				displayVariablesDropdown.value ? (openBlock(), createBlock(EnvironmentVariablesDropdown_default, {
+					key: 8,
+					ref_key: "dropdownRef",
+					ref: dropdownRef,
+					contextFunctionItems: contextFunctionDropdownItems.value,
+					dropdownPosition: dropdownPosition.value,
+					environment: __props.environment,
+					listboxId: listboxId.value,
+					query: dropdownQuery.value,
+					onClose: _cache[0] || (_cache[0] = ($event) => showDropdown.value = false),
+					onRedirect: _cache[1] || (_cache[1] = ($event) => emit("navigate", {
+						page: "document",
+						path: "environment"
+					})),
+					onSelect: handleDropdownSelect
+				}, null, 8, [
+					"contextFunctionItems",
+					"dropdownPosition",
+					"environment",
+					"listboxId",
+					"query"
+				])) : createCommentVNode("", true)
+			], 64);
+		};
+	}
+});
+//#endregion
+export { CodeInputLite_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=CodeInputLite.vue.script.js.map

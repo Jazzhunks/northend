@@ -1,0 +1,7 @@
+import ScalarIconMicrosoftPowerpointLogo_vue_vue_type_script_setup_true_lang_default from "./ScalarIconMicrosoftPowerpointLogo.vue.script.js";
+//#region src/components/ScalarIconMicrosoftPowerpointLogo.vue
+var ScalarIconMicrosoftPowerpointLogo_default = ScalarIconMicrosoftPowerpointLogo_vue_vue_type_script_setup_true_lang_default;
+//#endregion
+export { ScalarIconMicrosoftPowerpointLogo_default as default };
+
+//# sourceMappingURL=ScalarIconMicrosoftPowerpointLogo.js.map

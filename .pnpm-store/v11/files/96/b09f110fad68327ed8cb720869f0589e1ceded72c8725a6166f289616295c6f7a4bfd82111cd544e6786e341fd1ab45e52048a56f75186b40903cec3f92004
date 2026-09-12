@@ -1,0 +1,29 @@
+import type { Component } from 'vue';
+/**
+ * Scalar Sidebar Items component
+ *
+ * A base container for ScalarSidebarItem(s), renders as
+ * a  `<ul>` by default to meet accessibility requirements
+ *
+ * @example
+ * <ScalarSidebarItems>
+ *   <ScalarSidebarItem>...</ScalarSidebarItem>
+ *   <ScalarSidebarItem>...</ScalarSidebarItem>
+ *   <ScalarSidebarItem>...</ScalarSidebarItem>
+ * </ScalarSidebarItems>
+ */
+declare const _default: typeof __VLS_export;
+export default _default;
+declare const __VLS_export: __VLS_WithSlots<import("vue").DefineComponent<{
+    is?: Component | string;
+}, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").PublicProps, Readonly<{
+    is?: Component | string;
+}> & Readonly<{}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>, {
+    default?: (props: {}) => any;
+}>;
+type __VLS_WithSlots<T, S> = T & {
+    new (): {
+        $slots: S;
+    };
+};
+//# sourceMappingURL=ScalarSidebarItems.vue.d.ts.map

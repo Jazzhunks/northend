@@ -1,0 +1,68 @@
+import DataTableInput_default from "../../../components/data-table/DataTableInput.vue.js";
+import { createBlock, createElementVNode, defineComponent, mergeModels, mergeProps, openBlock, renderSlot, unref, useId, useModel, withCtx } from "vue";
+//#region src/v2/blocks/scalar-auth-selector-block/components/RequestAuthDataTableInput.vue?vue&type=script&setup=true&lang.ts
+var _hoisted_1 = ["for"];
+var RequestAuthDataTableInput_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	__name: "RequestAuthDataTableInput",
+	props: /* @__PURE__ */ mergeModels({
+		containerClass: {},
+		environment: {},
+		readOnly: {
+			type: Boolean,
+			default: false
+		},
+		required: {
+			type: Boolean,
+			default: false
+		},
+		type: {}
+	}, {
+		"modelValue": {
+			default: "",
+			required: true
+		},
+		"modelModifiers": {}
+	}),
+	emits: /* @__PURE__ */ mergeModels([
+		"inputFocus",
+		"inputBlur",
+		"selectVariable"
+	], ["update:modelValue"]),
+	setup(__props, { emit: __emit }) {
+		const emit = __emit;
+		const modelValue = useModel(__props, "modelValue");
+		const id = useId();
+		return (_ctx, _cache) => {
+			return openBlock(), createBlock(unref(DataTableInput_default), mergeProps({ id: unref(id) }, _ctx.$attrs, {
+				modelValue: modelValue.value,
+				"onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => modelValue.value = $event),
+				canAddCustomEnumValue: !__props.readOnly,
+				containerClass: __props.containerClass,
+				environment: __props.environment,
+				readOnly: __props.readOnly,
+				required: __props.required,
+				type: __props.type,
+				onInputBlur: _cache[1] || (_cache[1] = ($event) => emit("inputBlur")),
+				onInputFocus: _cache[2] || (_cache[2] = ($event) => emit("inputFocus")),
+				onSelectVariable: _cache[3] || (_cache[3] = ($event) => emit("selectVariable", $event))
+			}), {
+				default: withCtx(() => [createElementVNode("label", { for: unref(id) }, [renderSlot(_ctx.$slots, "default")], 8, _hoisted_1)]),
+				icon: withCtx(() => [renderSlot(_ctx.$slots, "icon")]),
+				_: 3
+			}, 16, [
+				"id",
+				"modelValue",
+				"canAddCustomEnumValue",
+				"containerClass",
+				"environment",
+				"readOnly",
+				"required",
+				"type"
+			]);
+		};
+	}
+});
+//#endregion
+export { RequestAuthDataTableInput_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=RequestAuthDataTableInput.vue.script.js.map

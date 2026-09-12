@@ -1,0 +1,50 @@
+import clsx from 'clsx'
+import { DrawClientProvider } from '../context/draw-context'
+import {
+  createDevtoolsSettings,
+  createHeight,
+} from '../context/use-devtools-context'
+import { createStyles } from '../styles/use-styles'
+import { TANSTACK_DEVTOOLS } from '../utils/storage'
+import { createPiPWindow } from '../context/pip-context'
+
+import type { Accessor, JSX } from 'solid-js'
+
+export const MainPanel = (props: {
+  isOpen: Accessor<boolean>
+  children: JSX.Element
+  isResizing: Accessor<boolean>
+}) => {
+  const styles = createStyles()
+  const { height } = createHeight()
+  const { settings } = createDevtoolsSettings()
+  const pip = createPiPWindow()
+  return (
+    <div
+      id={TANSTACK_DEVTOOLS}
+      data-testid="tsd-main-panel"
+      data-open={props.isOpen() ? 'true' : 'false'}
+      style={{
+        height: pip().pipWindow ? '100vh' : height() + 'px',
+        '--tsd-main-panel-height': pip().pipWindow ? '100vh' : height() + 'px',
+      }}
+      class={clsx(
+        styles().devtoolsPanelContainer(
+          settings().panelLocation,
+          Boolean(pip().pipWindow),
+        ),
+        styles().devtoolsPanelContainerAnimation(
+          props.isOpen(),
+          height(),
+          settings().panelLocation,
+        ),
+        styles().devtoolsPanelContainerVisibility(props.isOpen()),
+        styles().devtoolsPanelContainerResizing(props.isResizing),
+      )}
+    >
+      <DrawClientProvider animationMs={400}>
+        {props.children}
+      </DrawClientProvider>
+    </div>
+  )
+}

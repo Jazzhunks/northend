@@ -1,0 +1,341 @@
+import { n as markdownRenderer, t as parseTags } from "./parse-tags-Cikh_NrX.js";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { createHash } from "node:crypto";
+import { valueToEstree } from "estree-util-value-to-estree";
+import { visit } from "unist-util-visit";
+import { toEstree } from "hast-util-to-estree";
+//#region src/lib/type-table.ts
+async function getTypeTableOutput(gen, { name, type, ...props }, options) {
+	const file = props.path && options?.basePath ? path.join(options.basePath, props.path) : props.path;
+	let typeName = name;
+	let content = "";
+	if (file) content = await fs.readFile(file, "utf-8");
+	if (type && type.split("\n").length > 1) content += `\n${type}`;
+	else if (type) {
+		typeName ??= "$Fumadocs";
+		content += `\nexport type ${typeName} = ${type}`;
+	}
+	const output = await gen.generateDocumentation({
+		path: file ?? "temp.ts",
+		content
+	}, typeName, options);
+	if (name && output.length === 0) throw new Error(`${name} in ${file ?? "empty file"} doesn't exist`);
+	return output;
+}
+//#endregion
+//#region src/cache/index.ts
+function generateHash(str) {
+	return createHash("SHA256").update(str).digest("hex").slice(0, 12);
+}
+//#endregion
+//#region package.json
+var version = "5.3.0";
+//#endregion
+//#region src/lib/base.ts
+async function createProject(options = {}) {
+	const { Project } = await import("ts-morph");
+	return new Project({
+		tsConfigFilePath: options.tsconfigPath ?? "./tsconfig.json",
+		skipAddingFilesFromTsConfig: true
+	});
+}
+function createGenerator(options = {}) {
+	const cache = options?.cache ? options.cache : null;
+	let instance = options?.project;
+	function getProject() {
+		if (instance) return instance;
+		return instance = createProject(options);
+	}
+	function getSourceFile(project, filePath, fileContent) {
+		const ext = path.extname(filePath);
+		const fileBase = filePath.slice(0, -ext.length);
+		let i = 0;
+		let sourceFile = project.getSourceFile(filePath);
+		while (sourceFile && sourceFile.getFullText() !== fileContent) {
+			filePath = `${fileBase}.${i++}${ext}`;
+			sourceFile = project.getSourceFile(filePath);
+		}
+		if (sourceFile) return sourceFile;
+		return project.createSourceFile(filePath, fileContent, { overwrite: true });
+	}
+	return {
+		async generateDocumentation(file, name, options = {}) {
+			const fullPath = path.resolve(file.path);
+			const content = file.content ?? await fs.readFile(fullPath, "utf-8");
+			let cacheKey;
+			if (cache) {
+				cacheKey = generateHash(`${file.path}:${name}:${content}:${version}`);
+				const cached = await cache.read(cacheKey);
+				if (cached) return cached;
+			}
+			const project = await getProject();
+			const sourceFile = getSourceFile(project, fullPath, content);
+			const out = [];
+			for (const [k, d] of sourceFile.getExportedDeclarations()) {
+				if (d.length === 0 || !name || name !== k) continue;
+				if (d.length > 1) console.warn(`export ${k} should not have more than one type declaration.`);
+				const declaration = d[0];
+				const entryContext = {
+					...options,
+					program: project,
+					type: declaration.getType(),
+					declaration
+				};
+				out.push(await generate(encodeURI(`${path.basename(file.path)}-${name}`), k, entryContext));
+			}
+			if (cache && cacheKey) await cache.write(cacheKey, out);
+			return out;
+		},
+		generateTypeTable(props, options) {
+			return getTypeTableOutput(this, props, options);
+		}
+	};
+}
+async function generate(id, name, entryContext) {
+	const { ts } = await import("ts-morph");
+	const { declaration, program } = entryContext;
+	const comment = declaration.getSymbol()?.compilerSymbol.getDocumentationComment(program.getTypeChecker().compilerObject);
+	const entries = [];
+	for (const prop of declaration.getType().getProperties()) {
+		const out = await getDocEntry(prop, entryContext);
+		if (out) entries.push(out);
+	}
+	return {
+		id,
+		name,
+		description: comment ? ts.displayPartsToString(comment) : void 0,
+		entries
+	};
+}
+async function getDocEntry(prop, context) {
+	const { ts } = await import("ts-morph");
+	const { getSimpleForm } = await import("./get-simple-form-B_lm5cA2.js");
+	const { transform, allowInternal = false, program } = context;
+	if (context.type.isClass() && prop.getName().startsWith("#")) return;
+	const subType = prop.getTypeAtLocation(context.declaration);
+	const isOptional = prop.isOptional();
+	const tags = [];
+	for (const tag of prop.getJsDocTags()) {
+		if (!allowInternal && tag.getName() === "internal") return;
+		tags.push({
+			name: tag.getName(),
+			text: ts.displayPartsToString(tag.getText())
+		});
+	}
+	const entry = {
+		name: prop.getName(),
+		description: ts.displayPartsToString(prop.compilerSymbol.getDocumentationComment(program.getTypeChecker().compilerObject)),
+		tags,
+		type: subType.getText(context.declaration, ts.TypeFormatFlags.UseAliasDefinedOutsideCurrentScope | ts.TypeFormatFlags.NoTruncation),
+		simplifiedType: getSimpleForm(subType, program.getTypeChecker(), context.declaration, {
+			...context.typeSimplifier,
+			noUndefined: isOptional
+		}),
+		required: !isOptional,
+		deprecated: false
+	};
+	for (const tag of tags) switch (tag.name) {
+		case "fumadocsType": {
+			const match = /`(?<name>.+)`$/.exec(tag.text)?.[1];
+			if (match) entry.type = match;
+			break;
+		}
+		case "remarks": {
+			const match = /^`(?<name>.+)`/.exec(tag.text)?.[1];
+			if (match) entry.simplifiedType = match;
+			break;
+		}
+		case "fumadocsHref": {
+			const content = tag.text.trim();
+			if (content.length > 0) entry.typeHref = content;
+			break;
+		}
+		case "deprecated":
+			entry.deprecated = true;
+			break;
+	}
+	transform?.call(context, entry, subType, prop);
+	return entry;
+}
+//#endregion
+//#region src/lib/remark-auto-type-table.ts
+function objectBuilder() {
+	const out = {
+		type: "ObjectExpression",
+		properties: []
+	};
+	return {
+		addExpressionNode(key, expression) {
+			out.properties.push({
+				type: "Property",
+				method: false,
+				shorthand: false,
+				computed: false,
+				key: {
+					type: "Literal",
+					value: key
+				},
+				kind: "init",
+				value: expression
+			});
+		},
+		addJsxProperty(key, hast) {
+			const estree = toEstree(hast, { elementAttributeNameCase: "react" }).body[0];
+			this.addExpressionNode(key, estree.expression);
+		},
+		build() {
+			return out;
+		}
+	};
+}
+async function buildTypeProp(entries, renderer) {
+	async function onItem(entry) {
+		const node = objectBuilder();
+		const tags = parseTags(entry.tags);
+		node.addJsxProperty("type", await renderer.renderTypeToHast(entry.simplifiedType));
+		node.addJsxProperty("typeDescription", await renderer.renderTypeToHast(entry.type));
+		node.addExpressionNode("required", valueToEstree(entry.required));
+		if (entry.typeHref) node.addExpressionNode("typeDescriptionLink", valueToEstree(entry.typeHref));
+		if (tags.default) node.addJsxProperty("default", await renderer.renderTypeToHast(tags.default));
+		if (tags.returns) node.addJsxProperty("returns", await renderer.renderMarkdownToHast(tags.returns));
+		if (tags.params) node.addExpressionNode("parameters", {
+			type: "ArrayExpression",
+			elements: await Promise.all(tags.params.map(onParam))
+		});
+		if (entry.description) node.addJsxProperty("description", await renderer.renderMarkdownToHast(entry.description));
+		if (entry.deprecated) node.addExpressionNode("deprecated", valueToEstree(true));
+		return node.build();
+	}
+	async function onParam(param) {
+		const node = objectBuilder();
+		node.addExpressionNode("name", valueToEstree(param.name));
+		if (param.description) node.addJsxProperty("description", await renderer.renderMarkdownToHast(param.description));
+		return node.build();
+	}
+	const prop = objectBuilder();
+	const output = await Promise.all(entries.map(async (entry) => ({
+		name: entry.name,
+		node: await onItem(entry)
+	})));
+	for (const node of output) prop.addExpressionNode(node.name, node.node);
+	return prop.build();
+}
+/**
+* Compile `auto-type-table` into Fumadocs UI compatible TypeTable
+*
+* MDX is required to use this plugin.
+*/
+function remarkAutoTypeTable(config = {}) {
+	const { name = "auto-type-table", outputName = "TypeTable", options: generateOptions = {}, remarkStringify = true, generator = createGenerator(), renderMarkdown, renderType, shiki } = config;
+	let renderer;
+	if (renderMarkdown && renderType) renderer = {
+		renderMarkdownToHast: renderMarkdown,
+		renderTypeToHast: renderType
+	};
+	else {
+		renderer = markdownRenderer(shiki);
+		if (renderMarkdown) renderer.renderMarkdownToHast = renderMarkdown;
+		if (renderType) renderer.renderTypeToHast = renderType;
+	}
+	async function generate(file, props, attributes) {
+		let basePath = props.cwd ? file.cwd : generateOptions.basePath;
+		if (file.dirname) basePath ??= file.dirname;
+		const output = await generator.generateTypeTable(props, {
+			...generateOptions,
+			basePath
+		});
+		const rendered = [];
+		for (const doc of output) rendered.push({
+			type: "mdxJsxFlowElement",
+			name: outputName,
+			attributes: [
+				{
+					type: "mdxJsxAttribute",
+					name: "id",
+					value: `type-table-${doc.id}`
+				},
+				{
+					type: "mdxJsxAttribute",
+					name: "type",
+					value: {
+						type: "mdxJsxAttributeValueExpression",
+						value: remarkStringify ? JSON.stringify(doc, null, 2) : "",
+						data: { estree: {
+							type: "Program",
+							sourceType: "module",
+							body: [{
+								type: "ExpressionStatement",
+								expression: await buildTypeProp(doc.entries, renderer)
+							}]
+						} }
+					}
+				},
+				...attributes
+			],
+			children: []
+		});
+		return rendered;
+	}
+	return async (tree, file) => {
+		const queue = [];
+		visit(tree, "mdxJsxFlowElement", (node) => {
+			if (node.name !== name) return;
+			const props = {};
+			const attributes = [];
+			const onError = (message, cause) => {
+				const location = node.position ? `${file.path}:${node.position.start.line}:${node.position.start.column}` : file.path;
+				throw new Error(`${location} from <auto-type-table>: ${message}`, { cause });
+			};
+			for (const attr of node.attributes) {
+				if (attr.type !== "mdxJsxAttribute") {
+					attributes.push(attr);
+					continue;
+				}
+				switch (attr.name) {
+					case "cwd":
+						props.cwd = true;
+						break;
+					case "path":
+					case "name":
+					case "type":
+						if (typeof attr.value === "string") props[attr.name] = attr.value;
+						else onError(`invalid type for attribute ${attr.name}: ${typeof attr.value}, expected: string`);
+						break;
+					default: attributes.push(attr);
+				}
+			}
+			queue.push(generate(file, props, attributes).then((children) => {
+				Object.assign(node, {
+					type: "root",
+					children
+				});
+			}).catch((err) => {
+				onError("failed to generate type table", err);
+			}));
+			return "skip";
+		});
+		await Promise.all(queue);
+	};
+}
+//#endregion
+//#region src/cache/fs-cache.ts
+function createFileSystemGeneratorCache(dir) {
+	dir = path.resolve(dir);
+	const initDirPromise = fs.mkdir(dir, { recursive: true }).catch(() => {});
+	return {
+		async write(hash, data) {
+			await initDirPromise;
+			await fs.writeFile(path.join(dir, `${hash}.json`), JSON.stringify(data));
+		},
+		async read(hash) {
+			try {
+				return JSON.parse(await fs.readFile(path.join(dir, `${hash}.json`), "utf-8"));
+			} catch {
+				return;
+			}
+		}
+	};
+}
+//#endregion
+export { createFileSystemGeneratorCache, createGenerator, createProject, generateHash, remarkAutoTypeTable };

@@ -1,0 +1,10 @@
+import { getAsyncApiSecurityRequirements } from '../channel-example/get-asyncapi-security-requirements.js';
+import { dedupeRequirements } from './dedupe-requirements.js';
+/**
+ * Merges security requirements from the selected server and all operations on a channel.
+ */
+export const getChannelConnectionSecurityRequirements = (document, _channel, server, channelOperations) => {
+    const serverRequirements = getAsyncApiSecurityRequirements(document, null, server);
+    const operationRequirements = channelOperations.flatMap(({ operation }) => getAsyncApiSecurityRequirements(document, operation, null));
+    return dedupeRequirements([...serverRequirements, ...operationRequirements]);
+};

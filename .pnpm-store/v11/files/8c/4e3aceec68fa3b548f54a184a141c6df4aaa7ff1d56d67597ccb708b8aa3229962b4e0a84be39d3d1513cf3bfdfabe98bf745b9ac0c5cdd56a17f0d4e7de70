@@ -1,0 +1,243 @@
+import type { WorkspaceStore } from '../client.js';
+/**
+ * Generates a set of mutators for managing OpenAPI document and workspace state.
+ *
+ * @param store - The workspace store containing all documents and workspace-level data
+ * @returns An object with mutators for the workspace, the active document, and any named document
+ */
+export declare function generateClientMutators(store: WorkspaceStore | null): {
+    /**
+     * Returns mutators for the workspace-level configuration.
+     */
+    workspace: () => {
+        cookie: {
+            upsertCookie: (payload: {
+                payload: Partial<import("../schemas/extensions/general/x-scalar-cookies.js").XScalarCookie>;
+                index?: number | undefined;
+            }) => import("../schemas/extensions/general/x-scalar-cookies.js").XScalarCookie | undefined;
+            deleteCookie: (payload: {
+                index: number;
+                cookieName: string;
+            }) => boolean;
+        };
+        tabs: {
+            updateTabs: (payload: import("../events/definitions/tabs.js").TabEvents["tabs:update:tabs"]) => void;
+            addTab: (payload: import("../events/definitions/tabs.js").TabEvents["tabs:add:tab"]) => boolean;
+            closeTab: (payload: import("../events/definitions/tabs.js").TabEvents["tabs:close:tab"]) => boolean;
+            closeOtherTabs: (payload: import("../events/definitions/tabs.js").TabEvents["tabs:close:other-tabs"]) => boolean;
+            navigatePreviousTab: (payload: import("../events/definitions/tabs.js").TabEvents["tabs:navigate:previous"]) => boolean;
+            navigateNextTab: (payload: import("../events/definitions/tabs.js").TabEvents["tabs:navigate:next"]) => boolean;
+            focusTab: (payload: import("../events/definitions/tabs.js").TabEvents["tabs:focus:tab"]) => boolean;
+            focusLastTab: (payload: import("../events/definitions/tabs.js").TabEvents["tabs:focus:tab-last"]) => boolean;
+        };
+        workspace: {
+            updateActiveProxy: (payload: import("../events/definitions/workspace.js").WorkspaceEvents["workspace:update:active-proxy"]) => void;
+            updateColorMode: (payload: import("../events/definitions/workspace.js").WorkspaceEvents["workspace:update:color-mode"]) => void;
+            updateTheme: (payload: import("../events/definitions/workspace.js").WorkspaceEvents["workspace:update:theme"]) => void;
+            updateSelectedClient: (payload: import("../events/definitions/workspace.js").WorkspaceEvents["workspace:update:selected-client"]) => void;
+            updateSelectedExample: (payload: import("../events/definitions/workspace.js").WorkspaceEvents["workspace:update:selected-example"]) => void;
+            updateActiveEnvironment: (payload: import("../events/definitions/workspace.js").WorkspaceEvents["workspace:update:active-environment"]) => void;
+        };
+        environment: {
+            upsertEnvironment: (payload: {
+                payload: Partial<import("../schemas/extensions/document/x-scalar-environments.js").XScalarEnvironment>;
+                environmentName: string;
+                oldEnvironmentName?: string | undefined;
+            }) => import("../schemas/extensions/document/x-scalar-environments.js").XScalarEnvironment | undefined;
+            deleteEnvironment: (payload: {
+                environmentName: string;
+            }) => void;
+            upsertEnvironmentVariable: (payload: {
+                index?: number | undefined;
+                environmentName: string;
+                variable: import("../schemas/extensions/document/x-scalar-environments.js").XScalarEnvVar;
+            }) => import("../schemas/extensions/document/x-scalar-environments.js").XScalarEnvVar | undefined;
+            deleteEnvironmentVariable: (payload: {
+                index: number;
+                environmentName: string;
+            }) => void;
+        };
+    };
+    /**
+     * Returns mutators for the currently active document.
+     * Falls back to the first document if no active document is set.
+     */
+    active: () => {
+        auth: {
+            updateSelectedSecuritySchemes: (payload: import("../events/definitions/auth.js").AuthEvents["auth:update:selected-security-schemes"]) => Promise<void>;
+            clearSelectedSecuritySchemes: (payload: import("../events/definitions/auth.js").AuthEvents["auth:clear:selected-security-schemes"]) => void;
+            updateSecurityScheme: (payload: import("../events/definitions/auth.js").AuthEvents["auth:update:security-scheme"]) => import("../schemas/v3.1/strict/security-scheme.js").SecuritySchemeObject | undefined;
+            updateSecuritySchemeSecrets: (payload: import("../events/definitions/auth.js").AuthEvents["auth:update:security-scheme-secrets"]) => void;
+            clearSecuritySchemeSecrets: (payload: import("../events/definitions/auth.js").AuthEvents["auth:clear:security-scheme-secrets"]) => void;
+            updateSelectedAuthTab: (payload: import("../events/definitions/auth.js").AuthEvents["auth:update:active-index"]) => void;
+            updateSelectedScopes: (payload: import("../events/definitions/auth.js").AuthEvents["auth:update:selected-scopes"]) => void;
+            upsertScope: (payload: import("../events/definitions/auth.js").AuthEvents["auth:upsert:scopes"]) => void;
+            deleteScope: (payload: import("../events/definitions/auth.js").AuthEvents["auth:delete:scopes"]) => void;
+            deleteSecurityScheme: (payload: import("../events/definitions/auth.js").AuthEvents["auth:delete:security-scheme"]) => void;
+        };
+        cookie: {
+            upsertCookie: (payload: {
+                payload: Partial<import("../schemas/extensions/general/x-scalar-cookies.js").XScalarCookie>;
+                index?: number | undefined;
+            }) => import("../schemas/extensions/general/x-scalar-cookies.js").XScalarCookie | undefined;
+            deleteCookie: (payload: {
+                index: number;
+                cookieName: string;
+            }) => boolean;
+        };
+        document: {
+            updateDocumentExtension: (payload: import("../events/definitions/document.js").DocumentEvents["document:update:extension"]) => void;
+            updateDocumentInfo: (payload: import("../events/definitions/document.js").DocumentEvents["document:update:info"]) => void;
+            updateWatchMode: (payload: import("../events/definitions/document.js").DocumentEvents["document:update:watch-mode"]) => void;
+            updateDocumentIcon: (payload: import("../events/definitions/document.js").DocumentEvents["document:update:icon"]) => void;
+            createEmptyDocument: (payload: import("../events/definitions/document.js").DocumentEvents["document:create:empty-document"]) => Promise<void>;
+            deleteDocument: (payload: import("../events/definitions/document.js").DocumentEvents["document:delete:document"]) => void;
+        };
+        operation: {
+            createOperation: (payload: import("../events/index.js").OperationEvents["operation:create:operation"]) => string | undefined;
+            updateOperationMeta: (payload: import("../events/index.js").OperationEvents["operation:update:meta"]) => void;
+            updateOperationPathMethod: (payload: import("../events/index.js").OperationEvents["operation:update:pathMethod"]) => void;
+            deleteOperation: (payload: import("../events/index.js").OperationEvents["operation:delete:operation"]) => void;
+            createOperationDraftExample: (payload: import("../events/index.js").OperationEvents["operation:create:draft-example"]) => void;
+            deleteOperationExample: (payload: import("../events/index.js").OperationEvents["operation:delete:example"]) => void;
+            renameOperationExample: (payload: import("../events/index.js").OperationEvents["operation:rename:example"]) => void;
+            updateOperationExtension: (payload: import("../events/index.js").OperationEvents["operation:update:extension"]) => void;
+            updateOperationExtraParameters: (payload: import("../events/index.js").OperationEvents["operation:update:extra-parameters"]) => void;
+            upsertOperationParameter: (payload: import("../events/index.js").OperationEvents["operation:upsert:parameter"]) => void;
+            deleteOperationParameter: (payload: import("../events/index.js").OperationEvents["operation:delete:parameter"]) => void;
+            deleteAllOperationParameters: (payload: import("../events/index.js").OperationEvents["operation:delete-all:parameters"]) => void;
+            updateOperationRequestBodyContentType: (payload: import("../events/index.js").OperationEvents["operation:update:requestBody:contentType"]) => void;
+            updateOperationRequestBodyExample: (payload: import("../events/index.js").OperationEvents["operation:update:requestBody:value"]) => void;
+            updateOperationRequestBodyFormValue: (payload: import("../events/index.js").OperationEvents["operation:update:requestBody:formValue"]) => void;
+            addResponseToHistory: (payload: import("../events/definitions/hooks.js").HooksEvents["hooks:on:request:complete"]) => Promise<void>;
+            reloadOperationHistory: (payload: import("../events/index.js").OperationEvents["operation:reload:history"]) => void;
+        };
+        server: {
+            initializeServers: (payload: import("../events/definitions/server.js").ServerEvents["server:initialize:servers"]) => import("../schemas/v3.1/strict/server.js").ServerObject[] | undefined;
+            addServer: (payload: import("../events/definitions/server.js").ServerEvents["server:add:server"]) => import("../schemas/v3.1/strict/server.js").ServerObject | undefined;
+            updateServer: (payload: import("../events/definitions/server.js").ServerEvents["server:update:server"]) => import("../schemas/v3.1/strict/server.js").ServerObject | undefined;
+            deleteServer: (payload: import("../events/definitions/server.js").ServerEvents["server:delete:server"]) => void;
+            clearServers: (payload: import("../events/definitions/server.js").ServerEvents["server:clear:servers"]) => void;
+            updateServerVariables: (payload: import("../events/definitions/server.js").ServerEvents["server:update:variables"]) => import("../schemas/v3.1/strict/server-variable.js").ServerVariableObject | undefined;
+            updateSelectedServer: (payload: import("../events/definitions/server.js").ServerEvents["server:update:selected"]) => string | undefined;
+            updateSelectedAsyncApiServer: (payload: import("../events/definitions/server.js").ServerEvents["asyncapi-server:update:selected"]) => string | undefined;
+            updateAsyncApiServerVariables: (payload: import("../events/definitions/server.js").ServerEvents["asyncapi-server:update:variables"]) => import("@scalar/types/asyncapi/3.1").AsyncApiServerVariableObject | undefined;
+        };
+        tag: {
+            createTag: (payload: import("../events/definitions/tag.js").TagEvents["tag:create:tag"]) => void;
+            editTag: (payload: import("../events/definitions/tag.js").TagEvents["tag:edit:tag"]) => void;
+            deleteTag: (payload: import("../events/definitions/tag.js").TagEvents["tag:delete:tag"]) => void;
+        };
+        environment: {
+            upsertEnvironment: (payload: {
+                payload: Partial<import("../schemas/extensions/document/x-scalar-environments.js").XScalarEnvironment>;
+                environmentName: string;
+                oldEnvironmentName?: string | undefined;
+            }) => import("../schemas/extensions/document/x-scalar-environments.js").XScalarEnvironment | undefined;
+            deleteEnvironment: (payload: {
+                environmentName: string;
+            }) => void;
+            upsertEnvironmentVariable: (payload: {
+                index?: number | undefined;
+                environmentName: string;
+                variable: import("../schemas/extensions/document/x-scalar-environments.js").XScalarEnvVar;
+            }) => import("../schemas/extensions/document/x-scalar-environments.js").XScalarEnvVar | undefined;
+            deleteEnvironmentVariable: (payload: {
+                index: number;
+                environmentName: string;
+            }) => void;
+        };
+    };
+    /**
+     * Returns mutators for a specific document by name.
+     *
+     * @param name - The name of the document
+     */
+    doc: (name: string) => {
+        auth: {
+            updateSelectedSecuritySchemes: (payload: import("../events/definitions/auth.js").AuthEvents["auth:update:selected-security-schemes"]) => Promise<void>;
+            clearSelectedSecuritySchemes: (payload: import("../events/definitions/auth.js").AuthEvents["auth:clear:selected-security-schemes"]) => void;
+            updateSecurityScheme: (payload: import("../events/definitions/auth.js").AuthEvents["auth:update:security-scheme"]) => import("../schemas/v3.1/strict/security-scheme.js").SecuritySchemeObject | undefined;
+            updateSecuritySchemeSecrets: (payload: import("../events/definitions/auth.js").AuthEvents["auth:update:security-scheme-secrets"]) => void;
+            clearSecuritySchemeSecrets: (payload: import("../events/definitions/auth.js").AuthEvents["auth:clear:security-scheme-secrets"]) => void;
+            updateSelectedAuthTab: (payload: import("../events/definitions/auth.js").AuthEvents["auth:update:active-index"]) => void;
+            updateSelectedScopes: (payload: import("../events/definitions/auth.js").AuthEvents["auth:update:selected-scopes"]) => void;
+            upsertScope: (payload: import("../events/definitions/auth.js").AuthEvents["auth:upsert:scopes"]) => void;
+            deleteScope: (payload: import("../events/definitions/auth.js").AuthEvents["auth:delete:scopes"]) => void;
+            deleteSecurityScheme: (payload: import("../events/definitions/auth.js").AuthEvents["auth:delete:security-scheme"]) => void;
+        };
+        cookie: {
+            upsertCookie: (payload: {
+                payload: Partial<import("../schemas/extensions/general/x-scalar-cookies.js").XScalarCookie>;
+                index?: number | undefined;
+            }) => import("../schemas/extensions/general/x-scalar-cookies.js").XScalarCookie | undefined;
+            deleteCookie: (payload: {
+                index: number;
+                cookieName: string;
+            }) => boolean;
+        };
+        document: {
+            updateDocumentExtension: (payload: import("../events/definitions/document.js").DocumentEvents["document:update:extension"]) => void;
+            updateDocumentInfo: (payload: import("../events/definitions/document.js").DocumentEvents["document:update:info"]) => void;
+            updateWatchMode: (payload: import("../events/definitions/document.js").DocumentEvents["document:update:watch-mode"]) => void;
+            updateDocumentIcon: (payload: import("../events/definitions/document.js").DocumentEvents["document:update:icon"]) => void;
+            createEmptyDocument: (payload: import("../events/definitions/document.js").DocumentEvents["document:create:empty-document"]) => Promise<void>;
+            deleteDocument: (payload: import("../events/definitions/document.js").DocumentEvents["document:delete:document"]) => void;
+        };
+        operation: {
+            createOperation: (payload: import("../events/index.js").OperationEvents["operation:create:operation"]) => string | undefined;
+            updateOperationMeta: (payload: import("../events/index.js").OperationEvents["operation:update:meta"]) => void;
+            updateOperationPathMethod: (payload: import("../events/index.js").OperationEvents["operation:update:pathMethod"]) => void;
+            deleteOperation: (payload: import("../events/index.js").OperationEvents["operation:delete:operation"]) => void;
+            createOperationDraftExample: (payload: import("../events/index.js").OperationEvents["operation:create:draft-example"]) => void;
+            deleteOperationExample: (payload: import("../events/index.js").OperationEvents["operation:delete:example"]) => void;
+            renameOperationExample: (payload: import("../events/index.js").OperationEvents["operation:rename:example"]) => void;
+            updateOperationExtension: (payload: import("../events/index.js").OperationEvents["operation:update:extension"]) => void;
+            updateOperationExtraParameters: (payload: import("../events/index.js").OperationEvents["operation:update:extra-parameters"]) => void;
+            upsertOperationParameter: (payload: import("../events/index.js").OperationEvents["operation:upsert:parameter"]) => void;
+            deleteOperationParameter: (payload: import("../events/index.js").OperationEvents["operation:delete:parameter"]) => void;
+            deleteAllOperationParameters: (payload: import("../events/index.js").OperationEvents["operation:delete-all:parameters"]) => void;
+            updateOperationRequestBodyContentType: (payload: import("../events/index.js").OperationEvents["operation:update:requestBody:contentType"]) => void;
+            updateOperationRequestBodyExample: (payload: import("../events/index.js").OperationEvents["operation:update:requestBody:value"]) => void;
+            updateOperationRequestBodyFormValue: (payload: import("../events/index.js").OperationEvents["operation:update:requestBody:formValue"]) => void;
+            addResponseToHistory: (payload: import("../events/definitions/hooks.js").HooksEvents["hooks:on:request:complete"]) => Promise<void>;
+            reloadOperationHistory: (payload: import("../events/index.js").OperationEvents["operation:reload:history"]) => void;
+        };
+        server: {
+            initializeServers: (payload: import("../events/definitions/server.js").ServerEvents["server:initialize:servers"]) => import("../schemas/v3.1/strict/server.js").ServerObject[] | undefined;
+            addServer: (payload: import("../events/definitions/server.js").ServerEvents["server:add:server"]) => import("../schemas/v3.1/strict/server.js").ServerObject | undefined;
+            updateServer: (payload: import("../events/definitions/server.js").ServerEvents["server:update:server"]) => import("../schemas/v3.1/strict/server.js").ServerObject | undefined;
+            deleteServer: (payload: import("../events/definitions/server.js").ServerEvents["server:delete:server"]) => void;
+            clearServers: (payload: import("../events/definitions/server.js").ServerEvents["server:clear:servers"]) => void;
+            updateServerVariables: (payload: import("../events/definitions/server.js").ServerEvents["server:update:variables"]) => import("../schemas/v3.1/strict/server-variable.js").ServerVariableObject | undefined;
+            updateSelectedServer: (payload: import("../events/definitions/server.js").ServerEvents["server:update:selected"]) => string | undefined;
+            updateSelectedAsyncApiServer: (payload: import("../events/definitions/server.js").ServerEvents["asyncapi-server:update:selected"]) => string | undefined;
+            updateAsyncApiServerVariables: (payload: import("../events/definitions/server.js").ServerEvents["asyncapi-server:update:variables"]) => import("@scalar/types/asyncapi/3.1").AsyncApiServerVariableObject | undefined;
+        };
+        tag: {
+            createTag: (payload: import("../events/definitions/tag.js").TagEvents["tag:create:tag"]) => void;
+            editTag: (payload: import("../events/definitions/tag.js").TagEvents["tag:edit:tag"]) => void;
+            deleteTag: (payload: import("../events/definitions/tag.js").TagEvents["tag:delete:tag"]) => void;
+        };
+        environment: {
+            upsertEnvironment: (payload: {
+                payload: Partial<import("../schemas/extensions/document/x-scalar-environments.js").XScalarEnvironment>;
+                environmentName: string;
+                oldEnvironmentName?: string | undefined;
+            }) => import("../schemas/extensions/document/x-scalar-environments.js").XScalarEnvironment | undefined;
+            deleteEnvironment: (payload: {
+                environmentName: string;
+            }) => void;
+            upsertEnvironmentVariable: (payload: {
+                index?: number | undefined;
+                environmentName: string;
+                variable: import("../schemas/extensions/document/x-scalar-environments.js").XScalarEnvVar;
+            }) => import("../schemas/extensions/document/x-scalar-environments.js").XScalarEnvVar | undefined;
+            deleteEnvironmentVariable: (payload: {
+                index: number;
+                environmentName: string;
+            }) => void;
+        };
+    };
+};
+//# sourceMappingURL=index.d.ts.map

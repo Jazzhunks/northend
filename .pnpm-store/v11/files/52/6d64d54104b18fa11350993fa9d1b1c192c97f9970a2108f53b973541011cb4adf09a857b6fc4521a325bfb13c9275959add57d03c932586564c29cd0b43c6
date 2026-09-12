@@ -1,0 +1,91 @@
+import DataTableRow_default from "../../../components/data-table/DataTableRow.vue.js";
+import RequestAuthDataTableInput_default from "./RequestAuthDataTableInput.vue.js";
+import { fetchOpenIDConnectDiscovery } from "../helpers/fetch-openid-connect-discovery.js";
+import { openIDDiscoveryToFlows } from "../helpers/openid-discovery-to-flows.js";
+import { Fragment, createElementBlock, createElementVNode, createTextVNode, createVNode, defineComponent, openBlock, unref, withCtx } from "vue";
+import { ScalarButton } from "@scalar/components/button";
+import { useToasts } from "@scalar/use-toasts";
+import { useLoadingState } from "@scalar/components/loading";
+//#region src/v2/blocks/scalar-auth-selector-block/components/OpenIDConnect.vue?vue&type=script&setup=true&lang.ts
+var _hoisted_1 = { class: "flex h-8 w-full items-center justify-end border-t" };
+var OpenIDConnect_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	__name: "OpenIDConnect",
+	props: {
+		environment: {},
+		eventBus: {},
+		getStaticBorderClass: { type: Function },
+		name: {},
+		proxyUrl: {},
+		scheme: {},
+		customFetch: {}
+	},
+	setup(__props) {
+		const loader = useLoadingState();
+		const { toast } = useToasts();
+		/**
+		* Fetches the OpenID Connect discovery document and triggers authorization
+		*/
+		const handleOpenIdConnect = async () => {
+			if (loader.isLoading || !__props.scheme.openIdConnectUrl) return;
+			loader.start();
+			const [error, _discovery] = await fetchOpenIDConnectDiscovery(__props.scheme.openIdConnectUrl, __props.proxyUrl, __props.customFetch);
+			await loader.clear();
+			if (error) {
+				console.error(error);
+				toast(error?.message ?? "Failed to fetch OpenID Connect configuration", "error");
+				return;
+			}
+			/** Set the newly discovered params in the secret store */
+			const openIdConnect = openIDDiscoveryToFlows(_discovery);
+			__props.eventBus.emit("auth:update:security-scheme-secrets", {
+				payload: openIdConnect,
+				name: __props.name,
+				overwrite: true
+			});
+		};
+		const handleUpdateOpenIdConnectUrl = (value) => __props.eventBus.emit("auth:update:security-scheme", {
+			payload: {
+				type: "openIdConnect",
+				openIdConnectUrl: value
+			},
+			name: __props.name
+		});
+		return (_ctx, _cache) => {
+			return openBlock(), createElementBlock(Fragment, null, [createVNode(unref(DataTableRow_default), null, {
+				default: withCtx(() => [createVNode(RequestAuthDataTableInput_default, {
+					containerClass: __props.getStaticBorderClass(),
+					environment: __props.environment,
+					modelValue: __props.scheme.openIdConnectUrl,
+					placeholder: "https://example.com/.well-known/openid-configuration",
+					required: "",
+					"onUpdate:modelValue": handleUpdateOpenIdConnectUrl
+				}, {
+					default: withCtx(() => [..._cache[0] || (_cache[0] = [createTextVNode(" Discovery URL ", -1)])]),
+					_: 1
+				}, 8, [
+					"containerClass",
+					"environment",
+					"modelValue"
+				])]),
+				_: 1
+			}), createVNode(unref(DataTableRow_default), { class: "min-w-full" }, {
+				default: withCtx(() => [createElementVNode("div", _hoisted_1, [createVNode(unref(ScalarButton), {
+					class: "mr-0.75 p-0 px-2 py-0.5",
+					disabled: !__props.scheme.openIdConnectUrl,
+					loader: unref(loader),
+					size: "sm",
+					variant: "outlined",
+					onClick: handleOpenIdConnect
+				}, {
+					default: withCtx(() => [..._cache[1] || (_cache[1] = [createTextVNode(" Fetch Configuration ", -1)])]),
+					_: 1
+				}, 8, ["disabled", "loader"])])]),
+				_: 1
+			})], 64);
+		};
+	}
+});
+//#endregion
+export { OpenIDConnect_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=OpenIDConnect.vue.script.js.map

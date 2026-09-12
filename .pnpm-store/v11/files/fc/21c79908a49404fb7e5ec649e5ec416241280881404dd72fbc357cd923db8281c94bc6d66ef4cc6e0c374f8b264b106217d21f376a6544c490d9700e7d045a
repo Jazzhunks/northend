@@ -1,0 +1,286 @@
+import { filterItems } from "../helpers/filter-items.js";
+import SidebarItemDecorator_default from "./SidebarItemDecorator.vue.js";
+import { hasChildren } from "../helpers/has-children.js";
+import { isSidebarFolder } from "../helpers/is-sidebar-folder.js";
+import { useDraggable } from "../hooks/use-draggable.js";
+import SidebarHttpBadge_default from "./SidebarHttpBadge.vue.js";
+import SidebarItemLabel_default from "./SidebarItemLabel.vue.js";
+import { Fragment, computed, createBlock, createCommentVNode, createElementBlock, createElementVNode, createSlots, createTextVNode, createVNode, defineComponent, mergeProps, normalizeClass, openBlock, renderList, renderSlot, resolveComponent, toDisplayString, toHandlers, unref, useSlots, withCtx } from "vue";
+import { ScalarSidebarGroup, ScalarSidebarGroupToggle, ScalarSidebarItem, ScalarSidebarSection } from "@scalar/components/sidebar";
+import { LibraryIcon } from "@scalar/icons/library";
+//#region src/components/SidebarItem.vue?vue&type=script&setup=true&lang.ts
+var _hoisted_1 = {
+	key: 0,
+	class: "line-through"
+};
+var _hoisted_2 = {
+	key: 0,
+	class: "line-through"
+};
+var SidebarItem_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
+	__name: "SidebarItem",
+	props: {
+		item: {},
+		layout: {},
+		isSelected: { type: Function },
+		isExpanded: { type: Function },
+		options: {},
+		isDraggable: {},
+		isDroppable: { type: Function }
+	},
+	emits: [
+		"selectItem",
+		"onDragEnd",
+		"toggleGroup"
+	],
+	setup(__props, { emit: __emit }) {
+		const emit = __emit;
+		const slots = useSlots();
+		const isGroup = (currentItem) => {
+			return "isGroup" in currentItem && currentItem.isGroup;
+		};
+		const isDeprecated = (currentItem) => {
+			return ("isDeprecated" in currentItem && currentItem.isDeprecated) ?? false;
+		};
+		/**
+		* Handle drag end event and bubble it up to parent.
+		*/
+		const onDragEnd = (draggingItem, hoveredItem) => {
+			emit("onDragEnd", draggingItem, hoveredItem);
+		};
+		const { draggableAttrs, draggableEvents } = useDraggable({
+			id: __props.item.id,
+			isDraggable: __props.isDraggable,
+			isDroppable: __props.isDroppable,
+			onDragEnd
+		});
+		const children = computed(() => hasChildren(__props.item) ? filterItems(__props.layout, __props.item.children, __props.options?.hideOperationDefaultExamples) : []);
+		return (_ctx, _cache) => {
+			const _component_SidebarItem = resolveComponent("SidebarItem", true);
+			return children.value.length > 0 && isGroup(__props.item) ? (openBlock(), createBlock(unref(ScalarSidebarSection), mergeProps({
+				key: 0,
+				"data-sidebar-id": __props.item.id
+			}, unref(draggableAttrs), toHandlers(unref(draggableEvents))), {
+				items: withCtx(() => [(openBlock(true), createElementBlock(Fragment, null, renderList(children.value, (child) => {
+					return openBlock(), createBlock(_component_SidebarItem, {
+						key: child.id,
+						isDraggable: __props.isDraggable,
+						isDroppable: __props.isDroppable,
+						isExpanded: __props.isExpanded,
+						isSelected: __props.isSelected,
+						item: child,
+						layout: __props.layout,
+						options: __props.options,
+						onOnDragEnd: onDragEnd,
+						onSelectItem: _cache[0] || (_cache[0] = (id) => emit("selectItem", id)),
+						onToggleGroup: _cache[1] || (_cache[1] = (id) => emit("toggleGroup", id))
+					}, createSlots({ _: 2 }, [
+						slots.decorator ? {
+							name: "decorator",
+							fn: withCtx((slotProps) => [renderSlot(_ctx.$slots, "decorator", mergeProps({ ref_for: true }, slotProps))]),
+							key: "0"
+						} : void 0,
+						slots.empty ? {
+							name: "empty",
+							fn: withCtx((slotProps) => [renderSlot(_ctx.$slots, "empty", mergeProps({ ref_for: true }, slotProps))]),
+							key: "1"
+						} : void 0,
+						slots.icon ? {
+							name: "icon",
+							fn: withCtx((slotProps) => [renderSlot(_ctx.$slots, "icon", mergeProps({ ref_for: true }, slotProps))]),
+							key: "2"
+						} : void 0
+					]), 1032, [
+						"isDraggable",
+						"isDroppable",
+						"isExpanded",
+						"isSelected",
+						"item",
+						"layout",
+						"options"
+					]);
+				}), 128))]),
+				default: withCtx(() => [createTextVNode(toDisplayString(__props.item.title) + " ", 1)]),
+				_: 3
+			}, 16, ["data-sidebar-id"])) : unref(isSidebarFolder)(__props.layout, __props.item, slots.empty !== void 0, __props.options?.hideOperationDefaultExamples ?? false) ? (openBlock(), createBlock(unref(ScalarSidebarGroup), mergeProps({
+				key: 1,
+				active: __props.isSelected(__props.item.id),
+				class: "relative",
+				controlled: "",
+				"data-sidebar-id": __props.item.id
+			}, unref(draggableAttrs), {
+				discrete: __props.layout === "reference" && __props.item.type === "text",
+				open: __props.isExpanded(__props.item.id)
+			}, toHandlers(unref(draggableEvents)), {
+				onClick: _cache[4] || (_cache[4] = () => emit("selectItem", __props.item.id)),
+				onToggle: _cache[5] || (_cache[5] = () => emit("toggleGroup", __props.item.id))
+			}), createSlots({
+				items: withCtx(() => [(openBlock(true), createElementBlock(Fragment, null, renderList(children.value, (child) => {
+					return openBlock(), createBlock(_component_SidebarItem, {
+						key: child.id,
+						isDraggable: __props.isDraggable,
+						isDroppable: __props.isDroppable,
+						isExpanded: __props.isExpanded,
+						isSelected: __props.isSelected,
+						item: child,
+						layout: __props.layout,
+						options: __props.options,
+						parentIds: [],
+						onOnDragEnd: onDragEnd,
+						onSelectItem: _cache[2] || (_cache[2] = (id) => emit("selectItem", id)),
+						onToggleGroup: _cache[3] || (_cache[3] = (id) => emit("toggleGroup", id))
+					}, createSlots({ _: 2 }, [
+						slots.decorator ? {
+							name: "decorator",
+							fn: withCtx((slotProps) => [renderSlot(_ctx.$slots, "decorator", mergeProps({ ref_for: true }, slotProps))]),
+							key: "0"
+						} : void 0,
+						slots.empty ? {
+							name: "empty",
+							fn: withCtx((slotProps) => [renderSlot(_ctx.$slots, "empty", mergeProps({ ref_for: true }, slotProps))]),
+							key: "1"
+						} : void 0,
+						slots.icon ? {
+							name: "icon",
+							fn: withCtx((slotProps) => [renderSlot(_ctx.$slots, "icon", mergeProps({ ref_for: true }, slotProps))]),
+							key: "2"
+						} : void 0
+					]), 1032, [
+						"isDraggable",
+						"isDroppable",
+						"isExpanded",
+						"isSelected",
+						"item",
+						"layout",
+						"options"
+					]);
+				}), 128)), slots.empty && (__props.item.children?.length ?? 0) === 0 ? renderSlot(_ctx.$slots, "empty", {
+					key: 0,
+					item: __props.item
+				}) : createCommentVNode("", true)]),
+				default: withCtx(() => [isDeprecated(__props.item) ? (openBlock(), createElementBlock("span", _hoisted_1, [createVNode(SidebarItemLabel_default, {
+					item: __props.item,
+					operationTitleSource: __props.options?.operationTitleSource
+				}, null, 8, ["item", "operationTitleSource"])])) : (openBlock(), createBlock(SidebarItemLabel_default, {
+					key: 1,
+					item: __props.item,
+					operationTitleSource: __props.options?.operationTitleSource
+				}, null, 8, ["item", "operationTitleSource"]))]),
+				_: 2
+			}, [
+				__props.item.type === "document" ? {
+					name: "icon",
+					fn: withCtx(({ open }) => [renderSlot(_ctx.$slots, "icon", {
+						item: __props.item,
+						open
+					}, () => [createVNode(unref(LibraryIcon), {
+						class: "block",
+						src: "icon" in __props.item && __props.item.icon || "interface-content-folder"
+					}, null, 8, ["src"])])]),
+					key: "0"
+				} : void 0,
+				"method" in __props.item ? {
+					name: "aside",
+					fn: withCtx(() => [createVNode(SidebarHttpBadge_default, {
+						active: __props.isSelected(__props.item.id),
+						class: normalizeClass(["ml-2 h-4 self-start", { "group-hover/button:opacity-0 group-focus-visible/button:opacity-0 group-has-[~*_[aria-expanded=true]]/button:opacity-0 group-has-[~*:focus-within]/button:opacity-0 group-has-[~*:hover]/button:opacity-0": slots.decorator }]),
+						label: __props.options?.labels?.httpMethod,
+						method: __props.item.method,
+						webhook: __props.item.type === "webhook"
+					}, null, 8, [
+						"active",
+						"class",
+						"label",
+						"method",
+						"webhook"
+					])]),
+					key: "1"
+				} : void 0,
+				"method" in __props.item ? {
+					name: "toggle",
+					fn: withCtx(() => [_cache[7] || (_cache[7] = createElementVNode("span", { class: "hidden" }, null, -1))]),
+					key: "2"
+				} : {
+					name: "toggle",
+					fn: withCtx(({ open }) => [createVNode(unref(ScalarSidebarGroupToggle), {
+						class: "text-sidebar-c-2",
+						open
+					}, {
+						label: withCtx(() => [createTextVNode(toDisplayString(open ? __props.options?.labels?.closeGroup ?? "Close Group" : __props.options?.labels?.openGroup ?? "Open Group"), 1)]),
+						_: 2
+					}, 1032, ["open"])]),
+					key: "3"
+				},
+				slots.decorator ? {
+					name: "after",
+					fn: withCtx(() => [createVNode(SidebarItemDecorator_default, null, {
+						default: withCtx(() => [renderSlot(_ctx.$slots, "decorator", { item: __props.item })]),
+						_: 3
+					})]),
+					key: "4"
+				} : void 0
+			]), 1040, [
+				"active",
+				"data-sidebar-id",
+				"discrete",
+				"open"
+			])) : (openBlock(), createBlock(unref(ScalarSidebarItem), mergeProps({
+				key: 2,
+				is: "button"
+			}, unref(draggableAttrs), {
+				class: "relative",
+				"data-sidebar-id": __props.item.id,
+				selected: __props.isSelected(__props.item.id)
+			}, toHandlers(unref(draggableEvents)), { onClick: _cache[6] || (_cache[6] = () => emit("selectItem", __props.item.id)) }), createSlots({
+				default: withCtx(() => [isDeprecated(__props.item) ? (openBlock(), createElementBlock("span", _hoisted_2, [createVNode(SidebarItemLabel_default, {
+					item: __props.item,
+					operationTitleSource: __props.options?.operationTitleSource
+				}, null, 8, ["item", "operationTitleSource"])])) : (openBlock(), createBlock(SidebarItemLabel_default, {
+					key: 1,
+					item: __props.item,
+					operationTitleSource: __props.options?.operationTitleSource
+				}, null, 8, ["item", "operationTitleSource"]))]),
+				_: 2
+			}, [
+				slots.icon ? {
+					name: "icon",
+					fn: withCtx(() => [renderSlot(_ctx.$slots, "icon", {
+						item: __props.item,
+						open: true
+					})]),
+					key: "0"
+				} : void 0,
+				"method" in __props.item ? {
+					name: "aside",
+					fn: withCtx(() => ["method" in __props.item ? (openBlock(), createBlock(SidebarHttpBadge_default, {
+						key: 0,
+						active: __props.isSelected(__props.item.id),
+						class: normalizeClass(["ml-2 h-4 self-start", { "group-hover/button:opacity-0 group-focus-visible/button:opacity-0 group-has-[~*_[aria-expanded=true]]/button:opacity-0 group-has-[~*:focus-within]/button:opacity-0 group-has-[~*:hover]/button:opacity-0": slots.decorator }]),
+						label: __props.options?.labels?.httpMethod,
+						method: __props.item.method,
+						webhook: __props.item.type === "webhook"
+					}, null, 8, [
+						"active",
+						"class",
+						"label",
+						"method",
+						"webhook"
+					])) : createCommentVNode("", true)]),
+					key: "1"
+				} : void 0,
+				slots.decorator ? {
+					name: "after",
+					fn: withCtx(() => [createVNode(SidebarItemDecorator_default, null, {
+						default: withCtx(() => [renderSlot(_ctx.$slots, "decorator", { item: __props.item })]),
+						_: 3
+					})]),
+					key: "2"
+				} : void 0
+			]), 1040, ["data-sidebar-id", "selected"]));
+		};
+	}
+});
+//#endregion
+export { SidebarItem_vue_vue_type_script_setup_true_lang_default as default };
+
+//# sourceMappingURL=SidebarItem.vue.script.js.map

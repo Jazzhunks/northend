@@ -1,0 +1,78 @@
+import * as Context from "effect/Context";
+import * as Effect from "effect/Effect";
+import type { LazyArg } from "effect/Function";
+import type * as Layer from "effect/Layer";
+import * as HttpClient from "effect/unstable/http/HttpClient";
+export { 
+/**
+ * Context reference for the `fetch` implementation used by the fetch-based HTTP client.
+ *
+ * @category fetch
+ * @since 4.0.0
+ */
+Fetch, 
+/**
+ * Layer that provides an `HttpClient` implementation backed by the configured `Fetch` function.
+ *
+ * @category fetch
+ * @since 4.0.0
+ */
+layer as layerFetch, 
+/**
+ * Service that contains default fetch options for the browser fetch client.
+ *
+ * **When to use**
+ *
+ * Use to provide default credentials, cache, redirect, integrity, or other
+ * fetch options for browser HTTP requests.
+ *
+ * @category fetch
+ * @since 4.0.0
+ */
+RequestInit } from "effect/unstable/http/FetchHttpClient";
+/**
+ * Allowed response body modes for the browser XHR HTTP client.
+ *
+ * @category models
+ * @since 4.0.0
+ */
+export type XHRResponseType = "arraybuffer" | "text";
+/**
+ * Context reference for the `XMLHttpRequest.responseType` used by the browser XHR HTTP client, defaulting to `"text"`.
+ *
+ * **When to use**
+ *
+ * Use when you need XHR-backed HTTP requests to receive response bodies as text
+ * or raw `ArrayBuffer` values.
+ *
+ * @see {@link XHRResponseType} for the allowed response body modes
+ * @see {@link withXHRArrayBuffer} for scoping XHR response handling to `ArrayBuffer`
+ *
+ * @category references
+ * @since 4.0.0
+ */
+export declare const CurrentXHRResponseType: Context.Reference<XHRResponseType>;
+/**
+ * Runs an effect with `CurrentXHRResponseType` set to `"arraybuffer"` so the XHR HTTP client receives response bodies as `ArrayBuffer` values.
+ *
+ * @category references
+ * @since 4.0.0
+ */
+export declare const withXHRArrayBuffer: <A, E, R>(self: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R>;
+declare const XMLHttpRequest_base: Context.ServiceClass<XMLHttpRequest, "@effect/platform-browser/BrowserHttpClient/XMLHttpRequest", LazyArg<globalThis.XMLHttpRequest>>;
+/**
+ * Service tag for the `XMLHttpRequest` constructor used by the browser XHR HTTP client.
+ *
+ * @category services
+ * @since 4.0.0
+ */
+export declare class XMLHttpRequest extends XMLHttpRequest_base {
+}
+/**
+ * Layer that provides an `HttpClient` implementation backed by the browser `XMLHttpRequest` API.
+ *
+ * @category layers
+ * @since 4.0.0
+ */
+export declare const layerXMLHttpRequest: Layer.Layer<HttpClient.HttpClient>;
+//# sourceMappingURL=BrowserHttpClient.d.ts.map

@@ -1,0 +1,108 @@
+import type { ApiReferenceEvents } from '@scalar/workspace-store/events';
+import type { XScalarEnvironment } from '@scalar/workspace-store/schemas/extensions/document/x-scalar-environments';
+import type { ParameterObject, SchemaObject } from '@scalar/workspace-store/schemas/v3.1/strict/openapi-document';
+export type TableRow = {
+    /** The parameter or field name/key */
+    name: string;
+    /** The parameter value, can be a string, file, or null */
+    value: string | File | null;
+    /** Optional description for the parameter */
+    description?: string;
+    /** Optional route for global parameters (e.g., cookies shared across workspace) */
+    globalRoute?: ApiReferenceEvents['ui:navigate'];
+    /** Whether the parameter is disabled/inactive */
+    isDisabled?: boolean;
+    /** OpenAPI schema object with type, validation rules, examples, etc. */
+    schema?: SchemaObject;
+    /** Whether the parameter is required */
+    isRequired?: boolean;
+    /**
+     * Whether the parameter is readonly and can not be modifies directly
+     * User can still override the parameter which is going to show up with the linethrough style
+     */
+    isReadonly?: boolean;
+    /** Whether the parameter is overridden later on */
+    isOverridden?: boolean;
+    /** Track the original parameter so we can update it */
+    originalParameter?: ParameterObject;
+    /** Path to a value inside the original parameter example for expanded object parameters */
+    sourceParameterValuePath?: string[];
+};
+export type TableRowUpsertPayload = {
+    name: string;
+    value: string | File;
+    isDisabled: boolean;
+    shouldRenameExpandedRow?: boolean;
+};
+type __VLS_Props = {
+    data: TableRow;
+    hasCheckboxDisabled?: boolean;
+    invalidParams?: Set<string>;
+    label?: string;
+    environment: XScalarEnvironment;
+    showUploadButton?: boolean;
+};
+declare const __VLS_export: import("vue").DefineComponent<__VLS_Props, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {} & {
+    navigate: (route: NonNullable<({
+        replace?: boolean;
+        teamSlug?: string;
+        workspaceSlug?: string;
+        callback?: (status: "success" | "error") => void;
+    } & ({
+        page: "document";
+        path: "overview" | "servers" | "environment" | "authentication" | "cookies" | "settings";
+        documentSlug?: string;
+    } | {
+        page: "workspace";
+        path: "environment" | "cookies" | "settings" | "get-started";
+    } | {
+        page: "example";
+        documentSlug?: string;
+        path: string;
+        method: import("@scalar/helpers/http/http-methods").HttpMethod;
+        exampleName: string;
+    } | {
+        page: "operation";
+        path: "overview" | "servers" | "authentication" | "editor";
+        operationPath: string;
+        method: import("@scalar/helpers/http/http-methods").HttpMethod;
+        documentSlug?: string;
+    })) | undefined>) => any;
+    upsertRow: (payload: TableRowUpsertPayload) => any;
+    deleteRow: () => any;
+    uploadFile: () => any;
+    removeFile: () => any;
+}, string, import("vue").PublicProps, Readonly<__VLS_Props> & Readonly<{
+    onNavigate?: ((route: NonNullable<({
+        replace?: boolean;
+        teamSlug?: string;
+        workspaceSlug?: string;
+        callback?: (status: "success" | "error") => void;
+    } & ({
+        page: "document";
+        path: "overview" | "servers" | "environment" | "authentication" | "cookies" | "settings";
+        documentSlug?: string;
+    } | {
+        page: "workspace";
+        path: "environment" | "cookies" | "settings" | "get-started";
+    } | {
+        page: "example";
+        documentSlug?: string;
+        path: string;
+        method: import("@scalar/helpers/http/http-methods").HttpMethod;
+        exampleName: string;
+    } | {
+        page: "operation";
+        path: "overview" | "servers" | "authentication" | "editor";
+        operationPath: string;
+        method: import("@scalar/helpers/http/http-methods").HttpMethod;
+        documentSlug?: string;
+    })) | undefined>) => any) | undefined;
+    onUpsertRow?: ((payload: TableRowUpsertPayload) => any) | undefined;
+    onDeleteRow?: (() => any) | undefined;
+    onUploadFile?: (() => any) | undefined;
+    onRemoveFile?: (() => any) | undefined;
+}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;
+declare const _default: typeof __VLS_export;
+export default _default;
+//# sourceMappingURL=RequestTableRow.vue.d.ts.map

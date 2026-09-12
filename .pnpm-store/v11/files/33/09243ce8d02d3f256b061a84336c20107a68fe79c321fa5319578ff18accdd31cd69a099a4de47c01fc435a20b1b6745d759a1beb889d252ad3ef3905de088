@@ -1,0 +1,7 @@
+import ScalarIconDotsThreeOutlineVertical_vue_vue_type_script_setup_true_lang_default from "./ScalarIconDotsThreeOutlineVertical.vue.script.js";
+//#region src/components/ScalarIconDotsThreeOutlineVertical.vue
+var ScalarIconDotsThreeOutlineVertical_default = ScalarIconDotsThreeOutlineVertical_vue_vue_type_script_setup_true_lang_default;
+//#endregion
+export { ScalarIconDotsThreeOutlineVertical_default as default };
+
+//# sourceMappingURL=ScalarIconDotsThreeOutlineVertical.js.map

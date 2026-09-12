@@ -1,0 +1,1 @@
+{"version":3,"file":"resolve-default-oauth2-redirect-url.d.ts","sourceRoot":"","sources":["../../../../../src/v2/blocks/scalar-auth-selector-block/helpers/resolve-default-oauth2-redirect-url.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,sBAAsB,EAAE,MAAM,6BAA6B,CAAA;AAEzE;;;;;;;GAOG;AACH,eAAO,MAAM,+BAA+B,GAAI,QAAQ,IAAI,CAAC,sBAAsB,EAAE,mBAAmB,CAAC,KAAG,MAU3G,CAAA"}
